@@ -1,7 +1,7 @@
 # SpotiSort live config.
 # "Hindi -> Dil" and "Malayalam -> NewAgeMadrasMail" are live, both at the default 14-day threshold
 # (decision 37: the test-only days_threshold: 0 override is gone now that --restore/top were proven live).
-# Japanese, English and the catch-all stay disabled until reviewed.
+# Japanese, English, the artist_in_playlist auto-router and the catch-all stay disabled until reviewed.
 default_days_threshold: 14
 language_playlists:
   "Dil": hindi
@@ -11,12 +11,21 @@ language_playlists:
 enrichment:
   musicbrainz: true
   english_default: false
+# Master decisions 11/decision 54: min_tracks 3 / min_dominance 0.9 is the measured, recommended default
+# (design/reports/measurement-round-2.md Task 1: 95.8% precision, 47.7% recall of the qualifying subset).
+# Vault_drx is excluded here for documentation; it is also hardcoded, independent of this list
+# (src/enrichment/artist_playlist.py), so it can never become an auto-routing target either way.
+artist_in_playlist:
+  min_tracks: 3
+  min_dominance: 0.9
+  exclude_playlists: ["Vault_drx"]
 rules:
   - name: "Hindi -> Dil"
     enabled: true
     match:
       language_in: [hindi]
     target_playlist: "Dil"
+    target_position: top   # 2026-09-27: testing top-insertion on a real, live-enabled rule; Dil is custom-ordered
   - name: "Malayalam -> NewAgeMadrasMail"
     enabled: true
     match:
@@ -56,6 +65,14 @@ rules:
     match:
       artist_in: ["The Midnight"]
     target_playlist: "Midnight Mixer"
+  # Master decisions 11/decision 54: proven (94.1-98.4% precision on the "effectively single-playlist
+  # artist" subset, design/reports/measurement-round-2.md Task 1) but shipped disabled -- the master/user
+  # turns it on after reviewing a dry-run with it enabled, same as every other rule that reached this config.
+  - name: "Route to artist's home playlist (draft)"
+    enabled: false
+    match:
+      artist_in_playlist: true
+    target_playlist: auto
   - name: "Japanese -> nani mo wakaranai (draft)"
     enabled: false
     match:
