@@ -1,7 +1,13 @@
 # Proposal: `artist_in_playlist` match key (auto-routing)
 
-Status: **draft, awaiting final proof, design agreed with user 2026-09-27.** Ranked #1 in decision 47's
-deferred list. Not implemented yet.
+Status: **approved in principle (2026-09-27); gated on a margin-based re-measurement (decision 50) before
+build.** Ranked #1 in decision 47's deferred list. Not implemented yet.
+
+**User confirmation (2026-09-27):** this is genuinely valuable — several playlists are dedicated to one or two
+artists (e.g. Linkin Park, 21 Pilots), which is exactly the overwhelming-margin case this mechanism is suited
+to. 100% coverage is explicitly not the goal; reliable precision on whatever it can confidently catch is. The
+general `min_tracks`-only sweep below undersold it by lumping single-artist-playlist cases in with weak,
+narrowly-split ones — a margin requirement (decision 50) should separate them.
 
 ## The problem
 

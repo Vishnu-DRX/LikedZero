@@ -353,6 +353,38 @@ run. It is not being replaced by anything.
     `runs.json`, dashboard fixtures/contract tests, and the workflow. Confirm no reference to the removed
     feature survives in docs or the Setup guide.
 
+## Master decisions 10 (2026-09-27) — precision over coverage; a real catch-all; a proper playlist audit
+User's framing, which now governs this whole area: **100% coverage is not the goal, reliable precision is.**
+With a wide, discovery-heavy taste, most songs genuinely have no repeat-artist pattern yet, and that is expected,
+not a gap to engineer away. `artist_in_playlist` is confirmed valuable specifically because some playlists are
+dedicated to one or two artists (e.g. a Linkin Park playlist, a 21 Pilots playlist) — an overwhelming-margin case,
+not the weak "3-vs-2 split" case that dragged the general sweep's precision down to ~80%. The 90% precision bar
+used everywhere else in this project is NOT being relaxed to buy coverage; instead, only a confident slice should
+ever auto-apply, and everything else stays visibly in the inbox (or the Q3 unmatched queue) for the user.
+
+50. **Re-measure `artist_in_playlist` with a dominance margin, not just a raw count.** Gate on BOTH a small
+    `min_tracks` floor AND the top playlist being a clear multiple ahead of the runner-up (e.g. `margin: 2.0` =
+    top count >= 2x second place; sweep a couple of margin values same as the min_tracks sweep did). Report,
+    per candidate margin/min_tracks combination: coverage, precision, recall — and specifically call out
+    single/near-single-artist playlists (an artist whose tracked-playlist tracks are >=90% in one playlist) as
+    their own row, since that's the paradigm case the user just confirmed matters. Only combinations clearing
+    ~90% precision are candidates to actually build; report which do, even if coverage is small.
+51. **A real catch-all, name decided: "SpotiSort Sink."** This is Q6 (proper `fallback_playlist`/catch-all,
+    dropping the `release_year_after: 1900` hack) made concrete. The user will create an empty playlist named
+    exactly this (same pattern as `SpotiSort Test`) when ready. Design it properly: `fallback_playlist` accepts
+    `{playlist, target_position}` (or a `match: {any: true}` rule — pick whichever fits the existing engine more
+    cleanly, your call, document the choice), evaluated only after every other enabled rule has failed to match
+    (including `artist_in_playlist` once built). Do not wire a real config to it until the user confirms the
+    playlist exists.
+52. **A proper playlist audit, not just the 4 already-mapped language playlists.** Analyze every owned/
+    collaborative playlist (reuse/extend `analyze.py`'s existing per-playlist profiling) and classify each one
+    by its dominant organizing factor — the three that matter, per the user: **language, genre, artist**. For
+    each playlist report (counts/labels only, `P01..` convention, no names in the committed file): dominant
+    artist share (is it effectively a single/few-artist "home" playlist?), dominant language share, dominant
+    genre share (of tagged tracks), and a suggested classification (artist-home / language-pure / genre-pure /
+    mixed-no-clear-pattern). This is analysis to inform which playlists get which rule type — not a rule-writing
+    or auto-config step. Bring the classification table back for the master/user to turn into real rules.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
