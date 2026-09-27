@@ -286,6 +286,55 @@ dashboard ("he won't read or understand shit"). Applies site-wide (Home, Setup g
     layout/DOM changes can regress CLS/contrast that were already fixed once (see the two CLS fixes in the last
     implementation round).
 
+## Master decisions 8 (after the 2026-09-27 end-to-end review) — binding
+An external review (`design/reviews/2026-09-27-end-to-end-review.md`) audited the whole repo. Master spot-checked its
+three sharpest claims directly against source and confirmed all three are real: (1) `SPOTISORT_SCHEDULED_APPLY` is
+read nowhere, only mentioned in a comment; (2) a `TooManyMoves` abort in `sync.py` returns before any log/`runs.json`/
+guardian write, so the dashboard would show a stale "last run" as current while only the Actions tab is red; (3) the
+PAT cache key is `owner/repo` only (no scope), so Configure's write-only token and run-now's dispatch-only token
+collide. The review's edit to `phase-U2.md` (walking back a verified-true CI claim to "unverified, check CI") was
+itself over-cautious and has been superseded by the merge — the original claim was checked against the real run ids
+and is true; no report correction needed. Read the review in full; the priority order below is binding.
+
+44. **Fix now (before anything else), all four together — these make committed logs actually private and the two
+    token flows actually independent, both already shipped and live:**
+    - P1-3: on `TooManyMoves` (and any other abort before `apply_moves` returns), still write the run log
+      (`verdict: "aborted_too_many"`, plan counts, no journal) and update `runs.json`/guardian before returning the
+      non-zero exit code, so the dashboard states the abort plainly instead of showing stale data.
+    - P1-4: when `include_track_names` is false, `redact_plan`/`redact_log` must also drop or salt-hash the `uri`
+      (and any other song-identifying field surviving in the explain trace), not just title/artist — a bare URI
+      resolves to a real song in one request. Reword every "private by default" claim in Configure/Setup guide to
+      match reality once fixed. Also correct the `sync.yml`/decision-33 wording: an artifact on a public repo is
+      downloadable by any signed-in GitHub user, not private.
+    - P1-5 + P1-6: split the PAT cache key by required scope set (or request the union of scopes both flows need
+      and store one token), so Configure and run-now never silently steal/invalidate each other's token; default
+      `expires_in` to 7 days instead of 90; verify() should check the granted scope, not just repo readability.
+    - P1-7: distinguish "no baseline yet" from "0 vanished" in the guardian (write `guardian.baseline: "missing"|"ok"`
+      to the log), and reword the Safety warning to "no longer liked (by you or Spotify)" rather than implying an
+      alarm — an intentional un-like must not be reported as a loss.
+45. **Fix next: P1-1 + P1-2 together, as one change (do not enable a schedule without both):** add config key
+    `inbox_since` (date; the email analogue is "apply to new mail only"), enforce it in the planner so nothing before
+    that date is ever evaluated regardless of selector, surface it in Configure and the Overview, and require it
+    whenever a run passes `--allow-unselected`. Only then implement reading `SPOTISORT_SCHEDULED_APPLY` in `sync.yml`
+    for a future `schedule:` trigger. Per decision 38 no schedule is being enabled yet, so this has no live urgency,
+    but must land before a schedule is ever turned on.
+46. **P2 hygiene, do in the same pass:** fix README/Setup-guide drift (decision 21 renamed the page "Configure"; the
+    tool does not yet run on a schedule; forks must be told to enable Actions on first visit — GitHub disables them
+    by default); derive `main` from the repo's actual `default_branch` everywhere instead of hardcoding it (data.js,
+    run-now.js, builder/app.js); prefix CSV cells starting with `= + - @` with `'` (formula-injection fix); set
+    `SPOTISORT_BROWSERS=chromium,firefox,webkit` (not `auto`) in CI so a missing browser fails the job instead of
+    silently skipping 175 tests; harden the `--apply` deny pattern in `.claude/settings.json` for arg orderings like
+    `--config x.yaml --apply`; consider slimming the committed `latest-plan.json` (1.4 MB, grows every run) once P1-4
+    is decided.
+47. **Deferred, schema-changing, needs master sign-off when we get there (do not build without asking first):**
+    Q1 `artist_in_playlist` (highest value — reuses the existing playlist-learning machinery, covers most of the 83%
+    of the library with no resolved language, no MusicBrainz needed), Q6 a proper `fallback_playlist`/catch-all
+    (drops the `release_year_after: 1900` hack, needed for the eventual Vault use case), Q3 an "unmatched, needs a
+    rule" queue on the dashboard (reuses `analyze.py`'s per-playlist stats). Lower priority: Q2 `unless:` exceptions,
+    Q4 `action: keep`, Q5 `action: copy` (multi-label), Q7 `artist_id_in`, Q8 a run digest (`$GITHUB_STEP_SUMMARY`),
+    Q9 deliberate re-liked-song handling. Bring a short recommendation back to the master before implementing any of
+    these; each needs config.py + validate.js + parity tests together (schema is otherwise frozen).
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
