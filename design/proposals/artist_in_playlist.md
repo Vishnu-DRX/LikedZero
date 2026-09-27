@@ -1,88 +1,102 @@
-# Proposal: `artist_in_playlist` match key
+# Proposal: `artist_in_playlist` match key (auto-routing)
 
-Status: **draft, awaiting master/user sign-off** — not implemented. Ranked #1 in decision 47's deferred list.
+Status: **draft, awaiting final proof, design agreed with user 2026-09-27.** Ranked #1 in decision 47's
+deferred list. Not implemented yet.
 
 ## The problem
 
 83% of the real library (641 of 774 songs) has no resolved language, and genre coverage is only ~49% of
 artists. Language and genre rules can only ever reach the minority of the library where those signals exist.
 Meanwhile the strongest signal available was sitting unused for anything except deriving language: **which of
-the user's own playlists an artist's other songs are already in.** If 12 of an artist's 14 songs already sit in
+the user's own playlists an artist's other songs are already in.** If most of an artist's existing songs sit in
 "Fuel", a new song by that artist is very likely also a "Fuel" song — no MusicBrainz call, no script detection,
-no ambiguity about romanised titles.
+no ambiguity about romanised titles, and it needs nothing new: `src/enrich.py` already builds the artist →
+playlist membership table for `language_playlists`. This proposal generalizes that table into a routing
+mechanism, not just a language source.
 
-This is also the single highest-value item precisely because it needs nothing new: `src/enrich.py` already
-builds an artist → playlist membership table to learn `language_playlists`. This proposal generalizes that
-table into a match key of its own.
+## Decisions made with the user (2026-09-27)
 
-## Schema change
+1. **Argmax, not a threshold-gated boolean.** Rather than the user writing one rule per target playlist
+   (`artist_in_playlist: ["Fuel"]` → `target_playlist: "Fuel"`), one rule resolves the target **at run time**
+   to whichever eligible playlist has the most existing tracks by the song's artist. This removes the need for
+   a `min_share` tie-breaker between rules entirely — there's only one rule, and it either finds a clear winner
+   or it doesn't.
+2. **`Vault_drx` is permanently excluded** from the candidate set. The user is setting it aside; a separate,
+   purpose-built catch-all playlist will be designated later (feeding into Q6's proper `fallback_playlist`,
+   not this mechanism).
+3. **The user plans to reset Liked Songs to empty** to start real operation on a clean inbox — this is what
+   the fresh-inbox design (decisions 12-17) was already built for, not a new complication.
 
-New optional `match` key, usable like any other (AND-combined with the rest of the rule):
+## Schema
 
-```yaml
-- name: "Fuel regulars"
-  match:
-    artist_in_playlist: ["Fuel"]
-  target_playlist: "Fuel"
-```
-
-`artist_in_playlist: [<playlist name>, ...]` — true if the track's artist (any credited artist, same
-convention as `artist_in`) has at least `artist_in_playlist.min_tracks` existing tracks in **any** of the named
-playlists. Playlist names are resolved the same way target playlists already are (owned/collaborative only).
-
-Two new **global** config knobs (not per-rule, to keep the rule schema small):
 ```yaml
 artist_in_playlist:
-  min_tracks: 3      # an artist needs at least this many tracks already in the playlist to count (default 3)
-  min_share: 0.5      # ...and they must make up at least this share of the artist's tracked-playlist tracks
+  min_tracks: 3                       # artist needs at least this many existing tracks somewhere, or the signal is too weak
+  exclude_playlists: ["Vault_drx"]    # never a candidate "home", however many tracks by the artist it holds
+
+rules:
+  - name: "Route to artist's home playlist"
+    match:
+      artist_in_playlist: true
+    target_playlist: auto             # resolved per song: the eligible playlist with the most existing tracks by this artist
 ```
-`min_share` matters for an artist who is legitimately split across several playlists (e.g. half their catalogue
-in "Fuel", half in "dusty tapes") — without it, the artist would match both and first-match-wins would pick
-whichever rule happens to come first, silently.
+
+- `artist_in_playlist: true` in `match` is the gate: does this artist have a clear home at all (see resolution
+  below)? Everything else about *which* playlist is in the global `artist_in_playlist` block, since the target
+  is computed, not authored per rule.
+- `target_playlist: auto` is a new sentinel value, valid only when the rule's match includes
+  `artist_in_playlist`. Any other rule keeps using a literal playlist name exactly as today.
+- **Resolution:** among the user's owned/collaborative playlists, minus `exclude_playlists`, count the song's
+  artist's existing tracks per playlist. If the top count is `>= min_tracks` and strictly greater than the
+  second-highest count, that playlist is the target. Otherwise (below the floor, or an exact tie) the rule does
+  not match — the song falls through to later rules or is left unmatched, never routed by a guess.
 
 ## Semantics and edge cases
 
-- **The target song itself is excluded** from its own artist's playlist counts (it's either already there, in
-  which case it's a no-op via the existing `already_in_target` handling, or it's the new song being evaluated
-  and must not vote for itself).
-- **A song already liked and already in one of these playlists is not a special case** — it's just a track
-  whose artist has 1+ tracks in that playlist; the rule fires or doesn't by the normal threshold.
-- **Interacts with `inbox_since`/age gate exactly like every other key** — it's just another condition; the
-  age gate still blocks first, per decision 2.
-- **Interacts with `target_position`** normally — this is just a match key, not a target.
+- **The song being evaluated never votes for itself** — counts come only from the artist's other, already-placed tracks.
+- **Interacts with `inbox_since`/the age gate exactly like every other key** — just another condition; the age
+  gate still blocks first, per decision 2.
+- **Interacts with `target_position`** normally — this determines the target playlist, not the insert position.
 - **Backtest reuses this cleanly**: the existing backtest already treats "which playlist a track is really in"
-  as ground truth, so `artist_in_playlist`'s own accuracy can be measured the same way every other signal was
-  (leave-one-out by artist, as the language playlist precision numbers already do), before it ever reaches a
-  real config.
-- **Explain trace**: show "learned from N of the artist's M tracks already in <playlist>" — same
-  sentence-first style as the language explain text, not a bare boolean.
-- **Does not read `language_playlists`** — this is deliberately playlist-membership-general, not tied to the
-  language feature. A playlist can be both a language source and an `artist_in_playlist` target; they're
-  independent signals that happen to share the same underlying artist→playlist table.
+  as ground truth, so this can be measured the same leave-one-out way the language-playlist precision already
+  is, before any rule using it goes live.
+- **Explain trace**: "Routed to *Fuel* — the artist has 12 tracks there, more than any other playlist (next
+  closest: 2)" — sentence-first, same style as the language explain text, not a bare boolean.
+- **Independent of `language_playlists`**: a playlist can be both a language source and an
+  `artist_in_playlist` candidate; they share the same underlying artist→playlist table but serve different
+  match keys.
 
-## What I'd want proven before this goes live (mirrors how language signals were gated)
+## What must be proven before this goes live (same bar as every other signal)
 
-1. **Backtest precision/recall per playlist**, leave-one-out, same methodology as the existing signal-precision
-   table — not assumed, measured, same as every other signal in this project.
-2. **A `min_tracks`/`min_share` sensitivity sweep** (e.g. 2/0.4, 3/0.5, 5/0.6) on the real library, so the
-   defaults aren't a guess.
-3. **Explicit interaction check** against the already-live Hindi/Malayalam rules: does `artist_in_playlist`
-   agree with, contradict, or overlap the language-learned rules for the same artists? A conflict should be
-   visible in Configure (e.g. two enabled rules would both plausibly fire for the same artist) — this is
-   exactly what the dashboard's existing shadowed-rule detection should already catch, but confirm it does.
+1. **Backtest precision/recall**, leave-one-out by artist, exactly like the language signal-precision table —
+   measured, not assumed.
+2. **`min_tracks` sensitivity sweep** (e.g. 2, 3, 5) on the real library, so the default isn't a guess.
+3. **Explicit interaction check** against the live Hindi/Malayalam rules: for artists both signals would claim,
+   does `artist_in_playlist` agree or conflict? The dashboard's existing shadowed-rule detection should surface
+   any rule this one makes unreachable — confirm it actually does before enabling both.
+4. **Confirm `Vault_drx` exclusion works** on the real library: assert no plan ever names it as an `auto` target.
 
-## Why this over the other two ranked items
+## Why this over the other two ranked items (Q6, Q3)
 
 Q6 (proper catch-all) and Q3 (unmatched queue) are smaller, more mechanical changes with clear scope. This one
 is ranked first anyway because it's the only one that actually *increases* how much of the library the tool can
-safely sort — everything else improves quality or visibility of what's already reachable. Recommend building
-this first, then Q6 (the catch-all is more useful once more of the library is being actively routed rather than
-falling through to it), then Q3.
+safely sort — everything else improves quality or visibility of what's already reachable. Build order stays:
+this → Q6 (more useful once more of the library is actively routed rather than falling through to a catch-all)
+→ Q3.
+
+## Operational note: emptying Liked Songs
+
+The user intends to reset Liked Songs to empty before real operation begins. The **guardian** (Phase 8b) will
+report every one of the ~774 currently-liked songs as "no longer liked" the first run after that happens — this
+is a large, correct, but noisy Safety-view entry for a deliberate reset, not a real alarm. Open question for
+the master/user: add a one-time "acknowledge this reset" action so it doesn't read as a mass failure, or leave
+it as a one-off warning to ignore. Not yet decided; flag before the reset happens.
 
 ## Ask for the master/user
 
-Sign-off needed on: the schema shape above, the two global defaults (3 tracks / 50% share), and the order
-(this → Q6 → Q3). Once approved, implementation follows the same pattern as every other schema addition:
-`config.py` + `validate.js` + parity tests together, then planner/rules_engine, then backtest measurement on
-the real library *before* enabling any rule that uses it, mirroring how `english_default` was gated behind
-measured precision.
+Sign-off needed on: the schema above (`target_playlist: auto`, the exclude list, the strict-max tie rule), the
+`min_tracks` default before the sweep picks a final value, the build order (this → Q6 → Q3), and the guardian
+reset-acknowledgement question just above. Once approved, implementation follows the same pattern as every
+other schema addition: `config.py` + `validate.js` + parity tests together, then planner/rules_engine, then
+backtest measurement on the real library *before* enabling any rule that uses it — mirroring how
+`english_default` was gated behind measured precision.
