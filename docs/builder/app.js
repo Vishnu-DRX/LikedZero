@@ -923,6 +923,220 @@
     list.forEach(function (v, i) { setTimeout(function () { downloadText(v.yaml, 'config.' + v.id + '.yaml'); }, i * 300); });
   }
 
+  // ---------------------------------------------------------------- Save to GitHub (Phase 7, decision 39/41)
+  // Reuses the shared PAT component (assets/github-pat.js) built for the dashboard's run-now button --
+  // same deep-link-and-paste flow, same sessionStorage-only token, just Contents: write instead of +Actions.
+  function ownerRepoParts() {
+    var onPages = /\.github\.io$/i.test(location.hostname);
+    var owner = onPages ? location.hostname.replace(/\.github\.io$/i, '') : null;
+    var seg = location.pathname.split('/').filter(Boolean)[0];
+    var repo = onPages && seg ? seg : null;
+    return { owner: owner, repo: repo, real: !!(owner && repo) };
+  }
+
+  function ghSaveBody() {
+    var body = $('github-save-body');
+    body.innerHTML = '';
+    (function add(list) {
+      list.forEach(function (c) { if (c) body.appendChild(c); });
+    })(Array.prototype.slice.call(arguments));
+    return body;
+  }
+
+  function b64EncodeUtf8(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+  function b64DecodeUtf8(b64) { return decodeURIComponent(escape(window.atob(String(b64 || '').replace(/\n/g, '')))); }
+
+  function openGithubSave() {
+    if (blocked('save to GitHub')) return;
+    var rr = ownerRepoParts();
+    if (UI) UI.open('github-save-dialog');
+    if (!rr.real) {
+      ghSaveBody(h('p', { text: 'This only works once the site is published on GitHub Pages, at <you>.github.io/<your-fork>/ -- it could not tell which repository to save to from this address.' }));
+      return;
+    }
+    var token = window.GithubPAT.get(rr.owner, rr.repo);
+    if (token) renderGithubCommitForm(rr, token); else renderGithubConnect(rr);
+  }
+
+  function renderGithubConnect(rr) {
+    var url = window.GithubPAT.tokenUrl({
+      owner: rr.owner, name: 'SpotiSort Configure (' + rr.repo + ')',
+      description: 'Lets Configure commit config.yaml to ' + rr.owner + '/' + rr.repo + '. Delete this token any time.',
+      scopes: [{ name: 'contents', level: 'write' }], expiresInDays: 90,
+    });
+    var status = h('p', { class: 'status', role: 'status' });
+    var input = h('input', { class: 'input', id: 'gh-token', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'github_pat_…' });
+    ghSaveBody(
+      h('ol', { class: 'steps' },
+        h('li', null, h('a', { href: url, target: '_blank', rel: 'noopener', text: 'Create a token on GitHub' }), ' — name, description and the Contents permission are pre-filled.'),
+        h('li', { text: 'Under Repository access, choose "Only select repositories" and pick ' + rr.owner + '/' + rr.repo + ' (GitHub does not let a link pre-select the repository).' }),
+        h('li', { text: 'Confirm the permission still shows "Contents: Read and write", then click Generate token.' }),
+        h('li', { text: 'Paste the token below. It stays only in this browser tab (sessionStorage), never written to disk.' })),
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'gh-token', text: 'Fine-grained personal access token' }), input),
+      status,
+      h('button', {
+        type: 'button', class: 'btn btn-primary', text: 'Save & verify',
+        onclick: function () {
+          var tok = input.value.trim();
+          if (!tok) { status.textContent = 'Paste a token first.'; return; }
+          status.textContent = 'Checking with GitHub…';
+          window.GithubPAT.verify(rr.owner, rr.repo, tok).then(function (res) {
+            if (!res.ok) { status.textContent = res.message; return; }
+            window.GithubPAT.set(rr.owner, rr.repo, tok);
+            renderGithubCommitForm(rr, tok);
+          });
+        },
+      })
+    );
+  }
+
+  function githubGetFile(rr, token) {
+    return fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/contents/config.yaml', {
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+    }).then(function (r) {
+      if (r.status === 404) return { exists: false };
+      return r.json().then(function (data) {
+        if (!r.ok) throw new Error('HTTP ' + r.status + (data && data.message ? ': ' + data.message : ''));
+        return { exists: true, sha: data.sha, content: b64DecodeUtf8(data.content) };
+      });
+    });
+  }
+
+  function githubPutFile(rr, token, message, sha) {
+    var body = { message: message, content: b64EncodeUtf8(current.yaml), branch: 'main' };
+    if (sha) body.sha = sha;
+    return fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/contents/config.yaml', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) { return r.json().then(function (data) { return { status: r.status, ok: r.ok, data: data }; }); });
+  }
+
+  function renderGithubCommitForm(rr, token) {
+    var msgInput = h('input', { class: 'input', id: 'gh-commit-msg', type: 'text', value: 'Update config.yaml via Configure' });
+    var status = h('p', { class: 'status', role: 'status' });
+    ghSaveBody(
+      h('p', { class: 'hint', text: 'Commits config.yaml straight to ' + rr.owner + '/' + rr.repo + ' (branch main).' }),
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'gh-commit-msg', text: 'Commit message' }), msgInput),
+      status,
+      h('div', { class: 'actions' },
+        h('button', { type: 'button', class: 'btn btn-primary', text: 'Commit', onclick: function () { doGithubCommit(rr, token, msgInput.value, null); } }),
+        h('button', {
+          type: 'button', class: 'btn btn-secondary btn-sm', text: 'Forget token',
+          onclick: function () { window.GithubPAT.clear(rr.owner, rr.repo); renderGithubConnect(rr); },
+        }))
+    );
+  }
+
+  function doGithubCommit(rr, token, msg, forcedSha) {
+    var status = document.querySelector('#github-save-body .status');
+    msg = (msg || '').trim() || 'Update config.yaml via Configure';
+    if (status) status.textContent = 'Committing…';
+    var go = function (sha) {
+      return githubPutFile(rr, token, msg, sha).then(function (res) {
+        if (res.ok) {
+          if (UI) UI.toast('config.yaml committed to GitHub.', { type: 'success' });
+          $('action-status').textContent = 'Saved to GitHub: ' + rr.owner + '/' + rr.repo + '.';
+          loadGithubVersions(rr, token);
+          if (UI) setTimeout(function () { UI.close('github-save-dialog'); }, 700);
+        } else if (res.status === 409) {
+          renderGithubConflict(rr, token, msg);
+        } else if (res.status === 401) {
+          window.GithubPAT.clear(rr.owner, rr.repo);
+          renderGithubConnect(rr);
+          var s = document.querySelector('#github-save-body .status');
+          if (s) s.textContent = 'GitHub rejected the token (invalid or expired). Reconnect above.';
+        } else if (status) {
+          status.textContent = 'GitHub returned HTTP ' + res.status + (res.data && res.data.message ? ': ' + res.data.message : '') + '.';
+        }
+      });
+    };
+    var onError = function (e) { if (status) status.textContent = 'Could not reach GitHub (' + (e && e.message ? e.message : 'network error') + ').'; };
+    if (forcedSha !== null) { go(forcedSha).catch(onError); return; }
+    githubGetFile(rr, token).then(function (f) { return go(f.exists ? f.sha : undefined); }).catch(onError);
+  }
+
+  function renderGithubConflict(rr, token, msg) {
+    ghSaveBody(h('p', { class: 'status', text: 'Checking what changed…' }));
+    githubGetFile(rr, token).then(function (f) {
+      var diff = lineDiff(f.content || '', current.yaml);
+      var pre = h('pre', { class: 'yaml' });
+      diff.forEach(function (d) {
+        var prefix = d.type === 'added' ? '+ ' : d.type === 'removed' ? '- ' : '  ';
+        pre.appendChild(h('div', { class: 'diff-line diff-' + d.type, text: prefix + d.text }));
+      });
+      ghSaveBody(
+        h('p', null, h('strong', { text: 'Someone (or something) changed config.yaml on GitHub since you last loaded it.' }),
+          ' Overwriting replaces their version with yours below — nothing is merged automatically.'),
+        pre,
+        h('div', { class: 'actions' },
+          h('button', { type: 'button', class: 'btn btn-primary', text: "Overwrite GitHub's version with mine", onclick: function () { doGithubCommit(rr, token, msg, f.sha); } }),
+          h('button', { type: 'button', class: 'btn btn-secondary', text: 'Cancel', onclick: function () { renderGithubCommitForm(rr, token); } }))
+      );
+    }).catch(function (e) {
+      ghSaveBody(h('p', { class: 'status', text: 'Could not reach GitHub (' + (e && e.message ? e.message : 'network error') + ').' }));
+    });
+  }
+
+  // ---- "On GitHub" section of the Versions drawer: last 5 commits to config.yaml, lazy-loaded on open.
+  function githubFileAtRef(rr, token, ref) {
+    return fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/contents/config.yaml?ref=' + encodeURIComponent(ref), {
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (b) { throw new Error('HTTP ' + r.status + (b && b.message ? ': ' + b.message : '')); });
+      return r.json();
+    }).then(function (data) { return b64DecodeUtf8(data.content); });
+  }
+
+  function compareGithubCommit(rr, token, sha) {
+    githubFileAtRef(rr, token, sha).then(function (yaml) { openCompare({ yaml: yaml, savedAt: new Date().toISOString() }); })
+      .catch(function (e) { if (UI) UI.toast('Could not load that commit: ' + (e && e.message ? e.message : 'network error'), { type: 'danger' }); });
+  }
+
+  function restoreGithubCommit(rr, token, sha) {
+    githubFileAtRef(rr, token, sha).then(function (yaml) { restoreVersion({ yaml: yaml, savedAt: new Date().toISOString() }); })
+      .catch(function (e) { if (UI) UI.toast('Could not load that commit: ' + (e && e.message ? e.message : 'network error'), { type: 'danger' }); });
+  }
+
+  function loadGithubVersions(rr, token) {
+    var list = $('versions-github-list'), hint = $('versions-github-hint');
+    if (!list || !hint) return;
+    rr = rr || ownerRepoParts();
+    if (!rr.real) { hint.textContent = 'Only available once this site is published on GitHub Pages.'; list.innerHTML = ''; return; }
+    token = token || window.GithubPAT.get(rr.owner, rr.repo);
+    if (!token) {
+      hint.innerHTML = '';
+      hint.appendChild(document.createTextNode('Connect via '));
+      var b = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Save to GitHub', onclick: function () { if (UI) UI.close('versions-drawer'); openGithubSave(); } });
+      hint.appendChild(b);
+      hint.appendChild(document.createTextNode(' to see commit history here.'));
+      list.innerHTML = '';
+      return;
+    }
+    hint.textContent = 'The last 5 commits to config.yaml on ' + rr.owner + '/' + rr.repo + '.';
+    list.innerHTML = '';
+    list.appendChild(h('li', { class: 'hint', text: 'Loading…' }));
+    fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/commits?path=config.yaml&per_page=5', {
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+    }).then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+      .then(function (commits) {
+        list.innerHTML = '';
+        if (!commits.length) { list.appendChild(h('li', { class: 'hint', text: 'No commits to config.yaml yet.' })); return; }
+        commits.forEach(function (c) {
+          var when = new Date(c.commit.author.date).toLocaleString();
+          var msg = c.commit.message.split('\n')[0];
+          list.appendChild(h('li', { class: 'card version-card' },
+            h('div', { class: 'version-meta' }, h('strong', { text: when }), h('span', { class: 'hint', text: msg })),
+            h('div', { class: 'actions' },
+              h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Compare with current', onclick: function () { compareGithubCommit(rr, token, c.sha); } }),
+              h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Restore', onclick: function () { restoreGithubCommit(rr, token, c.sha); } }))));
+        });
+      }).catch(function (e) {
+        list.innerHTML = '';
+        list.appendChild(h('li', { class: 'hint', text: 'Could not load GitHub history: ' + (e && e.message ? e.message : 'network error') }));
+      });
+  }
+
   // ---------------------------------------------------------------- autosave draft + beforeunload
   function saveDraft() {
     var payload = JSON.stringify({ nextId: nextId, state: state, advanced: advanced });
@@ -1063,6 +1277,8 @@
     $('yaml-edit').addEventListener('input', syncYamlEdit);
 
     $('save-btn').addEventListener('click', saveVersion);
+    $('save-github-btn').addEventListener('click', openGithubSave);
+    document.addEventListener('ui:open', function (e) { if (e.detail && e.detail.id === 'versions-drawer') loadGithubVersions(); });
     var dbtn = $('download-btn');
     if (dbtn) dbtn.addEventListener('click', function () {
       if (blocked('download')) return;

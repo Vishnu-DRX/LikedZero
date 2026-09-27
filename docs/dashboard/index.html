@@ -33,6 +33,21 @@
         <p>Read-only. Nothing here can change your Spotify library.</p>
       </div>
 
+      <div class="mode-bar">
+        <label class="switch">
+          <input type="checkbox" class="switch-input" id="mode-toggle" role="switch" aria-checked="false" />
+          <span class="switch-ui" aria-hidden="true"></span>
+          <span class="switch-label" id="mode-toggle-label">Detailed mode</span>
+        </label>
+      </div>
+      <div class="banner banner-info" id="mode-callout" role="status" hidden>
+        <span class="ico" aria-hidden="true">&#9432;</span>
+        <div class="mode-callout-body">
+          <p>Prefer more detail? <button type="button" class="btn secondary small" id="mode-callout-switch">Switch to Detailed</button></p>
+        </div>
+        <button type="button" class="icon-btn" id="mode-callout-dismiss" aria-label="Dismiss this tip">&#10005;</button>
+      </div>
+
       <p class="source-current" id="source-current" data-testid="source-current" role="status"></p>
 
       <form class="source-bar" id="source-bar" aria-label="Data source" onsubmit="return false">
@@ -82,12 +97,11 @@
 
       <main id="view-root" tabindex="-1" aria-busy="true">
         <p class="sr-only" role="status">Loading data…</p>
+        <!-- decision 42: Simple is the default, and its real Overview has 4 KPI cards (not 7), so this
+             zero-JS first-paint skeleton is sized for the common case to avoid a CLS jump for most visitors. -->
         <div aria-hidden="true">
           <span class="skeleton-line short"></span>
           <div class="grid">
-            <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
-            <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
-            <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
             <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
             <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
             <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>

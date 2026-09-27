@@ -104,6 +104,36 @@ def make_page(browser, site):
         c.close()
 
 
+def serve_fake_origin(page, origin, base_path):
+    """Route every request to `origin` (e.g. "https://someoneelse.github.io") straight to the real docs/
+    files on disk, rewriting `base_path` (e.g. "/their-fork/") the same way the real `site` fixture's HTTP
+    server rewrites BASE_PATH. Playwright intercepts the request before any real network call, but the
+    navigated URL -- and therefore `location.hostname`/`pathname` inside the page -- is genuinely `origin`,
+    so this is a real test of fork-genericness (decision 41), not a mock of it.
+    """
+    import mimetypes
+
+    def handler(route):
+        path = route.request.url[len(origin):].split("?")[0].split("#")[0]
+        if path.startswith(base_path):
+            path = path[len(base_path):]
+        elif path == base_path.rstrip("/"):
+            path = ""
+        else:
+            route.fulfill(status=404, body="not found")
+            return
+        if path == "" or path.endswith("/"):
+            path += "index.html"
+        local = DOCS / path
+        if not local.is_file():
+            route.fulfill(status=404, body="not found")
+            return
+        ctype = mimetypes.guess_type(str(local))[0] or "application/octet-stream"
+        route.fulfill(status=200, content_type=ctype, body=local.read_bytes())
+
+    page.route(f"{origin}/**", handler)
+
+
 @pytest.fixture
 def builder(make_page, site):
     page, _ = make_page()

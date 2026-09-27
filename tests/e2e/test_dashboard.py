@@ -11,6 +11,11 @@ import pytest
 pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import expect  # noqa: E402
 
+try:
+    from axe_playwright_python.sync_playwright import Axe
+except ImportError:  # optional dev dependency
+    Axe = None
+
 pytestmark = pytest.mark.e2e
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,11 +36,14 @@ RUNS = fx("runs.json")["runs"]
 def dash(make_page, site):
     """Open a dashboard view over fixtures (service worker blocked so routes always apply)."""
 
-    def _open(view="overview", qs="", width=1280, height=900, setup=None, source="fixtures", **ctx):
+    def _open(view="overview", qs="", width=1280, height=900, setup=None, source="fixtures", mode="detailed", **ctx):
+        # decision 42: Simple is the default, but every pre-existing test here targets Detailed behaviour
+        # ("everything already built, unchanged"), so this fixture opts into Detailed unless a test asks
+        # for Simple explicitly. New Simple-mode tests pass mode="simple".
         page, context = make_page(width=width, height=height, service_workers="block", **ctx)
         if setup:
             setup(page)
-        page.goto(f"{site}dashboard/?source={source}{qs}#/{view}")
+        page.goto(f"{site}dashboard/?source={source}&mode={mode}{qs}#/{view}")
         page.wait_for_selector(f'#view-root[data-state="ready"][data-view="{view}"]')
         return page
 
@@ -566,7 +574,7 @@ def test_no_requests_leave_the_site_with_fixtures(dash, site):
 def test_storage_blocked_does_not_break_the_page(make_page, site):
     page, _ = make_page(service_workers="block")
     page.add_init_script("Object.defineProperty(window, 'localStorage', {get(){ throw new Error('blocked') }})")
-    page.goto(f"{site}dashboard/?source=fixtures#/overview")
+    page.goto(f"{site}dashboard/?source=fixtures&mode=detailed#/overview")
     page.wait_for_selector('#view-root[data-state="ready"] [data-card="liked"]')
 
 
@@ -642,6 +650,105 @@ def test_run_now_bad_token_shows_github_message_and_does_not_save(dash):
     expect(page.locator("#run-now-token")).to_be_visible()
 
 
+# ------------------------------------------------------------------ Simple/Detailed mode (decision 42)
+SIMPLE_HIDDEN_VIEWS = ["signals", "backtest", "runs"]
+
+
+def test_simple_mode_is_the_default_for_a_fresh_viewer(make_page, site):
+    # a genuinely fresh visitor: no mode= param, no prior localStorage -- unlike the `dash` fixture, which
+    # opts every other test into Detailed on purpose (see its docstring).
+    page, _ = make_page(service_workers="block")
+    page.goto(f"{site}dashboard/?source=fixtures#/overview")
+    page.wait_for_selector('#view-root[data-state="ready"] [data-card="last-run"]')
+    expect(page.locator("#mode-toggle")).not_to_be_checked()
+    for present in ("last-run", "pending", "moves", "safety"):
+        expect(page.locator(f'[data-card="{present}"]')).to_be_visible()
+    for absent in ("next-run", "liked", "errors"):
+        expect(page.locator(f'[data-card="{absent}"]')).to_have_count(0)
+    expect(page.locator('[data-testid="simple-health-banner"]')).to_be_visible()
+    # no raw tables of numbers, no glossary needed: the banner and cards read as plain sentences
+    body = page.locator("#view-root").inner_text()
+    assert "Everything looks fine" in body or "This needs attention" in body
+    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
+    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Safety"]
+
+
+def test_simple_mode_inbox_has_three_columns_and_explain_works(dash):
+    page = dash("inbox", mode="simple")
+    headers = page.locator('[data-testid="inbox-table-simple"] th').all_inner_texts()
+    assert headers == ["Song", "Status", "Why"]
+    expect(page.locator("#inbox-decision")).to_have_count(0)  # no raw filter dropdowns in Simple
+    expect(page.locator("#inbox-csv")).to_have_count(0)
+    page.locator('[data-testid="inbox-table-simple"] [data-explain]').first.click()
+    page.wait_for_selector('[role="dialog"][aria-modal="true"]')
+    assert page.locator("#drawer-root").inner_text().strip() != ""
+
+
+def test_simple_mode_redirects_away_from_advanced_views(dash):
+    for view in SIMPLE_HIDDEN_VIEWS:
+        page = dash("overview", mode="simple")
+        page.evaluate("v => { location.hash = '#/' + v }", view)
+        page.wait_for_selector('#view-root[data-state="ready"][data-view="overview"]')
+
+
+def test_mode_toggle_switches_and_persists(dash):
+    page = dash("overview", mode="simple")
+    expect(page.locator('[data-card="next-run"]')).to_have_count(0)
+    page.locator("label:has(#mode-toggle) .switch-ui").click()  # see click_switch in test_builder.py
+    page.wait_for_selector('[data-card="next-run"]')
+    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
+    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Safety", "Signals", "Backtest"]
+    assert page.evaluate("localStorage.getItem('spotisort.dashboard.mode')") == "detailed"
+    # reload WITHOUT an explicit mode= param (an explicit param, as `dash` sets, always wins -- same rule
+    # as the existing `source` param) to prove the stored preference is what sticks for a normal visit.
+    page.goto(page.url.split("?")[0] + "?source=fixtures#/overview")
+    page.wait_for_selector('#view-root[data-state="ready"] [data-card="next-run"]')
+    expect(page.locator("#mode-toggle")).to_be_checked()
+
+
+def test_first_visit_callout_shown_once_and_dismissible(make_page, site):
+    page, _ = make_page(service_workers="block")
+    page.goto(f"{site}dashboard/?source=fixtures#/overview")
+    page.wait_for_selector('#view-root[data-state="ready"]')
+    expect(page.locator("#mode-callout")).to_be_visible()
+    page.locator("#mode-callout-dismiss").click()
+    expect(page.locator("#mode-callout")).to_be_hidden()
+    page.reload()
+    page.wait_for_selector('#view-root[data-state="ready"]')
+    expect(page.locator("#mode-callout")).to_be_hidden()  # dismissal is remembered
+
+
+def test_first_visit_callout_switch_button_opts_into_detailed(make_page, site):
+    page, _ = make_page(service_workers="block")
+    page.goto(f"{site}dashboard/?source=fixtures#/overview")
+    page.wait_for_selector('#view-root[data-state="ready"]')
+    page.locator("#mode-callout-switch").click()
+    page.wait_for_selector('[data-card="next-run"]')
+    expect(page.locator("#mode-toggle")).to_be_checked()
+    expect(page.locator("#mode-callout")).to_be_hidden()
+
+
+def test_simple_kpi_cards_have_tooltips(dash):
+    page = dash("overview", mode="simple")
+    for card_name in ("pending", "moves", "safety"):
+        expect(page.locator(f'[data-card="{card_name}"] .help-btn')).to_be_visible()
+
+
+@pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
+@pytest.mark.parametrize("mode", ["simple", "detailed"])
+@pytest.mark.parametrize("theme", ["dark", "light"])
+def test_axe_zero_serious_or_critical_on_overview_and_inbox(dash, mode, theme):
+    for view in ("overview", "inbox"):
+        page = dash(view, mode=mode)
+        if theme == "light":
+            page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
+        page.wait_for_timeout(50)
+        axe = Axe()
+        results = axe.run(page)
+        serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
+        assert not serious, json.dumps([{"id": v["id"], "impact": v["impact"], "help": v["help"], "view": view, "mode": mode} for v in serious], indent=2)
+
+
 def test_hostile_titles_are_escaped(dash):
     def mutate(d):
         d["songs"][0]["title"] = '<img src=x onerror="window.__xss=1">'
@@ -705,6 +812,16 @@ def test_no_horizontal_overflow_and_screenshots(dash, view, width, height):
     page.screenshot(path=str(SHOTS / f"dashboard-{view}-{width}.png"), full_page=True)
 
 
+def test_simple_vs_detailed_screenshots(dash):
+    """Decision 42 proof artefact: committed before/after screenshots of the two modes, over fixtures only."""
+    SHOTS.mkdir(exist_ok=True)
+    for mode in ("simple", "detailed"):
+        for view in ("overview", "inbox"):
+            page = dash(view, mode=mode)
+            page.wait_for_timeout(50)
+            page.screenshot(path=str(SHOTS / f"dashboard-{view}-{mode}-1280.png"), full_page=True)
+
+
 @pytest.mark.parametrize("width", [375, 1280])
 def test_drawer_and_details_fit_the_viewport(dash, width):
     page = dash("inbox", width=width)
@@ -732,14 +849,15 @@ def test_mobile_tables_collapse_to_cards(dash):
 # ------------------------------------------------------------------ offline
 def test_dashboard_works_offline_via_service_worker(make_page, site):
     page, ctx = make_page()  # service workers allowed
-    page.goto(f"{site}dashboard/?source=fixtures#/overview")
+    page.goto(f"{site}dashboard/?source=fixtures&mode=detailed#/overview")
     page.wait_for_selector('#view-root[data-state="ready"]')
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
     page.reload()
     page.wait_for_function("navigator.serviceWorker.controller !== null")
     cached = page.evaluate("caches.keys().then(async ks => (await Promise.all(ks.map(k => caches.open(k).then(c => c.keys())))).flat().map(r => r.url))")
     for needed in ("dashboard/", "dashboard/index.html", "dashboard/dashboard.css", "dashboard/data.js", "dashboard/views.js",
-                   "dashboard/app.js", "assets/tokens.css", "dashboard/fixtures/latest-plan.json", "dashboard/fixtures/runs.json"):
+                   "dashboard/app.js", "dashboard/run-now.js", "assets/github-pat.js", "assets/tokens.css",
+                   "dashboard/fixtures/latest-plan.json", "dashboard/fixtures/runs.json"):
         assert site + needed in cached, needed
     ctx.set_offline(True)
     page.reload()

@@ -117,7 +117,7 @@
       if (!url) return; // render only keys that exist — no placeholders
       var d = socialIcon(key);
       if (!d) return;
-      socialsHtml += '<a class="btn btn-icon btn-sm" href="' + url + '" rel="noopener" aria-label="' + config.name_label_prefix + capitalize(key) + '">' +
+      socialsHtml += '<a class="btn btn-icon btn-sm" href="' + url + '" rel="noopener" aria-label="' + escapeHtml(config.name ? config.name + '’s ' : '') + capitalize(key) + '">' +
         '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">' + d + '</svg></a>';
     });
     var creditHtml = config.name

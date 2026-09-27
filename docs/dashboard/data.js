@@ -32,7 +32,10 @@
   var FILES_MARKER = 'files:'; // sentinel "base" for the files source; never fetched as a URL
   var FIXTURE_NOW = '2026-09-21T07:00:00Z'; // fixtures are frozen in time; the demo must not look stale
   var STALE_MS = 2 * 24 * 3600 * 1000;
-  var KEY = { source: 'spotisort.dashboard.source', repo: 'spotisort.dashboard.repo', theme: 'spotisort.theme' };
+  var KEY = {
+    source: 'spotisort.dashboard.source', repo: 'spotisort.dashboard.repo', theme: 'spotisort.theme',
+    mode: 'spotisort.dashboard.mode', modeCalloutSeen: 'spotisort.dashboard.modeCalloutSeen',
+  };
   var RAW_RE = /^https:\/\/raw\.githubusercontent\.com\/[\w.-]+\/[\w.-]+\/[\w.\/-]+\/$/;
 
   function store(op, key, value) {

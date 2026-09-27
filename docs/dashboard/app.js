@@ -18,6 +18,10 @@
   var filesInput = document.getElementById('files-input');
   var filesStatus = document.getElementById('files-status');
   var glossaryBody = document.getElementById('glossary-body');
+  var modeToggle = document.getElementById('mode-toggle');
+  var modeCallout = document.getElementById('mode-callout');
+  var modeCalloutSwitch = document.getElementById('mode-callout-switch');
+  var modeCalloutDismiss = document.getElementById('mode-callout-dismiss');
 
   var data = null;          // {source, base, files}
   var state = {};           // per-view UI state that survives re-render
@@ -41,6 +45,29 @@
     applyTheme(theme);
   });
 
+  // ------------------------------------------------------------------ Simple/Detailed mode (decision 42)
+  var SIMPLE_HIDDEN_VIEWS = ['signals', 'backtest', 'runs'];
+  var qsMode = D.params().get('mode');
+  var storedMode = D.store('get', D.KEY.mode);
+  var modeChosen = !!(qsMode || storedMode);
+  var mode = (qsMode || storedMode) === 'detailed' ? 'detailed' : 'simple';
+  function dismissModeCallout() {
+    D.store('set', D.KEY.modeCalloutSeen, '1');
+    modeCallout.hidden = true;
+  }
+  function applyMode(m, persist) {
+    mode = m === 'detailed' ? 'detailed' : 'simple';
+    if (persist) { D.store('set', D.KEY.mode, mode); modeChosen = true; dismissModeCallout(); }
+    modeToggle.checked = mode === 'detailed';
+    modeToggle.setAttribute('aria-checked', String(mode === 'detailed'));
+    if (!modeChosen && mode === 'simple' && !D.store('get', D.KEY.modeCalloutSeen)) modeCallout.hidden = false;
+    else modeCallout.hidden = true;
+  }
+  applyMode(mode, false);
+  modeToggle.addEventListener('change', function () { applyMode(modeToggle.checked ? 'detailed' : 'simple', true); render(true); });
+  modeCalloutSwitch.addEventListener('click', function () { applyMode('detailed', true); render(true); });
+  modeCalloutDismiss.addEventListener('click', dismissModeCallout);
+
   // ------------------------------------------------------------------ routing
   function parseRoute() {
     var h = location.hash.replace(/^#\/?/, '');
@@ -53,7 +80,8 @@
   }
 
   function buildTabs(active) {
-    tabsEl.innerHTML = VW.ORDER.map(function (k) {
+    var order = mode === 'simple' ? VW.ORDER.filter(function (k) { return SIMPLE_HIDDEN_VIEWS.indexOf(k) < 0; }) : VW.ORDER;
+    tabsEl.innerHTML = order.map(function (k) {
       return '<li><a href="#/' + k + '"' + (k === active ? ' aria-current="page"' : '') + '>' + esc(V[k].label) + '</a></li>';
     }).join('');
   }
@@ -63,11 +91,12 @@
   function render(focusHeading) {
     var my = ++token;
     var route = parseRoute();
+    if (mode === 'simple' && SIMPLE_HIDDEN_VIEWS.indexOf(route.name) >= 0) { go('#/overview'); return Promise.resolve(); }
     var view = V[route.name];
     buildTabs(route.name);
     document.title = view.label + ' · SpotiSort dashboard';
     if (!data) return Promise.resolve();
-    var ctx = { files: data.files, base: data.base, source: data.source, state: state, query: route.query, arg: route.arg, go: go };
+    var ctx = { files: data.files, base: data.base, source: data.source, state: state, query: route.query, arg: route.arg, go: go, mode: mode };
     var body;
     try { body = view.render(ctx); } catch (e) { body = '<div class="errorbox" role="alert"><h3>This view failed to draw</h3><p>' + esc(e && e.message) + '</p></div>'; }
     root.setAttribute('aria-busy', 'true');
@@ -119,17 +148,24 @@
   function skeletonCard() {
     return '<div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>';
   }
-  var LOADING_SKELETON = '<p class="sr-only" role="status">Loading data…</p><div aria-hidden="true">' +
-    '<span class="skeleton-line short"></span>' +
-    '<div class="grid">' + skeletonCard() + skeletonCard() + skeletonCard() + skeletonCard() + skeletonCard() + skeletonCard() + skeletonCard() + '</div>' +
-    '<span class="skeleton-line"></span><span class="skeleton-line short"></span></div>';
+  // decision 42: Simple mode's real Overview has 4 KPI cards, not 7 -- match the skeleton to whichever
+  // mode is about to render, or the swap from skeleton to real content would itself cause a CLS jump.
+  function loadingSkeleton() {
+    var n = mode === 'simple' ? 4 : 7;
+    var cards = '';
+    for (var i = 0; i < n; i++) cards += skeletonCard();
+    return '<p class="sr-only" role="status">Loading data…</p><div aria-hidden="true">' +
+      '<span class="skeleton-line short"></span>' +
+      '<div class="grid">' + cards + '</div>' +
+      '<span class="skeleton-line"></span><span class="skeleton-line short"></span></div>';
+  }
 
   function load() {
     var source = D.currentSource();
     syncBar(source);
     root.setAttribute('data-state', 'loading');
     root.setAttribute('aria-busy', 'true');
-    root.innerHTML = LOADING_SKELETON;
+    root.innerHTML = loadingSkeleton();
     D.clearLogCache();
     return D.loadAll(source).then(function (d) { data = d; return render(false); });
   }

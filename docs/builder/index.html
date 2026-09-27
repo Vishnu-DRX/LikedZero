@@ -188,9 +188,10 @@
               <p id="action-status" class="status" role="status" aria-live="polite"></p>
               <div class="actions">
                 <button type="button" class="btn btn-primary" id="save-btn">Save configuration</button>
+                <button type="button" class="btn btn-secondary" id="save-github-btn">Save to GitHub</button>
                 <button type="button" class="btn btn-secondary" id="download-btn" data-advanced-only>Download config.yaml</button>
               </div>
-              <p class="hint">Until GitHub write-back ships, <strong>Save configuration</strong> only saves a version locally in this browser. Use Copy (above) or Download to actually get the file into your fork — commit it as <code>config.yaml</code> at the root.</p>
+              <p class="hint"><strong>Save configuration</strong> saves a version locally in this browser only. <strong>Save to GitHub</strong> commits <code>config.yaml</code> straight to your fork's repository root. Either way, Copy or Download also work.</p>
               <div class="wizard-nav"><button type="button" class="btn btn-secondary" data-back>Back</button><span></span></div>
             </section>
           </div>
@@ -214,10 +215,22 @@
       <div class="drawer" role="dialog" aria-labelledby="versions-drawer-title">
         <div class="dialog-head"><h2 id="versions-drawer-title">Versions</h2><button class="btn btn-icon" data-close aria-label="Close">×</button></div>
         <div class="dialog-body">
+          <h3>Saved locally</h3>
           <p class="hint">The last 5 saved versions, kept in this browser only.</p>
           <ul id="versions-list" class="versions-list"></ul>
           <p id="versions-empty" class="empty">No saved versions yet. Use "Save configuration" on the Review step.</p>
+          <h3>On GitHub</h3>
+          <p class="hint" id="versions-github-hint">The last 5 commits to <code>config.yaml</code> on your fork.</p>
+          <ul id="versions-github-list" class="versions-list"></ul>
         </div>
+      </div>
+    </div>
+
+    <!-- Save to GitHub dialog -->
+    <div class="overlay" id="github-save-dialog" hidden>
+      <div class="dialog" role="dialog" aria-labelledby="github-save-title">
+        <div class="dialog-head"><h2 id="github-save-title">Save to GitHub</h2><button class="btn btn-icon" data-close aria-label="Close">×</button></div>
+        <div class="dialog-body" id="github-save-body"></div>
       </div>
     </div>
 
@@ -251,6 +264,7 @@
     <script src="schema.js"></script>
     <script src="../assets/ui.js" defer></script>
     <script src="../assets/shell.js" defer data-active="configure"></script>
+    <script src="../assets/github-pat.js" defer></script>
     <script src="app.js" defer></script>
   </body>
 </html>

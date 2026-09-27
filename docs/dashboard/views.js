@@ -30,6 +30,12 @@
   };
   var DECISION_ORDER = ['will_move', 'too_young', 'blocked', 'target_problem', 'no_match'];
   function decisionBadge(d) { var m = DECISIONS[d] || ['neutral', d]; return badge(m[0], m[1]); }
+  // decision 42 (Simple mode): the same decisions, in plainer sentences, for readers who never open the glossary.
+  var SIMPLE_STATUS = {
+    will_move: ['ok', 'Will move soon'], too_young: ['info', 'Not old enough yet'], no_match: ['neutral', 'Nothing matches it'],
+    target_problem: ['bad', "Can't reach its playlist"], blocked: ['warn', 'Not sure yet']
+  };
+  function simpleStatusBadge(d) { var m = SIMPLE_STATUS[d] || ['neutral', d]; return badge(m[0], m[1]); }
   var RULE_STATUS = { ok: ['ok', 'Active'], dead: ['bad', 'Dead'], shadowed: ['warn', 'Shadowed'], disabled: ['neutral', 'Disabled'] };
   function ruleStatusBadge(s) { var m = RULE_STATUS[s] || ['neutral', s]; return badge(m[0], m[1]); }
   var VERDICTS = { ok: ['ok', 'OK'], dry_run: ['info', 'Dry run'], mismatch: ['bad', 'Mismatch'], error: ['bad', 'Error'] };
@@ -116,8 +122,8 @@
     return out + '</div>';
   }
 
-  function card(label, value, sub, extra) {
-    return '<div class="card"' + (extra || '') + '><p class="metric-label">' + esc(label) + '</p><p class="metric-value">' + value + '</p>' + (sub ? '<p class="metric-sub">' + sub + '</p>' : '') + '</div>';
+  function card(label, value, sub, extra, tip) {
+    return '<div class="card"' + (extra || '') + '><p class="metric-label">' + esc(label) + (tip ? helpBtn(tip) : '') + '</p><p class="metric-value">' + value + '</p>' + (sub ? '<p class="metric-sub">' + sub + '</p>' : '') + '</div>';
   }
 
   function tableWrap(html, cards) { return '<div class="table-wrap' + (cards ? ' cards' : '') + '">' + html + '</div>'; }
@@ -268,17 +274,6 @@
           '<span class="small muted">Dispatches the Sync workflow on GitHub with your own token; nothing runs from this page itself.</span></p>';
       }
 
-      html += '<div class="grid">';
-      if (last) {
-        html += card('Last run', verdictBadge(last.verdict), esc(last.mode === 'apply' ? 'Apply run' : 'Dry run') + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(last.duration_seconds) + ' s', ' data-card="last-run"');
-      } else {
-        html += card('Last run', '<span class="muted">None</span>', 'No run has been recorded.', ' data-card="last-run"');
-      }
-      var sched = ok(ctx.files.runs) && ctx.files.runs.data.schedule || (p && p.schedule);
-      var schedText = 'Not scheduled';
-      if (typeof sched === 'string' && sched) schedText = sched;
-      else if (sched && typeof sched === 'object') schedText = sched.next_run ? D.fmtTime(sched.next_run) : (sched.description || sched.cron || schedText);
-      html += card('Next scheduled run', esc(schedText), sched ? '' : 'Runs only happen when you start them.', ' data-card="next-run"');
       // decision 34: KPI cards show a delta vs. the previous run, where one is meaningful (needs 2+ runs).
       function delta(cur, prev, goodDown) {
         if (prev == null || cur == null) return '';
@@ -288,16 +283,40 @@
         return ' &middot; <span class="' + (good ? 'delta-up' : 'delta-down') + '">' + (d > 0 ? '+' : '') + d + ' since the previous run</span>';
       }
       var prevRun = runs[1];
-      html += card('Liked songs', p ? esc(p.liked_total) : '—', (p ? 'Currently in the inbox' : '') + (prevRun ? delta(last.liked_after, prevRun.liked_after) : ''), ' data-card="liked"');
-      html += card('Pending', p ? esc(p.counts.will_move + p.counts.too_young) : '—', p ? esc(p.counts.will_move) + ' ready to move, ' + esc(p.counts.too_young) + ' too young' : '', ' data-card="pending"');
-      html += card('Moves this week', last ? esc(movesWeek) : '—', 'Songs actually moved by apply runs in the last 7 days' + (prevRun ? delta(last.moved, prevRun.moved) : ''), ' data-card="moves"');
-      html += card('Errors and warnings', last ? esc(last.errors) + ' / ' + esc(last.warnings) : '—', 'Last run. Past 7 days: ' + esc(errWeek) + ' errors, ' + esc(warnWeek) + ' warnings' + (prevRun ? delta(last.errors + last.warnings, prevRun.errors + prevRun.warnings, true) : ''), ' data-card="errors"');
+      var lastRunCard = last
+        ? card('Last run', verdictBadge(last.verdict), esc(last.mode === 'apply' ? 'Apply run' : 'Dry run') + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(last.duration_seconds) + ' s', ' data-card="last-run"')
+        : card('Last run', '<span class="muted">None</span>', 'No run has been recorded.', ' data-card="last-run"');
+      var pendingCard = card('Pending', p ? esc(p.counts.will_move + p.counts.too_young) : '—', p ? esc(p.counts.will_move) + ' ready to move, ' + esc(p.counts.too_young) + ' too young' : '', ' data-card="pending"', 'Songs still in Liked Songs that a rule has matched: either ready to move on the next run, or matched but not old enough yet.');
+      var movesCard = card('Moves this week', last ? esc(movesWeek) : '—', 'Songs actually moved by apply runs in the last 7 days' + (prevRun ? delta(last.moved, prevRun.moved) : ''), ' data-card="moves"', 'A real run (not a dry run) actually moved these songs out of Liked Songs into a playlist.');
       var safety;
       if (lastApply) {
         safety = lastApply.verdict === 'ok' ? badge('ok', 'Reconcile OK') : (lastApply.verdict === 'mismatch' ? badge('bad', 'Mismatch') : verdictBadge(lastApply.verdict));
       } else safety = badge('info', 'No apply run yet');
       var safetySub = lastApply ? 'Last apply run ' + esc(D.fmtDate(lastApply.time)) + (mismatches ? ' &middot; ' + esc(plural(mismatches, 'mismatch', 'mismatches')) + ' in history' : '') : 'Everything so far is a dry run; nothing was removed from Liked Songs.';
-      html += card('Safety verdict', safety, safetySub + ' <a href="#/safety">Open Safety</a>', ' data-card="safety"');
+      var safetyTip = 'After every real run, SpotiSort checks that the number of Liked Songs before minus what it removed equals what is left after. "Reconcile OK" means that checked out; a mismatch means a song may need restoring.';
+      var safetyCard = card('Safety verdict', safety, safetySub + ' <a href="#/safety">Open Safety</a>', ' data-card="safety"', safetyTip);
+
+      if (ctx.mode === 'simple') {
+        html += '<div class="grid">' + lastRunCard + pendingCard + movesCard + safetyCard + '</div>';
+        var simpleOk = last && last.verdict !== 'error' && last.verdict !== 'mismatch' && !mismatches;
+        html += simpleOk
+          ? banner('ok', '✓', '<p><strong>Everything looks fine.</strong> The last run completed cleanly and nothing needs your attention. Switch to Detailed for rule-by-rule and signal-by-signal history.</p>', 'data-testid="simple-health-banner"')
+          : banner('warn', '▲', '<p><strong>This needs attention.</strong> ' + (last ? 'The last run reported a problem — open ' : 'No run has completed yet — check ') + '<a href="#/safety">Safety</a> for details. Switch to Detailed for the full history and signal breakdown.</p>', 'data-testid="simple-health-banner"');
+        return html;
+      }
+
+      html += '<div class="grid">';
+      html += lastRunCard;
+      var sched = ok(ctx.files.runs) && ctx.files.runs.data.schedule || (p && p.schedule);
+      var schedText = 'Not scheduled';
+      if (typeof sched === 'string' && sched) schedText = sched;
+      else if (sched && typeof sched === 'object') schedText = sched.next_run ? D.fmtTime(sched.next_run) : (sched.description || sched.cron || schedText);
+      html += card('Next scheduled run', esc(schedText), sched ? '' : 'Runs only happen when you start them.', ' data-card="next-run"');
+      html += card('Liked songs', p ? esc(p.liked_total) : '—', (p ? 'Currently in the inbox' : '') + (prevRun ? delta(last.liked_after, prevRun.liked_after) : ''), ' data-card="liked"');
+      html += pendingCard;
+      html += movesCard;
+      html += card('Errors and warnings', last ? esc(last.errors) + ' / ' + esc(last.warnings) : '—', 'Last run. Past 7 days: ' + esc(errWeek) + ' errors, ' + esc(warnWeek) + ' warnings' + (prevRun ? delta(last.errors + last.warnings, prevRun.errors + prevRun.warnings, true) : ''), ' data-card="errors"');
+      html += safetyCard;
       html += '</div>';
 
       if (p) {
@@ -329,6 +348,11 @@
       if (q.has('decision')) st.decision = q.get('decision');
       if (q.has('rule')) st.rule = q.get('rule');
       if (q.has('q')) st.q = q.get('q');
+      if (ctx.mode === 'simple') {
+        return '<div class="toolbar" role="search">' +
+          '<div class="field grow"><label for="inbox-q">Search title or artist</label><input id="inbox-q" type="search" value="' + esc(st.q) + '" autocomplete="off" /></div></div>' +
+          '<div id="inbox-results"></div>';
+      }
       var rules = p.rules.map(function (r) { return r.name; });
       var opts = '<option value="">All decisions</option>' + DECISION_ORDER.map(function (d) {
         return '<option value="' + d + '"' + (st.decision === d ? ' selected' : '') + '>' + esc(DECISIONS[d][1]) + ' (' + p.counts[d] + ')</option>';
@@ -345,6 +369,44 @@
       var p = plan(ctx);
       if (!p) return;
       var st = ctx.state.inbox;
+      if (ctx.mode === 'simple') {
+        function paintSimple() {
+          var term = st.q.trim().toLowerCase();
+          var hiddenTitles = !!p.titles_hidden;
+          var rows = [];
+          p.songs.forEach(function (s, i) {
+            if (term) {
+              var hay = [s.title, (s.artists || []).join(' ')].join(' ').toLowerCase();
+              if (hay.indexOf(term) < 0) return;
+            }
+            rows.push({ s: s, i: i });
+          });
+          var shown = rows.slice(0, st.shown);
+          var h = '<p class="result-count" role="status" data-testid="result-count">Showing ' + shown.length + ' of ' + rows.length + ' songs' + (rows.length !== p.songs.length ? ' (filtered)' : '') + '</p>';
+          if (!rows.length) {
+            h += '<div class="empty"><h3>No songs match</h3><p>Try clearing the search.</p></div>';
+          } else {
+            h += '<div class="table-wrap cards"><table class="stack" data-testid="inbox-table-simple"><thead><tr>' +
+              '<th scope="col">Song</th><th scope="col">Status</th><th scope="col">Why</th></tr></thead><tbody>';
+            shown.forEach(function (r) {
+              var s = r.s;
+              h += '<tr data-decision="' + esc(s.decision) + '"><td class="cell-main">' + titleOrHidden(s.title, hiddenTitles) +
+                '<div class="small muted">' + (hiddenTitles ? '' : esc((s.artists || []).join(', '))) + '</div></td>' +
+                '<td data-label="Status">' + simpleStatusBadge(s.decision) + '</td>' +
+                '<td data-label="Why"><button type="button" class="btn secondary small" data-explain="' + r.i + '" aria-haspopup="dialog">Why?</button></td></tr>';
+            });
+            h += '</tbody></table></div>';
+            if (rows.length > shown.length) h += '<p><button type="button" class="btn secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
+          }
+          root.querySelector('#inbox-results').innerHTML = h;
+        }
+        paintSimple();
+        root.querySelector('#inbox-q').addEventListener('input', function (e) { st.q = e.target.value; st.shown = 100; paintSimple(); });
+        root.querySelector('#inbox-results').addEventListener('click', function (e) {
+          if (e.target.closest('[data-more]')) { st.shown += 100; paintSimple(); }
+        });
+        return;
+      }
       var COLS = [
         ['title', 'Song'], ['age', 'Age (days)', 'num'], ['decision', 'Decision'], ['rule', 'Rule'],
         ['target', 'Target playlist'], ['eligible', 'Eligible on'], ['language', 'Language']
