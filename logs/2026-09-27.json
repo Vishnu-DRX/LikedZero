@@ -21,8 +21,8 @@
   "POST accounts.spotify.com": 1,
   "GET api.spotify.com": 26
  },
- "runtime_seconds": 7.2,
- "run_id": "20260927T054308Z",
+ "runtime_seconds": 5.0,
+ "run_id": "20260927T063119Z",
  "mode": "dry_run",
  "what_if": false,
  "liked_before": 774,
@@ -43,5 +43,6 @@
   "target_problem": 0,
   "blocked": 0
  },
+ "vanished": [],
  "titles_hidden": true
 }
