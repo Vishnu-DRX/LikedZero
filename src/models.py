@@ -46,7 +46,8 @@ class Playlist:
 
 @dataclass(frozen=True)
 class Enrichment:
-    """Genre/language metadata for a track (Spotify provides neither)."""
+    """Computed signals for a track that Spotify itself provides neither of: genre/language, and (design/
+    proposals/artist_in_playlist.md) which of the user's own playlists is this track's artist's "home"."""
 
     genres: tuple[str, ...] = ()
     language: str | None = None
@@ -55,6 +56,9 @@ class Enrichment:
     language_confidence: float | None = None
     genre_source: str | None = None  # musicbrainz
     genre_confidence: float | None = None
+    artist_home_playlist: str | None = None  # resolved target playlist NAME for artist_in_playlist, if any
+    artist_home_track_count: int | None = None  # N: the artist's tracks already in artist_home_playlist
+    artist_home_total: int | None = None  # M: the artist's total tracks across every candidate playlist
 
 
 @dataclass(frozen=True)
@@ -78,6 +82,9 @@ class Config:
     english_default: bool = False  # enrichment.english_default (weak guess; off unless asked for)
     include_track_names: bool = False  # logging.include_track_names: committed logs carry titles only if true
     inbox_since: date | None = None  # decision 45/P1-2: never evaluate a song liked before this date
+    artist_in_playlist_min_tracks: int = 3  # artist_in_playlist.min_tracks
+    artist_in_playlist_min_dominance: float = 0.9  # artist_in_playlist.min_dominance
+    artist_in_playlist_exclude_playlists: tuple[str, ...] = ()  # artist_in_playlist.exclude_playlists (Vault_drx always added too)
 
 
 @dataclass(frozen=True)

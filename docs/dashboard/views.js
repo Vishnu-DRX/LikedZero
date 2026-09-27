@@ -40,7 +40,7 @@
   function ruleStatusBadge(s) { var m = RULE_STATUS[s] || ['neutral', s]; return badge(m[0], m[1]); }
   var VERDICTS = { ok: ['ok', 'OK'], dry_run: ['info', 'Dry run'], mismatch: ['bad', 'Mismatch'], error: ['bad', 'Error'] };
   function verdictBadge(v) { var m = VERDICTS[v] || ['neutral', v]; return badge(m[0], m[1]); }
-  var TARGET = { resolved: ['ok', 'Found'], missing: ['bad', 'Missing'], not_writable: ['bad', 'Not writable'], ambiguous: ['warn', 'Ambiguous'] };
+  var TARGET = { resolved: ['ok', 'Found'], missing: ['bad', 'Missing'], not_writable: ['bad', 'Not writable'], ambiguous: ['warn', 'Ambiguous'], dynamic: ['info', 'Resolved per song'] };
   function targetBadge(s) { var m = TARGET[s] || ['neutral', s || 'unknown']; return badge(m[0], m[1]); }
   var TIERS = { playlist: ['ok', 'Playlist'], script: ['ok', 'Script'], hint: ['warn', 'Hint'], country_default: ['warn', 'Country default'] };
   function tierBadge(s) { if (!s) return ''; var m = TIERS[s] || ['neutral', s]; return badge(m[0], m[1]); }
@@ -168,6 +168,12 @@
     }
     if (lang.value && song.decision !== 'blocked') {
       base += ' The language is ' + esc(lang.value) + ' (' + esc(TIER_PLAIN[lang.source] || lang.source || 'an unknown signal') + (lang.confidence != null ? ', ' + confWord(lang.confidence) : '') + ').';
+    }
+    var ar = song.artist_routing;
+    // design/proposals/artist_in_playlist.md: shown whenever the artist has a resolved home, regardless of
+    // which rule actually decided the song -- same pattern as the language sentence above.
+    if (ar && ar.playlist) {
+      base += ' Routed to “' + esc(ar.playlist) + '” — ' + esc(ar.track_count) + ' of the artist’s ' + esc(ar.artist_total) + ' tracked tracks are already there.';
     }
     var trace = (song.explain && song.explain.trace) || [];
     var shadow = trace.filter(function (e) { return e.result === 'not_reached_but_would_match'; }).map(function (e) { return e.rule; });

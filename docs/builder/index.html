@@ -149,6 +149,48 @@
               <p>Rules run top to bottom and the <strong>first match wins</strong> — order is priority. Put specific rules above broad ones.</p>
               <div class="example-box"><strong>Example:</strong> a rule matching "language is Hindi" placed above a catch-all rule means Hindi songs go to your Hindi playlist even though the catch-all would also match them.</div>
               <p class="reorder-help hint">Reorder: drag a rule by its handle, or focus the handle and use the Up/Down buttons or <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>.</p>
+
+              <div class="card" id="aip-panel">
+                <h3>Route songs to an artist's existing playlist</h3>
+                <p class="hint">If most of an artist's songs already sit in one of your playlists, a new song by that artist can be routed there automatically — no language or genre needed. Turn this on, then add a rule below using the "Artist has a confident home playlist" condition with Target playlist set to <code>auto</code>.</p>
+                <div class="field check-row-field">
+                  <label class="switch">
+                    <input id="g-aip-enabled" type="checkbox" class="switch-input" role="switch" aria-checked="false" />
+                    <span class="switch-ui" aria-hidden="true"></span>
+                    <span class="switch-label">Enable artist-based routing</span>
+                  </label>
+                  <button class="help" data-tip="artist_in_playlist: off by default. When on, adds the settings below to config.yaml so a rule can use the 'auto' target." aria-label="Why does this matter?">?</button>
+                </div>
+                <div class="field">
+                  <label class="label" for="g-aip-min-tracks">Minimum tracks
+                    <button class="help" data-tip="artist_in_playlist.min_tracks: the artist needs at least this many existing tracks in one playlist, or the signal is too weak to act on." aria-label="Why does this matter?">?</button>
+                  </label>
+                  <input id="g-aip-min-tracks" class="input" type="text" inputmode="numeric" autocomplete="off" aria-describedby="g-aip-min-tracks-hint err-g-aip-min-tracks" />
+                  <p class="hint" id="g-aip-min-tracks-hint">Default 3.</p>
+                  <p class="err" id="err-g-aip-min-tracks"></p>
+                </div>
+                <div class="field">
+                  <label class="label" for="g-aip-min-dominance">Minimum dominance
+                    <button class="help" data-tip="artist_in_playlist.min_dominance: that top playlist must hold at least this share (0-1) of the artist's tracked tracks, or it's not treated as a confident home." aria-label="Why does this matter?">?</button>
+                  </label>
+                  <input id="g-aip-min-dominance" class="input" type="text" inputmode="decimal" autocomplete="off" aria-describedby="g-aip-min-dominance-hint err-g-aip-min-dominance" />
+                  <p class="hint" id="g-aip-min-dominance-hint">Default 0.9 (90%).</p>
+                  <p class="err" id="err-g-aip-min-dominance"></p>
+                </div>
+                <div class="field" data-advanced-only>
+                  <label class="label" for="aip-exclude-add">Never route to these playlists
+                    <button class="help" data-tip="artist_in_playlist.exclude_playlists: these playlists are never a candidate target, however many tracks by the artist they hold. Vault_drx is always excluded, on top of anything listed here." aria-label="Why does this matter?">?</button>
+                  </label>
+                  <ul id="aip-exclude-chips" class="chips" aria-label="Excluded playlists"></ul>
+                  <div class="chip-add">
+                    <input id="aip-exclude-add" class="input" type="text" autocomplete="off" aria-describedby="err-g-aip-exclude" />
+                    <button type="button" class="btn btn-secondary" id="aip-exclude-add-btn">Add</button>
+                  </div>
+                  <p class="hint">Vault_drx is always excluded and cannot be removed here.</p>
+                  <p class="err" id="err-g-aip-exclude"></p>
+                </div>
+              </div>
+
               <div id="rule-notice" class="notice" role="status" aria-live="polite"></div>
               <p id="rules-empty" class="empty">No rules yet. Add one to get started.</p>
               <ol id="rules" class="rules"></ol>

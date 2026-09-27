@@ -18,6 +18,7 @@ from .config import ConfigError, load_config
 from .enrichment.cache import DEFAULT_PATH, EnrichmentCache
 from .enrichment.enricher import Enricher
 from .enrichment.musicbrainz import MusicBrainz
+from .enrichment.artist_playlist import ArtistPlaylistMap, build_artist_playlist_map as _build_artist_playlist_map
 from .enrichment.playlist_language import LanguageMap, resolve_language_playlists
 from .models import Config
 from .spotify_client import SpotifyClient, SpotifyError, load_env
@@ -39,6 +40,20 @@ def build_language_map(client: SpotifyClient, config: Config, playlists=None) ->
         lmap.add_playlist(tracks, lang)
         sizes[lang] = sizes.get(lang, 0) + len(tracks)
     return lmap, warnings, sizes
+
+
+def build_artist_playlist_map(client: SpotifyClient, config: Config, playlists=None) -> ArtistPlaylistMap | None:
+    """Read-only. None when no ENABLED rule's match uses `artist_in_playlist` -- callers can then skip the
+    extra full-library playlist read entirely, so a run costs nothing while the feature stays disabled
+    (decision 54). Pass a config with every rule enabled (e.g. a what-if preview) to include disabled drafts."""
+    if not any(r.enabled and "artist_in_playlist" in r.match for r in config.rules):
+        return None
+    playlists = playlists if playlists is not None else list(client.iter_my_playlists())
+    return _build_artist_playlist_map(
+        playlists, client.iter_playlist_items,
+        min_tracks=config.artist_in_playlist_min_tracks, min_dominance=config.artist_in_playlist_min_dominance,
+        exclude=config.artist_in_playlist_exclude_playlists,
+    )
 
 
 def coverage(tracks, enrichments, mb: MusicBrainz | None, enricher: Enricher, lmap: LanguageMap | None = None) -> dict[str, Any]:

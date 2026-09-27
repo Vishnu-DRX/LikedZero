@@ -493,3 +493,108 @@ def test_logging_must_be_mapping():
 
 def test_logging_null_is_same_as_absent():
     assert _cfg(logging=None).include_track_names is False
+
+
+# ---- Master decisions 11/decision 54: artist_in_playlist schema
+
+def _auto_rule(**over):
+    r = {"name": "auto", "match": {"artist_in_playlist": True}, "target_playlist": "auto"}
+    r.update(over)
+    return r
+
+
+def test_artist_in_playlist_defaults():
+    cfg = _cfg()
+    assert cfg.artist_in_playlist_min_tracks == 3
+    assert cfg.artist_in_playlist_min_dominance == 0.9
+    assert cfg.artist_in_playlist_exclude_playlists == ()
+
+
+def test_artist_in_playlist_valid_block_and_rule():
+    cfg = _cfg(
+        artist_in_playlist={"min_tracks": 2, "min_dominance": 0.85, "exclude_playlists": ["Fuel", "Serenity"]},
+        rules=[_auto_rule()],
+    )
+    assert cfg.artist_in_playlist_min_tracks == 2
+    assert cfg.artist_in_playlist_min_dominance == 0.85
+    assert cfg.artist_in_playlist_exclude_playlists == ("Fuel", "Serenity")
+    (r,) = cfg.rules
+    assert r.target_playlist == "auto" and r.match == {"artist_in_playlist": True}
+
+
+def test_artist_in_playlist_exclude_playlists_does_not_auto_include_vault_drx():
+    """The hardcoded exclusion lives at the point of use (enrichment/artist_playlist.py), not baked into the
+    parsed Config -- so a Config built directly (bypassing parse_config) never silently drops it either."""
+    assert _cfg().artist_in_playlist_exclude_playlists == ()
+    assert Config().artist_in_playlist_exclude_playlists == ()
+
+
+@pytest.mark.parametrize("min_tracks", [0, -1, 1.5, "3", True, None])
+def test_artist_in_playlist_min_tracks_must_be_positive_int(min_tracks):
+    with pytest.raises(ConfigError, match="min_tracks"):
+        _cfg(artist_in_playlist={"min_tracks": min_tracks})
+
+
+@pytest.mark.parametrize("min_dominance", [0, -0.1, 1.1, "0.9", True, None])
+def test_artist_in_playlist_min_dominance_must_be_in_range(min_dominance):
+    with pytest.raises(ConfigError, match="min_dominance"):
+        _cfg(artist_in_playlist={"min_dominance": min_dominance})
+
+
+def test_artist_in_playlist_min_dominance_accepts_int_one():
+    assert _cfg(artist_in_playlist={"min_dominance": 1}).artist_in_playlist_min_dominance == 1.0
+
+
+@pytest.mark.parametrize("bad", ["Vault_drx", [""], [1]])
+def test_artist_in_playlist_exclude_playlists_must_be_list_of_strings(bad):
+    with pytest.raises(ConfigError, match="exclude_playlists"):
+        _cfg(artist_in_playlist={"exclude_playlists": bad})
+
+
+def test_artist_in_playlist_null_block_is_same_as_absent():
+    assert _cfg(artist_in_playlist=None).artist_in_playlist_min_tracks == 3
+
+
+def test_artist_in_playlist_rejects_unknown_key():
+    with pytest.raises(ConfigError, match="artist_in_playlist.unknown"):
+        _cfg(artist_in_playlist={"unknown": 1})
+
+
+def test_artist_in_playlist_block_must_be_mapping():
+    with pytest.raises(ConfigError, match="'artist_in_playlist' must be a mapping"):
+        _cfg(artist_in_playlist=[])
+
+
+def test_auto_target_requires_artist_in_playlist_match():
+    with pytest.raises(ConfigError, match="only valid with match"):
+        _cfg(rules=[{"name": "bad", "match": {"explicit": True}, "target_playlist": "auto"}])
+
+
+def test_artist_in_playlist_match_requires_auto_target():
+    with pytest.raises(ConfigError, match="requires target_playlist: auto"):
+        _cfg(rules=[{"name": "bad", "match": {"artist_in_playlist": True}, "target_playlist": "Fuel"}])
+
+
+def test_auto_target_is_case_insensitive():
+    cfg = _cfg(rules=[_auto_rule(target_playlist="AUTO")])
+    assert cfg.rules[0].target_playlist == "auto"
+    cfg2 = _cfg(rules=[_auto_rule(target_playlist=" Auto ")])
+    assert cfg2.rules[0].target_playlist == "auto"
+
+
+def test_artist_in_playlist_match_value_must_be_true():
+    with pytest.raises(ConfigError, match="must be true"):
+        _cfg(rules=[_auto_rule(match={"artist_in_playlist": False})])
+    with pytest.raises(ConfigError, match="unknown match key"):
+        # sanity: a genuinely unknown key still errors the old way, not swallowed by the new branch
+        _cfg(rules=[{"name": "r", "match": {"not_a_real_key": True}, "target_playlist": "P"}])
+
+
+def test_artist_in_playlist_can_combine_with_other_match_keys():
+    cfg = _cfg(rules=[_auto_rule(match={"artist_in_playlist": True, "explicit": False})])
+    assert cfg.rules[0].match == {"artist_in_playlist": True, "explicit": False}
+
+
+def test_two_artist_in_playlist_rules_are_both_valid():
+    cfg = _cfg(rules=[_auto_rule(name="a"), _auto_rule(name="b")])
+    assert len(cfg.rules) == 2 and all(r.target_playlist == "auto" for r in cfg.rules)

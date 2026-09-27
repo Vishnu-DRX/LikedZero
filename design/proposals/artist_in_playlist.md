@@ -1,7 +1,10 @@
 # Proposal: `artist_in_playlist` match key (auto-routing)
 
-Status: **approved in principle (2026-09-27); gated on a margin-based re-measurement (decision 50) before
-build.** Ranked #1 in decision 47's deferred list. Not implemented yet.
+Status: **built (2026-09-27, Master decisions 11/decision 54).** `config.py`/`validate.js`/parity tests,
+`rules_engine`/`planner` resolution, the Configure UI, dashboard explain wording and a live backtest-
+integration test (reproducing the measured precision with the shipped code) are all in. Ships in `config.yaml`
+as a single draft rule, `enabled: false` -- the master/user turns it on after reviewing a dry-run. See
+`design/reports/phase-artist_in_playlist.md` for the proof. Ranked #1 in decision 47's deferred list.
 
 **User confirmation (2026-09-27):** this is genuinely valuable — several playlists are dedicated to one or two
 artists (e.g. Linkin Park, 21 Pilots), which is exactly the overwhelming-margin case this mechanism is suited
@@ -92,14 +95,14 @@ resolve to real, named artists (Anavae, Linkin Park, Queen, Twenty One Pilots, K
 `config.yaml`, which now has explicit `artist_in` rules for exactly these 6, added directly rather than waiting
 on the dynamic mechanism, since they cost nothing and don't need to wait.
 
-**Remaining before/alongside build:**
-1. Interaction check against the live Hindi/Malayalam/new artist rules: for artists any two signals would both
-   claim, do they agree? The dashboard's shadowed-rule detection should surface any rule this makes unreachable
-   — confirm it actually does once built.
-2. Confirm `Vault_drx` exclusion works on the real library: assert no plan ever names it as an `auto` target.
-3. Reproduce the measured precision numbers above with the actual shipped code (not just the standalone
-   measurement script) as a backtest-integration test, before enabling any rule that uses `target_playlist: auto`
-   for real.
+**Done (decision 55):**
+1. Interaction/shadowing check: the dashboard's existing shadowed-rule detection generalizes to
+   `artist_in_playlist` with no code change (it works off the generic explain trace); confirmed with a unit
+   test (`tests/test_artifacts.py::test_auto_rule_shadowing_is_detected`) and a dashboard e2e test.
+2. `Vault_drx` exclusion confirmed live: `tests/test_artist_in_playlist_live.py::test_vault_drx_is_never_an_auto_target_on_the_real_library`.
+3. Backtest-integration proof: `tests/test_artist_in_playlist_live.py::test_shipped_artist_playlist_map_reproduces_measured_precision`
+   runs the actual shipped `ArtistPlaylistMap` (not the standalone measurement script) against the real
+   library and reproduces the measured 94.1%/95.8%/98.4% precision (min_tracks 2/3/5) within tolerance.
 
 ## Why this over the other two ranked items (Q6, Q3)
 

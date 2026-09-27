@@ -59,7 +59,11 @@
     release_year_after: { label: 'Released after year', kind: 'year', hint: 'A year from 1 to 9999.' },
     explicit: { label: 'Explicit flag', kind: 'bool', hint: 'true = explicit songs only, false = clean songs only. Remove the condition to ignore it.' },
     track_name_contains: { label: 'Track name contains', kind: 'text', hint: 'Case-insensitive substring.' },
-    album_name_contains: { label: 'Album name contains', kind: 'text', hint: 'Case-insensitive substring.' }
+    album_name_contains: { label: 'Album name contains', kind: 'text', hint: 'Case-insensitive substring.' },
+    artist_in_playlist: {
+      label: 'Artist has a confident home playlist (auto-routed)', kind: 'flag',
+      hint: 'No value to enter here — uses the min_tracks/min_dominance settings above the rule list. Set Target playlist to "auto".'
+    }
   };
 
   function englishLabel(cond) {
@@ -88,6 +92,7 @@
   function blankState() {
     return {
       defaultDays: '14', fallback: '', inboxSince: '', musicbrainz: true, englishDefault: false, includeTrackNames: false,
+      aipEnabled: false, aipMinTracks: '3', aipMinDominance: '0.9', aipExclude: [],
       langPlaylists: [], rules: [], revealAll: false
     };
   }
@@ -164,6 +169,11 @@
     $('g-en').checked = state.englishDefault;
     $('g-log').checked = state.includeTrackNames;
     $('g-log').setAttribute('aria-checked', String(state.includeTrackNames));
+    $('g-aip-enabled').checked = state.aipEnabled;
+    $('g-aip-enabled').setAttribute('aria-checked', String(state.aipEnabled));
+    $('g-aip-min-tracks').value = state.aipMinTracks;
+    $('g-aip-min-dominance').value = state.aipMinDominance;
+    renderAipExclude();
   }
 
   function fid(rule, field) { return 'r' + rule.id + '-' + field.replace('.', '-'); }
@@ -174,6 +184,10 @@
   function toInt(text) {
     var t = String(text).trim();
     return /^-?\d+$/.test(t) ? Number(t) : text;
+  }
+  function toNum(text) {
+    var t = String(text).trim();
+    return t !== '' && isFinite(Number(t)) ? Number(t) : text;
   }
   function langOut(v) { var n = Lang.normalize(v); return n === null ? v : n; }
 
@@ -196,6 +210,13 @@
     data.logging = { include_track_names: state.includeTrackNames };
     data.fallback_playlist = state.fallback === '' ? null : state.fallback;
     data.inbox_since = state.inboxSince.trim() === '' ? null : state.inboxSince.trim();
+    if (state.aipEnabled) {
+      var aip = {};
+      if (state.aipMinTracks.trim() !== '') aip.min_tracks = toInt(state.aipMinTracks);
+      if (state.aipMinDominance.trim() !== '') aip.min_dominance = toNum(state.aipMinDominance);
+      if (state.aipExclude.length) aip.exclude_playlists = state.aipExclude.slice();
+      data.artist_in_playlist = aip;
+    }
     data.rules = state.rules.map(function (r) {
       var match = {};
       r.match.forEach(function (c) {
@@ -203,6 +224,7 @@
         if (def.kind === 'list') match[c.key] = c.value.map(c.key === 'language_in' ? langOut : String);
         else if (def.kind === 'year') match[c.key] = toInt(c.value);
         else if (def.kind === 'bool') match[c.key] = c.value === 'true';
+        else if (def.kind === 'flag') match[c.key] = true;
         else match[c.key] = c.value;
       });
       var out = { name: r.name, enabled: r.enabled, match: match, target_playlist: r.target };
@@ -232,7 +254,12 @@
       if (f === 'match') return r.match.length ? null : 'r' + r.id + '-add-cond';
       return fid(r, f);
     }
-    return { default_days_threshold: 'g-days', fallback_playlist: 'g-fallback', inbox_since: 'g-inbox-since', 'enrichment.musicbrainz': 'g-mb', 'enrichment.english_default': 'g-en', 'logging.include_track_names': 'g-log' }[e.field] || null;
+    return {
+      default_days_threshold: 'g-days', fallback_playlist: 'g-fallback', inbox_since: 'g-inbox-since',
+      'enrichment.musicbrainz': 'g-mb', 'enrichment.english_default': 'g-en', 'logging.include_track_names': 'g-log',
+      'artist_in_playlist.min_tracks': 'g-aip-min-tracks', 'artist_in_playlist.min_dominance': 'g-aip-min-dominance',
+      'artist_in_playlist.exclude_playlists': 'aip-exclude-add'
+    }[e.field] || null;
   }
   function slotIdFor(e) {
     if (e.lpRowId) return 'err-lp' + e.lpRowId;
@@ -241,7 +268,11 @@
       if (!r || !e.field) return null;
       return 'err-' + fid(r, e.field);
     }
-    return { default_days_threshold: 'err-g-days', fallback_playlist: 'err-g-fallback', inbox_since: 'err-g-inbox-since' }[e.field] || null;
+    return {
+      default_days_threshold: 'err-g-days', fallback_playlist: 'err-g-fallback', inbox_since: 'err-g-inbox-since',
+      'artist_in_playlist.min_tracks': 'err-g-aip-min-tracks', 'artist_in_playlist.min_dominance': 'err-g-aip-min-dominance',
+      'artist_in_playlist.exclude_playlists': 'err-g-aip-exclude'
+    }[e.field] || null;
   }
 
   var debouncedAutosave = debounce(function () { saveDraft(); }, 400);
@@ -381,6 +412,27 @@
     });
   }
 
+  // Advanced-only exclude_playlists chip list for artist_in_playlist. Vault_drx is always shown, first, with
+  // no remove button (design/proposals/artist_in_playlist.md: permanently excluded, not just by default).
+  function renderAipExclude() {
+    var list = $('aip-exclude-chips');
+    if (!list) return;
+    list.innerHTML = '';
+    list.appendChild(h('li', { class: 'chip', title: 'Always excluded — cannot be removed here.' }, h('span', { text: 'Vault_drx' })));
+    state.aipExclude.forEach(function (name, i) {
+      list.appendChild(h('li', { class: 'chip' },
+        h('span', { text: name }),
+        h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove ' + name, onclick: function () {
+          state.aipExclude.splice(i, 1);
+          renderAipExclude();
+          update();
+          pushHistory();
+          $('aip-exclude-add').focus();
+        }, text: '×' })
+      ));
+    });
+  }
+
   // ---------------------------------------------------------------- rendering: rules
   function chipList(rule, cond) {
     var ul = h('ul', { class: 'chips', 'aria-label': COND[cond.key].label + ' (entries)' });
@@ -431,6 +483,8 @@
       input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } });
       body = h('div', { class: 'chip-entry' }, ul, h('div', { class: 'chip-add' }, input,
         h('button', { type: 'button', class: 'btn btn-secondary', onclick: commit, 'aria-label': 'Add to ' + def.label, text: 'Add' })));
+    } else if (def.kind === 'flag') {
+      body = h('p', { class: 'hint', text: 'On — resolved per song at run time.' });
     } else if (def.kind === 'bool') {
       var sel = h('select', { id: id, class: 'select', 'aria-describedby': hintId + ' ' + errId },
         h('option', { value: 'true', text: 'true (explicit only)' }), h('option', { value: 'false', text: 'false (clean only)' }));
@@ -547,8 +601,9 @@
     var addCond = function () {
       if (!sel.value) { sel.focus(); return; }
       var def = COND[sel.value];
-      var cond = { key: sel.value, value: def.kind === 'list' ? [] : def.kind === 'bool' ? 'true' : '' };
+      var cond = { key: sel.value, value: def.kind === 'list' ? [] : def.kind === 'bool' ? 'true' : def.kind === 'flag' ? true : '' };
       rule.match.push(cond);
+      if (sel.value === 'artist_in_playlist' && !rule.target.trim()) rule.target = 'auto';
       rule.pristine = false;
       renderRules();
       update();
@@ -563,7 +618,10 @@
 
     var body = h('div', { class: 'rule-body' },
       textField(rule, 'name', 'Rule name', 'name', 'Unique, case-insensitive.'),
-      textField(rule, 'target_playlist', 'Target playlist', 'target', 'Name of an existing playlist you own.'),
+      textField(rule, 'target_playlist', 'Target playlist', 'target',
+        rule.match.some(function (c) { return c.key === 'artist_in_playlist'; })
+          ? 'Type "auto" — with the artist-routing condition, the real target is resolved per song.'
+          : 'Name of an existing playlist you own.'),
       h('div', { class: 'field check-row-field' },
         h('label', { class: 'check-row' }, (function () {
           var cb = h('input', { type: 'checkbox', class: 'check', id: fid(rule, 'enabled') });
@@ -687,6 +745,15 @@
     if (raw.enrichment && typeof raw.enrichment === 'object' && typeof raw.enrichment.musicbrainz === 'boolean') next.musicbrainz = raw.enrichment.musicbrainz;
     if (raw.enrichment && typeof raw.enrichment === 'object' && typeof raw.enrichment.english_default === 'boolean') next.englishDefault = raw.enrichment.english_default;
     if (raw.logging && typeof raw.logging === 'object' && typeof raw.logging.include_track_names === 'boolean') next.includeTrackNames = raw.logging.include_track_names;
+    var ai = raw.artist_in_playlist;
+    if (ai && typeof ai === 'object' && !Array.isArray(ai)) {
+      next.aipEnabled = true;
+      next.aipMinTracks = ai.min_tracks === undefined || ai.min_tracks === null ? '3' : String(ai.min_tracks);
+      next.aipMinDominance = ai.min_dominance === undefined || ai.min_dominance === null ? '0.9' : String(ai.min_dominance);
+      next.aipExclude = Array.isArray(ai.exclude_playlists)
+        ? ai.exclude_playlists.map(String).filter(function (n) { return n.toLowerCase().trim() !== 'vault_drx'; })
+        : [];
+    }
     var lp = raw.language_playlists;
     if (lp && typeof lp === 'object' && !Array.isArray(lp)) {
       Object.keys(lp).forEach(function (k) {
@@ -1232,6 +1299,31 @@
       e.target.setAttribute('aria-checked', String(e.target.checked));
       update(); pushHistory();
     });
+    $('g-aip-enabled').addEventListener('change', function (e) {
+      state.aipEnabled = e.target.checked;
+      e.target.setAttribute('aria-checked', String(e.target.checked));
+      update(); pushHistory();
+    });
+    $('g-aip-min-tracks').addEventListener('input', function (e) { state.aipMinTracks = e.target.value; update(); });
+    $('g-aip-min-tracks').addEventListener('change', pushHistory);
+    $('g-aip-min-dominance').addEventListener('input', function (e) { state.aipMinDominance = e.target.value; update(); });
+    $('g-aip-min-dominance').addEventListener('change', pushHistory);
+    (function () {
+      var input = $('aip-exclude-add');
+      var commit = function () {
+        var text = input.value.trim();
+        if (!text || text.toLowerCase() === 'vault_drx') { input.value = ''; return; }
+        var dup = state.aipExclude.some(function (x) { return x.toLowerCase() === text.toLowerCase(); });
+        if (!dup) state.aipExclude.push(text);
+        input.value = '';
+        renderAipExclude();
+        update();
+        pushHistory();
+        input.focus();
+      };
+      input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } });
+      $('aip-exclude-add-btn').addEventListener('click', commit);
+    })();
     $('lp-add').addEventListener('click', function () {
       var row = newLp();
       state.langPlaylists.push(row);

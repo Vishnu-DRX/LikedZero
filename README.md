@@ -44,12 +44,17 @@ and can be installed as an app; nothing leaves your browser. It can also commit 
 fork via **Save to GitHub** (a fine-grained token you create and control, kept in the browser tab only), or you
 can download/copy it and commit it yourself. Supported match keys:
 
-`artist_in`, `genre_contains`, `language_in`, `release_year_before`, `release_year_after`, `explicit`, `track_name_contains`, `album_name_contains`
+`artist_in`, `genre_contains`, `language_in`, `release_year_before`, `release_year_after`, `explicit`, `track_name_contains`, `album_name_contains`, `artist_in_playlist`
 
 - Conditions within a rule are ANDed.
 - The first matching rule wins; a too-young match blocks rather than falling through to a broader later rule.
 - Rules can be disabled.
 - Each rule may set its own `days_threshold` and `target_position` (`top` or `bottom` of the target playlist).
+- `artist_in_playlist: true` routes a song to whichever of your own playlists already holds most of that
+  artist's tracks — no genre or language needed. Pair it with `target_playlist: auto` (the only valid target
+  for this key); tune `artist_in_playlist.min_tracks`/`min_dominance` (defaults 3 / 0.9) and
+  `exclude_playlists` (`Vault_drx` is always excluded, whether or not it's listed) at the top level of
+  `config.yaml`. See `design/proposals/artist_in_playlist.md`.
 - `inbox_since` (a date) is optional for manual runs, but songs liked before it are never evaluated regardless
   of how a run is started — see "Going unattended" below.
 

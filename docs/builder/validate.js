@@ -3,15 +3,18 @@
 (function (root) {
   'use strict';
 
-  var TOP_LEVEL_KEYS = ['default_days_threshold', 'fallback_playlist', 'rules', 'language_playlists', 'enrichment', 'logging', 'inbox_since'];
+  var TOP_LEVEL_KEYS = ['default_days_threshold', 'fallback_playlist', 'rules', 'language_playlists', 'enrichment', 'logging', 'inbox_since', 'artist_in_playlist'];
   var ENRICHMENT_KEYS = ['musicbrainz', 'english_default'];
   var LOGGING_KEYS = ['include_track_names'];
+  var ARTIST_IN_PLAYLIST_KEYS = ['min_tracks', 'min_dominance', 'exclude_playlists'];
   var RULE_KEYS = ['name', 'enabled', 'match', 'target_playlist', 'days_threshold', 'create_missing_playlists', 'target_position'];
+  var AUTO_TARGET = 'auto'; // design/proposals/artist_in_playlist.md: sentinel, valid only with match.artist_in_playlist
   var LIST_MATCH_KEYS = ['artist_in', 'genre_contains', 'language_in'];
   var INT_MATCH_KEYS = ['release_year_before', 'release_year_after'];
   var STR_MATCH_KEYS = ['track_name_contains', 'album_name_contains'];
   var BOOL_MATCH_KEYS = ['explicit'];
-  var MATCH_KEYS = LIST_MATCH_KEYS.concat(INT_MATCH_KEYS, STR_MATCH_KEYS, BOOL_MATCH_KEYS);
+  var TRUE_ONLY_MATCH_KEYS = ['artist_in_playlist']; // no defined meaning for false; only true is a valid gate
+  var MATCH_KEYS = LIST_MATCH_KEYS.concat(INT_MATCH_KEYS, STR_MATCH_KEYS, BOOL_MATCH_KEYS, TRUE_ONLY_MATCH_KEYS);
 
   function has(list, key) { return list.indexOf(key) !== -1; }
   function isInt(v) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v; }
@@ -71,6 +74,8 @@
         if (!isInt(value) || value < 1 || value > 9999) add(field, "'" + key + "' must be a year (integer 1-9999)");
       } else if (has(STR_MATCH_KEYS, key)) {
         if (!nonemptyStr(value)) add(field, "'" + key + "' must be a non-empty string");
+      } else if (has(TRUE_ONLY_MATCH_KEYS, key)) {
+        if (value !== true) add(field, "'" + key + "' must be true (there is no defined meaning for false)");
       } else if (typeof value !== 'boolean') {
         add(field, "'" + key + "' must be true or false");
       }
@@ -91,6 +96,7 @@
       if (!has(RULE_KEYS, key)) add(null, "unknown key '" + key + "'");
     });
     if (!nonemptyStr(raw.target_playlist)) add('target_playlist', "'target_playlist' is required and must be a non-empty string");
+    var isAutoTarget = nonemptyStr(raw.target_playlist) && raw.target_playlist.trim().toLowerCase() === AUTO_TARGET;
     var enabled = 'enabled' in raw ? raw.enabled : true;
     if (typeof enabled !== 'boolean') add('enabled', "'enabled' must be true or false");
     var create = 'create_missing_playlists' in raw ? raw.create_missing_playlists : false;
@@ -102,6 +108,12 @@
       add('days_threshold', "'days_threshold' must be an integer >= 0");
     }
     validateMatch(raw.match, where, index, errors);
+    // Mirrors config.py: `uses_auto_artist` reflects the CLEANED value (only true when the key is literally
+    // `true`), so an invalid `artist_in_playlist` value reports its own error plus this pairing error too, same
+    // as the Python side.
+    var usesAutoArtist = isMap(raw.match) && raw.match.artist_in_playlist === true;
+    if (isAutoTarget && !usesAutoArtist) add('target_playlist', "target_playlist '" + AUTO_TARGET + "' is only valid with match: {artist_in_playlist: true}");
+    if (usesAutoArtist && !isAutoTarget) add('target_playlist', "match 'artist_in_playlist' requires target_playlist: " + AUTO_TARGET);
     return nonemptyStr(name) ? name : null;
   }
 
@@ -180,6 +192,28 @@
       }
     }
 
+    var ai = 'artist_in_playlist' in data ? data.artist_in_playlist : {};
+    if (ai === null) ai = {};
+    if (!isMap(ai)) {
+      top('artist_in_playlist', "'artist_in_playlist' must be a mapping");
+    } else {
+      Object.keys(ai).forEach(function (key) {
+        if (!has(ARTIST_IN_PLAYLIST_KEYS, key)) top('artist_in_playlist', "unknown key 'artist_in_playlist." + key + "'");
+      });
+      if ('min_tracks' in ai && (!isInt(ai.min_tracks) || ai.min_tracks < 1)) {
+        top('artist_in_playlist.min_tracks', "'artist_in_playlist.min_tracks' must be an integer >= 1");
+      }
+      if ('min_dominance' in ai) {
+        var md = ai.min_dominance;
+        if (typeof md !== 'number' || !isFinite(md) || md <= 0 || md > 1) {
+          top('artist_in_playlist.min_dominance', "'artist_in_playlist.min_dominance' must be a number > 0 and <= 1");
+        }
+      }
+      if ('exclude_playlists' in ai && (!Array.isArray(ai.exclude_playlists) || !ai.exclude_playlists.every(nonemptyStr))) {
+        top('artist_in_playlist.exclude_playlists', "'artist_in_playlist.exclude_playlists' must be a list of non-empty strings");
+      }
+    }
+
     var rawRules = 'rules' in data ? data.rules : [];
     if (!Array.isArray(rawRules)) {
       top('rules', "'rules' must be a list");
@@ -206,6 +240,9 @@
     INT_MATCH_KEYS: INT_MATCH_KEYS,
     STR_MATCH_KEYS: STR_MATCH_KEYS,
     BOOL_MATCH_KEYS: BOOL_MATCH_KEYS,
-    LOGGING_KEYS: LOGGING_KEYS
+    TRUE_ONLY_MATCH_KEYS: TRUE_ONLY_MATCH_KEYS,
+    LOGGING_KEYS: LOGGING_KEYS,
+    ARTIST_IN_PLAYLIST_KEYS: ARTIST_IN_PLAYLIST_KEYS,
+    AUTO_TARGET: AUTO_TARGET
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -90,6 +90,12 @@ def check_key(track: Track, enrichment: Enrichment | None, key: str, wanted: Any
     if key == "album_name_contains":
         ok = bool(wanted.strip()) and _fold(wanted) in _fold(track.album_name)
         return ok, track.album_name, wanted if ok else None
+    if key == "artist_in_playlist":
+        home = enrichment.artist_home_playlist if enrichment else None
+        if home is None:
+            return False, None, None
+        actual = {"playlist": home, "artist_tracks": enrichment.artist_home_track_count, "artist_total": enrichment.artist_home_total}
+        return True, actual, home
     return False, None, None  # unknown key: never silently ignore a condition
 
 

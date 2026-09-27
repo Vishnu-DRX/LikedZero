@@ -947,3 +947,43 @@ def test_dashboard_works_offline_via_service_worker(make_page, site):
     goto_view(page, "inbox")
     expect(page.locator("#inbox-results tbody tr")).to_have_count(len(PLAN["songs"]))
     ctx.set_offline(False)
+
+
+# ------------------------------------------------------------------ artist_in_playlist (Master decisions 11)
+def test_explain_shows_artist_routing_sentence(dash):
+    def patch(data):
+        data = json.loads(json.dumps(data))
+        s = next(s for s in data["songs"] if s["title"] == "Nameless Loop 04")
+        s["artist_routing"] = {"playlist": "Fake Chill", "track_count": 9, "artist_total": 10}
+        return data
+
+    page = dash("inbox", setup=lambda p: patch_json(p, "latest-plan.json", patch))
+    _, dlg = open_explain(page, "Nameless Loop 04")
+    narrative = dlg.locator('[data-testid="explain-narrative"]').inner_text()
+    assert "Routed to" in narrative and "Fake Chill" in narrative
+    assert "9" in narrative and "10" in narrative and "tracked tracks are already there" in narrative
+
+
+def test_explain_no_artist_routing_sentence_when_absent(dash):
+    page = dash("inbox")
+    _, dlg = open_explain(page, "Nameless Loop 04")
+    narrative = dlg.locator('[data-testid="explain-narrative"]').inner_text()
+    assert "Routed to" not in narrative
+
+
+def test_rules_view_shows_dynamic_badge_for_auto_rule(dash):
+    def patch(data):
+        data = json.loads(json.dumps(data))
+        auto_rule = dict(data["rules"][0])
+        auto_rule.update({
+            "name": "Route to artist home", "target_playlist": "auto", "target_status": "dynamic",
+            "conditions": {"artist_in_playlist": True}, "status": "ok", "would_match": 0, "wins": 0,
+        })
+        data["rules"].append(auto_rule)
+        return data
+
+    page = dash("rules", setup=lambda p: patch_json(p, "latest-plan.json", patch))
+    row = page.locator('tr[data-rule="Route to artist home"]')
+    expect(row).to_be_visible()
+    assert "auto" in row.inner_text()
+    assert "Resolved per song" in row.inner_text()

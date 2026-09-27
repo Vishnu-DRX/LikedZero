@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .config import AUTO_TARGET
 from .models import Config, Enrichment, Playlist, Rule, Track
 from .planner import decide, resolve_target
 from .rules_engine import age_days, explain
@@ -130,6 +131,10 @@ def _song(
             "source": raw.genre_source if raw else None,
             "confidence": raw.genre_confidence if raw else None,
         },
+        "artist_routing": (
+            {"playlist": raw.artist_home_playlist, "track_count": raw.artist_home_track_count, "artist_total": raw.artist_home_total}
+            if raw and raw.artist_home_playlist else None
+        ),
         "explain": tr,
     }
 
@@ -171,11 +176,17 @@ def build_latest_plan(
                 elif e["result"] == "not_reached_but_would_match":
                     would += 1
         info = _rule_summary(rule, config.default_days_threshold)
-        pl, problem, _ = resolve_target(rule.target_playlist, playlists)
+        if rule.target_playlist == AUTO_TARGET:
+            # design/proposals/artist_in_playlist.md: the target is resolved per-song, not fixed -- there is
+            # nothing here for resolve_target() to look up, and "missing" would misreport a working rule.
+            target_status = "dynamic"
+        else:
+            pl, problem, _ = resolve_target(rule.target_playlist, playlists)
+            target_status = "resolved" if pl else problem
         info.update({
             "would_match": would,
             "wins": wins,
-            "target_status": "resolved" if pl else problem,
+            "target_status": target_status,
             "status": "disabled" if not rule.enabled else "dead" if would == 0 else "shadowed" if wins == 0 else "ok",
         })
         rules_out.append(info)
@@ -187,6 +198,11 @@ def build_latest_plan(
     playlists_out = []
     seen: set[str] = set()
     for rule in config.rules:
+        # An "auto" rule has no single fixed target to report on here -- each song it moves already appears
+        # under its own REAL resolved playlist name below, via whichever rule (if any) also names that
+        # playlist literally; artist_in_playlist-only targets simply don't get a dedicated Playlists row.
+        if rule.target_playlist == AUTO_TARGET:
+            continue
         key = rule.target_playlist.casefold()
         if key in seen:
             continue

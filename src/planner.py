@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Iterable, Mapping, Sequence
 
+from .config import AUTO_TARGET
 from .models import Config, Enrichment, Match, Playlist, Rule, Track
 from .rules_engine import age_days, first_match
 
@@ -45,8 +46,16 @@ def decide(
         if only_rule and m.rule.name.casefold() != only_rule.casefold():
             return Decision(track, "no_match", age_days=age)  # excluded by --rule; precedence was still respected
         kind = "move" if m.aged else "too_young"
+        # design/proposals/artist_in_playlist.md: `target_playlist: auto` is a sentinel resolved per-song from
+        # the enrichment's precomputed artist-home signal -- config.py guarantees this rule's match required
+        # `artist_in_playlist: true`, which only ever passes when that signal is set, so it is never None here.
+        target_name = m.rule.target_playlist
+        if target_name == AUTO_TARGET:
+            target_name = enrichment.artist_home_playlist if enrichment else None
+            if target_name is None:  # defensive: should be unreachable given config.py's match/target pairing
+                return Decision(track, "no_match", age_days=age)
         return Decision(
-            track, kind, m.rule.name, m.rule.target_playlist, m.rule.create_missing_playlists,
+            track, kind, m.rule.name, target_name, m.rule.create_missing_playlists,
             dict(m.matched), m.age_days, m.threshold,
         )
     if config.fallback_playlist and not only_rule:

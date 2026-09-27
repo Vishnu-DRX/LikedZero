@@ -626,3 +626,71 @@ def test_update_runs_index_stores_schedule():
         # a later call without a schedule argument does not silently keep the old one hostage on the caller's behalf
         data2 = uri_(f, {"run_id": "b", "time": iso(NOW)}, NOW)
         assert data2["schedule"] is None
+
+
+# ------------------------------------------------------------------ artist_in_playlist (Master decisions 11)
+
+def test_song_artist_routing_present_when_enrichment_has_a_home():
+    cfg = Config(default_days_threshold=14, rules=(R("route", {"artist_in_playlist": True}, "auto"),))
+    enr = Enrichment(artist_home_playlist="Chill", artist_home_track_count=9, artist_home_total=10)
+    p = plan([trk(1, "Dominant")], {"t1": enr}, cfg=cfg)
+    s = by_id(p, 1)
+    assert s["artist_routing"] == {"playlist": "Chill", "track_count": 9, "artist_total": 10}
+    assert s["decision"] == "will_move" and s["target_playlist"] == "Chill"
+
+
+def test_song_artist_routing_none_without_a_home():
+    s = by_id(plan([trk(1)]), 1)
+    assert s["artist_routing"] is None
+
+
+def test_song_artist_routing_shown_even_when_a_different_rule_decides():
+    """Mirrors the language field: shown whenever present, regardless of which rule actually matched."""
+    cfg = Config(default_days_threshold=14, rules=(
+        R("chill", {"artist_in": ["Bonobo"]}, "Chill"),
+        R("route", {"artist_in_playlist": True}, "auto"),
+    ))
+    enr = Enrichment(artist_home_playlist="Chill", artist_home_track_count=9, artist_home_total=10)
+    s = by_id(plan([trk(1, "Bonobo")], {"t1": enr}, cfg=cfg), 1)
+    assert s["decision"] == "will_move" and s["target_playlist"] == "Chill" and s["rule"] == "chill"
+    assert s["artist_routing"] == {"playlist": "Chill", "track_count": 9, "artist_total": 10}
+
+
+def test_rule_summary_target_status_dynamic_for_auto_rule():
+    cfg = Config(default_days_threshold=14, rules=(R("route", {"artist_in_playlist": True}, "auto"),))
+    r = rule_of(plan([], cfg=cfg), "route")
+    assert r["target_playlist"] == "auto" and r["target_status"] == "dynamic"
+
+
+def test_auto_rule_never_appears_in_playlists_out():
+    cfg = Config(default_days_threshold=14, rules=(
+        R("route", {"artist_in_playlist": True}, "auto"),
+        R("chill", {"artist_in": ["Bonobo"]}, "Chill"),
+    ))
+    p = plan([], cfg=cfg)
+    names = {row["name"] for row in p["playlists"]}
+    assert "auto" not in names
+    assert "Chill" in names
+
+
+def test_auto_rule_shadowing_is_detected():
+    cfg = Config(default_days_threshold=14, rules=(
+        R("route", {"artist_in_playlist": True}, "auto"),
+        R("chill", {"artist_in": ["Bonobo"]}, "Chill"),
+    ))
+    enr = Enrichment(artist_home_playlist="Chill", artist_home_track_count=9, artist_home_total=10)
+    p = plan([trk(1, "Bonobo")], {"t1": enr}, cfg=cfg)
+    assert rule_of(p, "route")["status"] == "ok"
+    assert rule_of(p, "chill")["status"] == "shadowed"
+
+
+def test_redact_plan_leaves_artist_routing_playlist_name_untouched():
+    """Playlist names are not redacted anywhere else in this file (target_playlist survives), so
+    artist_routing's playlist name is consistent with that, not the song-identifying fields."""
+    cfg = Config(default_days_threshold=14, rules=(R("route", {"artist_in_playlist": True}, "auto"),))
+    enr = Enrichment(artist_home_playlist="Chill", artist_home_track_count=9, artist_home_total=10)
+    p = plan([trk(1, "Dominant")], {"t1": enr}, cfg=cfg)
+    red = redact_plan(p)
+    (s,) = red["songs"]
+    assert s["artist_routing"] == {"playlist": "Chill", "track_count": 9, "artist_total": 10}
+    assert s["title"] is None and s["uri"] is None

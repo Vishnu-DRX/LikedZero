@@ -269,7 +269,10 @@ def test_full_build_with_globals_and_all_keys(builder):
     add_cond(r, "explicit").select_option("false")
     add_cond(r, "track_name_contains").fill("remix")
     add_cond(r, "album_name_contains").fill("deluxe")
-    assert r.locator("select[id$='-add-cond']").count() == 0  # all conditions used
+    # artist_in_playlist is deliberately not addable here: it requires target_playlist: auto, incompatible
+    # with this rule's literal "Kitchen Sink" target, so it's the one key left in the dropdown.
+    remaining = r.locator("select[id$='-add-cond'] option:not([value=''])").all_text_contents()
+    assert remaining == ["Artist has a confident home playlist (auto-routed) (artist_in_playlist)"]
 
     text = download_text(builder)
     cfg = validated(text)
@@ -294,6 +297,94 @@ def test_copy_button_copies_yaml(builder):
     clip = builder.evaluate("navigator.clipboard.readText()")
     clip = chr(10).join(clip.splitlines()) + chr(10)
     assert validated(clip).rules[0].match == {"artist_in": ["Tycho"]}
+
+
+# ------------------------------------------------------------------ artist_in_playlist (decision 54)
+def test_artist_in_playlist_basic_toggle_and_defaults(builder_basic):
+    page = builder_basic
+    goto_step(page, 3, "Rules")
+    assert "artist_in_playlist" not in preview_data(page)
+    click_switch(page, "g-aip-enabled")
+    data = preview_data(page)
+    assert data["artist_in_playlist"] == {"min_tracks": 3, "min_dominance": 0.9}
+    assert validated(preview(page)).artist_in_playlist_min_tracks == 3
+    assert validated(preview(page)).artist_in_playlist_min_dominance == 0.9
+    page.locator("#g-aip-min-tracks").fill("5")
+    page.locator("#g-aip-min-dominance").fill("0.75")
+    assert preview_data(page)["artist_in_playlist"] == {"min_tracks": 5, "min_dominance": 0.75}
+    click_switch(page, "g-aip-enabled")
+    assert "artist_in_playlist" not in preview_data(page)
+
+
+def test_artist_in_playlist_rule_autofills_auto_target_and_validates(builder):
+    page = builder
+    goto_step(page, 3, "Rules")
+    click_switch(page, "g-aip-enabled")
+    r = add_rule(page, "Route to artist home", "")
+    add_cond(r, "artist_in_playlist")
+    assert r.get_by_label("Target playlist").input_value() == "auto"
+    assert problem_count(page) == 0, page.locator("#error-summary").text_content()
+    cfg = validated(preview(page))
+    (got,) = cfg.rules
+    assert got.target_playlist == "auto" and got.match == {"artist_in_playlist": True}
+
+
+def test_artist_in_playlist_target_playlist_mismatch_is_flagged(builder):
+    page = builder
+    r = add_rule(page, "Bad", "Some Playlist")
+    add_cond(r, "artist_in_playlist")
+    assert page.locator("#g-aip-enabled").is_checked() is False  # feature toggle is independent of this error
+    assert problem_count(page) >= 1
+    assert "target_playlist 'auto' is only valid with match" in page.locator("#error-summary").text_content() \
+        or "requires target_playlist: auto" in page.locator("#error-summary").text_content()
+
+
+def test_artist_in_playlist_exclude_playlists_vault_drx_not_removable(builder):
+    page = builder
+    goto_step(page, 3, "Rules")
+    click_switch(page, "g-aip-enabled")
+    chips = page.locator("#aip-exclude-chips .chip")
+    expect(chips).to_have_count(1)
+    assert chips.first.text_content().strip() == "Vault_drx"
+    assert chips.first.locator(".chip-x").count() == 0  # not removable
+
+    add_input = page.locator("#aip-exclude-add")
+    add_input.fill("Serenity")
+    add_input.press("Enter")
+    expect(chips).to_have_count(2)
+    assert preview_data(page)["artist_in_playlist"]["exclude_playlists"] == ["Serenity"]
+
+    # typing Vault_drx again is a no-op, not a duplicate
+    add_input.fill("vault_drx")
+    add_input.press("Enter")
+    expect(chips).to_have_count(2)
+
+    chips.nth(1).locator(".chip-x").click()
+    expect(chips).to_have_count(1)
+    assert "exclude_playlists" not in preview_data(page)["artist_in_playlist"]
+
+
+def test_artist_in_playlist_round_trips_through_yaml_import(builder):
+    page = builder
+    yaml_text = (
+        "artist_in_playlist:\n  min_tracks: 4\n  min_dominance: 0.8\n  exclude_playlists: [Vault_drx, Archive]\n"
+        "rules:\n  - name: auto-route\n    target_playlist: auto\n    match: {artist_in_playlist: true}\n"
+    )
+    goto_review(page)
+    page.locator("#import summary").click()
+    page.locator("#import-text").fill(yaml_text)
+    page.get_by_role("button", name="Load into form").click()
+    goto_step(page, 3, "Rules")
+    assert page.locator("#g-aip-enabled").is_checked() is True
+    assert page.locator("#g-aip-min-tracks").input_value() == "4"
+    assert page.locator("#g-aip-min-dominance").input_value() == "0.8"
+    chip_texts = page.locator("#aip-exclude-chips .chip span").all_text_contents()
+    assert chip_texts == ["Vault_drx", "Archive"]
+    cfg = validated(preview(page))
+    assert cfg.artist_in_playlist_min_tracks == 4 and cfg.artist_in_playlist_min_dominance == 0.8
+    # Vault_drx is deliberately dropped from the re-serialized list: the UI shows it separately (always
+    # excluded, non-removable) rather than duplicating it into the user-editable exclude_playlists value.
+    assert set(cfg.artist_in_playlist_exclude_playlists) == {"Archive"}
 
 
 # ------------------------------------------------------------------ language aliases
@@ -422,6 +513,16 @@ PARITY = [
      "fallback_playlist": "F", "default_days_threshold": 0},
     {"inbox_since": "2026-09-20"}, {"inbox_since": None}, {"inbox_since": "not-a-date"},
     {"inbox_since": "2026-13-40"}, {"inbox_since": "2026-02-30"}, {"inbox_since": 5}, {"inbox_since": True},
+    {"artist_in_playlist": {"min_tracks": 2, "min_dominance": 0.85, "exclude_playlists": ["Vault_drx", "Other"]},
+     "rules": [{"name": "auto", "target_playlist": "auto", "match": {"artist_in_playlist": True}}]},
+    {"artist_in_playlist": []}, {"artist_in_playlist": {"min_tracks": 0}}, {"artist_in_playlist": {"min_tracks": 1.5}},
+    {"artist_in_playlist": {"min_dominance": 0}}, {"artist_in_playlist": {"min_dominance": 1.1}},
+    {"artist_in_playlist": {"min_dominance": "0.9"}}, {"artist_in_playlist": {"exclude_playlists": "Vault_drx"}},
+    {"artist_in_playlist": {"exclude_playlists": [""]}}, {"artist_in_playlist": {"unknown": 1}},
+    {"rules": [{"name": "bad", "target_playlist": "auto", "match": {"explicit": True}}]},
+    {"rules": [{"name": "bad2", "target_playlist": "Fuel", "match": {"artist_in_playlist": True}}]},
+    {"rules": [{"name": "bad3", "target_playlist": "AUTO", "match": {"artist_in_playlist": True}}]},
+    {"rules": [{"name": "bad4", "target_playlist": "auto", "match": {"artist_in_playlist": False}}]},
 ]
 
 

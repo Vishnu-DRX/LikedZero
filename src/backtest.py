@@ -24,6 +24,7 @@ from typing import Any, Mapping, Sequence
 
 from . import artifacts
 from .config import ConfigError, load_config
+from .enrichment.artist_playlist import ArtistPlaylistMap, excluded_playlist_names
 from .enrichment.cache import DEFAULT_PATH, EnrichmentCache
 from .enrichment.enricher import Enricher
 from .enrichment.musicbrainz import MusicBrainz
@@ -279,6 +280,23 @@ def run(args: argparse.Namespace) -> int:
             print(f"  enriched {i}/{len(tracks)} (musicbrainz requests {mb.requests_made if mb else 0})", file=sys.stderr)
     if cache.dirty:
         cache.save()
+
+    # design/proposals/artist_in_playlist.md: same source data as `truth` above (no extra network read), leave-
+    # one-out by construction. Only built when some rule's match actually uses it (mirrors sync.py's own gate).
+    if any(r.enabled and "artist_in_playlist" in r.match for r in config.rules):
+        excluded = excluded_playlist_names(config.artist_in_playlist_exclude_playlists)
+        amap = ArtistPlaylistMap(config.artist_in_playlist_min_tracks, config.artist_in_playlist_min_dominance)
+        for pid, name in names.items():
+            if name.casefold().strip() in excluded:
+                continue
+            amap.add_playlist(pid, name, [t for t in tracks if pid in truth[t.id]])
+        for t in tracks:
+            home = amap.resolve(t)
+            if home is not None:
+                raw[t.id] = replace(
+                    raw[t.id], artist_home_playlist=home.playlist_name,
+                    artist_home_track_count=home.track_count, artist_home_total=home.artist_total,
+                )
 
     # ground-truth language: a track inside exactly one distinct mapped language
     truth_language: dict[str, str] = {}

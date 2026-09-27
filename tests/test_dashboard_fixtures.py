@@ -33,7 +33,7 @@ PLAN_KEYS = {"version", "generated_at", "run_id", "mode", "what_if", "inbox_kind
 RULE_KEYS = {"name", "enabled", "target_playlist", "target_position", "threshold_days", "conditions", "uses_language",
              "weak_signals_possible", "would_match", "wins", "target_status", "status"}
 SONG_KEYS = {"title", "artists", "uri", "added_at", "age_days", "decision", "reason", "rule", "target_playlist", "target_status",
-             "eligible_on", "target_position", "language", "genres", "explain"}
+             "eligible_on", "target_position", "language", "genres", "artist_routing", "explain"}
 RUN_KEYS = {"run_id", "time", "mode", "what_if", "planned_moves", "moved", "too_young", "no_match", "blocked", "target_problems", "errors",
             "warnings", "liked_before", "liked_after", "duration_seconds", "verdict", "rule_counts", "moves_by_playlist", "log"}
 LOG_KEYS = {"date", "run_id", "mode", "dry_run", "what_if", "evaluated", "moved", "skipped_no_match", "skipped_too_young",

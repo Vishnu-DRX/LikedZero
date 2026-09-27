@@ -506,3 +506,52 @@ def test_targets_needed_ignores_ambiguous_and_followed():
     r = rule(BONOBO, "r", "Dup")
     assert targets_needed([track()], {}, cfg(r), NOW, [pl("Dup", "1"), pl("Dup", "2")]) == set()
     assert targets_needed([track()], {}, cfg(r), NOW, [pl("Dup", "1", owned=False)]) == set()
+
+
+# ------------------------------------------------------------------ artist_in_playlist "auto" resolution (Master decisions 11)
+
+def home(playlist=None, count=None, total=None) -> Enrichment:
+    return Enrichment(artist_home_playlist=playlist, artist_home_track_count=count, artist_home_total=total)
+
+
+def test_decide_resolves_auto_target_from_enrichment():
+    r = rule({"artist_in_playlist": True}, "route", "auto")
+    d = decide(track(age=30), home("Fuel", 9, 10), cfg(r), NOW)
+    assert d.kind == "move" and d.target_name == "Fuel" and d.rule_name == "route"
+
+
+def test_decide_auto_rule_too_young_still_resolves_target():
+    r = rule({"artist_in_playlist": True}, "route", "auto")
+    d = decide(track(age=1), home("Fuel", 9, 10), cfg(r), NOW)
+    assert d.kind == "too_young" and d.target_name == "Fuel"
+
+
+def test_decide_auto_target_falls_back_to_no_match_without_enrichment():
+    """Defensive: config.py guarantees this pairing (artist_in_playlist match <-> auto target), so this
+    should be unreachable in practice, but decide() must not crash if it somehow is."""
+    r = rule({"artist_in_playlist": True}, "route", "auto")
+    d = decide(track(age=30), None, cfg(r), NOW)
+    assert d.kind == "no_match"
+
+
+def test_build_plan_moves_to_the_resolved_playlist_not_literal_auto():
+    r = rule({"artist_in_playlist": True}, "route", "auto")
+    t = track(age=30)
+    plan = build_plan([t], {t.id: home("Fuel", 9, 10)}, cfg(r), NOW, [pl("Fuel", "idfuel")])
+    assert len(plan.moves) == 1
+    move = plan.moves[0]
+    assert move["playlist"] == "Fuel" and move["playlist_id"] == "idfuel" and move["rule"] == "route"
+
+
+def test_targets_needed_resolves_auto_target():
+    r = rule({"artist_in_playlist": True}, "route", "auto")
+    t = track(age=30)
+    assert targets_needed([t], {t.id: home("Fuel", 9, 10)}, cfg(r), NOW, [pl("Fuel", "idfuel")]) == {"idfuel"}
+
+
+def test_build_plan_skips_when_resolved_target_playlist_missing():
+    r = rule({"artist_in_playlist": True}, "route", "auto")
+    t = track(age=30)
+    plan = build_plan([t], {t.id: home("Ghost Playlist", 9, 10)}, cfg(r), NOW, [])
+    assert plan.moves == [] and len(plan.skipped_playlist_missing) == 1
+    assert plan.skipped_playlist_missing[0]["target_playlist"] == "Ghost Playlist"

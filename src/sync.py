@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import requests
 
 from .config import ConfigError, load_config
-from .enrich import build_language_map
+from .enrich import build_artist_playlist_map, build_language_map
 from .enrichment.cache import DEFAULT_PATH, EnrichmentCache
 from .enrichment.enricher import Enricher
 from .enrichment.musicbrainz import MusicBrainz
@@ -221,6 +221,24 @@ def run(args: argparse.Namespace) -> int:
             saved_at = mb.requests_made
     if cache.dirty:
         cache.save()
+
+    # design/proposals/artist_in_playlist.md: only reads every owned/collaborative playlist's full contents
+    # (a real cost) when some ENABLED rule's match actually uses artist_in_playlist -- None otherwise, so a
+    # run costs nothing extra while the feature ships disabled (decision 54). A what-if preview checks as if
+    # every rule were enabled, same as build_latest_plan's own what_if handling below, without yet mutating
+    # the real `config` (that happens after gating, once raw_enrichments has split off from enrichments).
+    what_if_config = (
+        replace(config, rules=tuple(replace(r, enabled=True) for r in config.rules)) if args.what_if_enable_all else config
+    )
+    artist_map = build_artist_playlist_map(client, what_if_config, playlists)
+    if artist_map is not None:
+        for t in tracks:
+            home = artist_map.resolve(t)
+            if home is not None:
+                enrichments[t.id] = replace(
+                    enrichments[t.id], artist_home_playlist=home.playlist_name,
+                    artist_home_track_count=home.track_count, artist_home_total=home.artist_total,
+                )
 
     precision = load_precision(logs_dir / "signal-precision.json")
     raw_enrichments = enrichments

@@ -584,3 +584,63 @@ def test_explain_agrees_with_first_match():
     rules = [rule(TYC, "a"), rule(BON, "b"), rule(BON, "c")]
     tr = ex(make_track(), rules)
     assert tr["decided_by"] == first_match(make_track(), None, rules, NOW).rule.name
+
+
+# ---------------------------------------------------------------- artist_in_playlist (Master decisions 11)
+
+def with_home(playlist=None, count=None, total=None) -> Enrichment:
+    return Enrichment(artist_home_playlist=playlist, artist_home_track_count=count, artist_home_total=total)
+
+
+def test_artist_in_playlist_matches_when_enrichment_has_a_home():
+    m = run(make_track(), [rule({"artist_in_playlist": True}, target="auto")], enrichment=with_home("Fuel", 9, 10))
+    assert m is not None
+    assert m.matched["artist_in_playlist"] == "Fuel"
+    assert m.rule.target_playlist == "auto"
+
+
+def test_artist_in_playlist_no_match_without_a_home():
+    assert run(make_track(), [rule({"artist_in_playlist": True}, target="auto")], enrichment=with_home()) is None
+
+
+def test_artist_in_playlist_no_match_with_no_enrichment_at_all():
+    assert run(make_track(), [rule({"artist_in_playlist": True}, target="auto")], enrichment=None) is None
+
+
+def test_artist_in_playlist_check_key_actual_carries_counts():
+    from src.rules_engine import check_key
+
+    ok, actual, hit = check_key(make_track(), with_home("Fuel", 9, 10), "artist_in_playlist", True)
+    assert ok is True and hit == "Fuel"
+    assert actual == {"playlist": "Fuel", "artist_tracks": 9, "artist_total": 10}
+
+
+def test_artist_in_playlist_check_key_false_when_no_home():
+    from src.rules_engine import check_key
+
+    ok, actual, hit = check_key(make_track(), with_home(), "artist_in_playlist", True)
+    assert ok is False and actual is None and hit is None
+
+
+def test_artist_in_playlist_can_combine_with_other_conditions():
+    match = {"artist_in_playlist": True, "explicit": False}
+    assert run(make_track(explicit=False), [rule(match, target="auto")], enrichment=with_home("Fuel", 5, 5)) is not None
+    assert run(make_track(explicit=True), [rule(match, target="auto")], enrichment=with_home("Fuel", 5, 5)) is None
+
+
+def test_artist_in_playlist_explain_trace_shows_matched_with_routing_info():
+    tr = ex(make_track(), [rule({"artist_in_playlist": True}, target="auto")], enrichment=with_home("Fuel", 9, 10))
+    assert results(tr) == ["matched"]
+    cond = tr["trace"][0]["conditions"][0]
+    assert cond["key"] == "artist_in_playlist" and cond["passed"] is True
+    assert cond["actual"] == {"playlist": "Fuel", "artist_tracks": 9, "artist_total": 10}
+
+
+def test_artist_in_playlist_shadowed_rule_detected_via_explain():
+    """A broader artist_in_playlist rule placed before a narrower literal-target rule shadows it -- same
+    generic mechanism as every other match key (decision 55: confirm this already generalizes)."""
+    earlier = rule({"artist_in_playlist": True}, "earlier", target="auto")
+    later = rule({"artist_in": ["Bonobo"]}, "later", target="Fuel")
+    tr = ex(make_track(), [earlier, later], enrichment=with_home("Fuel", 9, 10))
+    assert results(tr) == ["matched", "not_reached_but_would_match"]
+    assert tr["decided_by"] == "earlier"

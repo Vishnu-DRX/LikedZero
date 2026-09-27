@@ -35,19 +35,30 @@ Apply runs (Phase 4) add `reconcile:{expected_after, actual_after, ok}`, `restor
 default_days_threshold, english_default, inbox_since:"YYYY-MM-DD"|null (decision 45/P1-2: songs liked before this
 are never evaluated by any selector; shown on Overview, required before --allow-unselected), counts:{will_move,too_young,no_match,target_problem,blocked},
 rules:[{name, enabled, target_playlist, target_position ("top"|"bottom"), threshold_days, conditions:{key:value}, uses_language,
-weak_signals_possible:[..], would_match, wins, target_status ("resolved"|"missing"|"not_writable"|"ambiguous"),
+weak_signals_possible:[..], would_match, wins, target_status ("resolved"|"missing"|"not_writable"|"ambiguous"|"dynamic"),
 status ("ok"|"dead"|"shadowed"|"disabled")}],
-playlists:[{name, status, size, planned_in, rules:[rule names]}],
+playlists:[{name, status, size, planned_in, rules:[rule names]}] (a rule whose `target_playlist` is the
+`artist_in_playlist` sentinel `"auto"` -- design/proposals/artist_in_playlist.md -- never appears here: there
+is no single fixed target to report on; its per-song resolved target still appears under the real playlist
+name via `songs[].target_playlist` and `artist_routing` below),
 songs:[{title, artists:[..], uri, added_at, age_days, decision ("will_move"|"too_young"|"no_match"|"target_problem"|"blocked"),
-reason, rule|null, target_playlist|null, target_status|null, eligible_on|null, target_position|null,
+reason, rule|null, target_playlist|null (already the RESOLVED real name for an artist_in_playlist match, never
+the literal "auto"), target_status|null, eligible_on|null, target_position|null,
 language:{value|null, source ("playlist"|"script"|"hint"|"country_default")|null, confidence 0..1|null, used_for_rules:bool, withheld:{language,source,precision,samples,reason}|null},
 genres:{values:[..], source|null, confidence|null},
+artist_routing:{playlist, track_count, artist_total}|null (design/proposals/artist_in_playlist.md: set whenever
+this song's artist has a resolved "home" playlist under the config's `artist_in_playlist.min_tracks`/
+`min_dominance`, regardless of whether an artist_in_playlist rule was the one that actually decided the song;
+`track_count`/`artist_total` are N of M -- the artist's tracks already in `playlist` vs. across every candidate
+playlist -- leave-one-out, so this song's own membership, if any, is never counted),
 titles_hidden (present+true on a titles-redacted snapshot: title/artists/uri are null; open local files to see them),
 explain:{trace:[{rule, enabled, threshold_days, conditions:[{key,wanted,actual,passed}],
   result ("matched"|"matched_too_young"|"failed"|"not_reached"|"not_reached_but_would_match"|"skipped_disabled"|"skipped_empty")}],
   decided_by|null, age_days}}]}`
 Rule `status`: `dead` = no song would match it; `shadowed` = songs would match but an earlier rule always wins; `disabled`.
-`what_if:true` means disabled rules were treated as enabled (preview) — show a clear banner.
+`what_if:true` means disabled rules were treated as enabled (preview) — show a clear banner. Rule `target_status`
+`"dynamic"` is specific to an `artist_in_playlist` rule's `target_playlist: "auto"` -- there is nothing to
+resolve at the rule level, only per song.
 
 ## `enrichment-coverage.json` (counts only)
 `{date, tracks, unique_primary_artists, genre_coverage_pct_of_artists, language_coverage_pct_whole_library,

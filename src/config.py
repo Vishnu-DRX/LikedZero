@@ -19,9 +19,11 @@ TOP_LEVEL_KEYS = {
     "enrichment",
     "logging",
     "inbox_since",
+    "artist_in_playlist",
 }
 ENRICHMENT_KEYS = {"musicbrainz", "english_default"}
 LOGGING_KEYS = {"include_track_names"}
+ARTIST_IN_PLAYLIST_KEYS = {"min_tracks", "min_dominance", "exclude_playlists"}
 RULE_KEYS = {
     "name",
     "enabled",
@@ -31,11 +33,13 @@ RULE_KEYS = {
     "create_missing_playlists",
     "target_position",
 }
+AUTO_TARGET = "auto"  # design/proposals/artist_in_playlist.md: sentinel, valid only with match.artist_in_playlist
 LIST_MATCH_KEYS = {"artist_in", "genre_contains", "language_in"}
 INT_MATCH_KEYS = {"release_year_before", "release_year_after"}
 STR_MATCH_KEYS = {"track_name_contains", "album_name_contains"}
 BOOL_MATCH_KEYS = {"explicit"}
-MATCH_KEYS = LIST_MATCH_KEYS | INT_MATCH_KEYS | STR_MATCH_KEYS | BOOL_MATCH_KEYS
+TRUE_ONLY_MATCH_KEYS = {"artist_in_playlist"}  # no defined meaning for `false`; only `true` is a valid gate
+MATCH_KEYS = LIST_MATCH_KEYS | INT_MATCH_KEYS | STR_MATCH_KEYS | BOOL_MATCH_KEYS | TRUE_ONLY_MATCH_KEYS
 
 
 class ConfigError(ValueError):
@@ -88,6 +92,11 @@ def _validate_match(match: Any, where: str, errors: list[str]) -> dict[str, Any]
                 errors.append(f"{where}: '{key}' must be a non-empty string")
             else:
                 clean[key] = value
+        elif key in TRUE_ONLY_MATCH_KEYS:
+            if value is not True:
+                errors.append(f"{where}: '{key}' must be true (there is no defined meaning for false)")
+            else:
+                clean[key] = True
         elif not isinstance(value, bool):
             errors.append(f"{where}: '{key}' must be true or false")
         else:
@@ -111,6 +120,7 @@ def _validate_rule(raw: Any, index: int, errors: list[str]) -> Rule | None:
     target = raw.get("target_playlist")
     if not _nonempty_str(target):
         errors.append(f"{where}: 'target_playlist' is required and must be a non-empty string")
+    is_auto_target = _nonempty_str(target) and target.strip().casefold() == AUTO_TARGET
     enabled = raw.get("enabled", True)
     if not isinstance(enabled, bool):
         errors.append(f"{where}: 'enabled' must be true or false")
@@ -124,12 +134,17 @@ def _validate_rule(raw: Any, index: int, errors: list[str]) -> Rule | None:
     if days is not None and (not _is_int(days) or days < 0):
         errors.append(f"{where}: 'days_threshold' must be an integer >= 0")
     match = _validate_match(raw.get("match"), where, errors)
+    uses_auto_artist = "artist_in_playlist" in match
+    if is_auto_target and not uses_auto_artist:
+        errors.append(f"{where}: target_playlist '{AUTO_TARGET}' is only valid with match: {{artist_in_playlist: true}}")
+    if uses_auto_artist and not is_auto_target:
+        errors.append(f"{where}: match 'artist_in_playlist' requires target_playlist: {AUTO_TARGET}")
 
     if len(errors) > before:
         return None
     return Rule(
         name=name,
-        target_playlist=target,
+        target_playlist=AUTO_TARGET if is_auto_target else target,
         match=match,
         enabled=enabled,
         days_threshold=days,
@@ -225,6 +240,41 @@ def parse_config(data: Any) -> Config:
             else:
                 include_names = raw_logging["include_track_names"]
 
+    ai_min_tracks = 3
+    ai_min_dominance = 0.9
+    ai_exclude: list[str] = []
+    raw_ai = data.get("artist_in_playlist", {})
+    if raw_ai is None:
+        raw_ai = {}
+    if not isinstance(raw_ai, dict):
+        errors.append("'artist_in_playlist' must be a mapping")
+    else:
+        for key in raw_ai:
+            if key not in ARTIST_IN_PLAYLIST_KEYS:
+                errors.append(f"unknown key 'artist_in_playlist.{key}'")
+        if "min_tracks" in raw_ai:
+            v = raw_ai["min_tracks"]
+            if not _is_int(v) or v < 1:
+                errors.append("'artist_in_playlist.min_tracks' must be an integer >= 1")
+            else:
+                ai_min_tracks = v
+        if "min_dominance" in raw_ai:
+            v = raw_ai["min_dominance"]
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not (0 < v <= 1):
+                errors.append("'artist_in_playlist.min_dominance' must be a number > 0 and <= 1")
+            else:
+                ai_min_dominance = float(v)
+        if "exclude_playlists" in raw_ai:
+            v = raw_ai["exclude_playlists"]
+            if not isinstance(v, list) or not all(_nonempty_str(x) for x in v):
+                errors.append("'artist_in_playlist.exclude_playlists' must be a list of non-empty strings")
+            else:
+                ai_exclude = list(v)
+    # decision 54: Vault_drx must always be excluded, even if the user's own list omits it. Deliberately NOT
+    # merged in here -- this field carries exactly what the user configured; the hardcoded exclusion is
+    # enforced independently, at the point of use, in enrichment/artist_playlist.py's excluded_playlist_names()
+    # (so it holds even if a caller builds a Config directly, bypassing this parser).
+
     raw_rules = data.get("rules", [])
     rules: list[Rule] = []
     if not isinstance(raw_rules, list):
@@ -252,6 +302,9 @@ def parse_config(data: Any) -> Config:
         english_default=english_default,
         include_track_names=include_names,
         inbox_since=inbox_since,
+        artist_in_playlist_min_tracks=ai_min_tracks,
+        artist_in_playlist_min_dominance=ai_min_dominance,
+        artist_in_playlist_exclude_playlists=tuple(ai_exclude),
     )
 
 
