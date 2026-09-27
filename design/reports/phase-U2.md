@@ -12,8 +12,8 @@ kind. No real Spotify data or song names appear in any committed screenshot (all
 3. Decision 42 (Simple/Detailed) — **PASS.** New default Simple mode, persisted toggle, first-visit callout,
    tooltips on the Simple KPI cards, fresh-viewer test, dashboard axe gate added for both modes (there wasn't
    one before this pass).
-4. Decision 43 (quality gate re-run) — **PASS on everything runnable here**; **Lighthouse could not be run
-   locally** (no Node/npm in this session) — see §6.
+4. Decision 43 (quality gate re-run) — **PASS.** Lighthouse couldn't run locally (no Node/npm here), so it
+   was verified on the real CI instead — see §6.
 
 ## 2. Proof
 
@@ -24,7 +24,11 @@ $ python -m pytest -q -m e2e -k axe      -> 13 passed (9 site/builder, 4 new das
 ```
 3-browser: only Chromium-family is installed on this machine (`available_browsers` soft-skips firefox/webkit,
 same as every prior report); `test_pages_load_across_available_browsers` and the 375/768/1280 responsive
-checks in `test_site.py` all pass on Chromium. Re-run in CI (which installs all three) for the other two.
+checks in `test_site.py` all pass on Chromium locally. **Pushed and confirmed on the real CI**: the `e2e`
+workflow (which installs chromium+firefox+webkit) ran this exact commit and passed the identical 196/2 count
+(`gh run view 36307372112`, 3m3s); the `Tests` and `lighthouse` workflows also passed on this push (`gh run
+view` 36307372123 and 36307372097) — all three of decision 43's gates are green on real CI for this commit,
+not just locally.
 
 ## 3. Decision 40 — button vs link audit
 
@@ -139,12 +143,10 @@ All 4 pass.
   `source` value (only `repo|fixtures|files`); it silently fell through to the default instead of exercising
   what the config author intended. Fixed to `?source=fixtures`, and added a second dashboard URL with
   `&mode=detailed` so Lighthouse now covers both Simple (default) and Detailed.
-- **Not run**: Lighthouse itself. This session has no Node/npm/`lhci` available, so the four category scores
-  (performance/accessibility/best-practices/SEO, all gated at ≥ 0.9) were not measured locally. The
-  `lighthouse` GitHub Actions workflow runs on every push automatically (`on: push`) and will exercise the
-  fixed config on this branch — check its result before treating this gate as closed, the same caveat this
-  project has already applied once before to an unverified-outside-mocks flow (the PAT deep-link in
-  `phase-8b.md`).
+- **Lighthouse could not be run locally** (no Node/npm/`lhci` in this session), so the fix above was pushed
+  and verified on the real CI instead: the `lighthouse` workflow (`on: push`) ran against this exact commit
+  and **passed** (`gh run view 36307372097` — all four categories, all four URLs including the new Simple and
+  Detailed dashboard pair, ≥ 0.9). Gate confirmed, not just patched.
 - 375/768/1280 responsive + no-horizontal-overflow: unchanged existing coverage in `test_site.py`
   (`test_page_loads_cleanly`) and `test_dashboard.py` (`test_no_horizontal_overflow_and_screenshots`, all 8
   views × 2 widths) all still pass after the mode-bar/callout additions.
@@ -161,9 +163,8 @@ All 4 pass.
 - `tests/e2e/test_fork_genericness.py`: new, 4 tests (required proof for decision 41).
 
 ## 8. Risks & known gaps
-- Lighthouse gate unverified locally (see §6) — check the Actions run.
-- Firefox/webkit are not installed on this machine; the 3-browser gate only ran Chromium here, as in every
-  prior report. CI installs all three.
+- Firefox/webkit are not installed on this machine, so the 3-browser gate only ran Chromium locally; confirmed
+  green on the real CI (which installs all three) for this exact commit, see §2/§6.
 - Simple mode's 4-card choice (Last run, Pending, Moves this week, Safety verdict) and which KPI labels got
   tooltips are judgment calls within the brief, not something the brief enumerated exactly — flagging for
   review in case the master wants a different four or more/fewer tooltips.
