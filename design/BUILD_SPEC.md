@@ -407,6 +407,44 @@ simplified single-dominance-ratio schema — the separate margin knob was redund
 55. Confirm the interaction/shadowing check (proposal's remaining item 1) actually surfaces on the dashboard
     once built, and confirm decision 54's item on Vault_drx exclusion holds on the real library.
 
+## Master decisions 12 (2026-09-27) — "Analyze my library" onboarding (Option B, server-side)
+Goal: any fork's user should get a personalized draft config the same way the master session hand-built one for
+the primary user, without a live human/LLM in the loop making judgment calls. What's automatable is the
+*analysis and draft*, not the judgment calls that got made in conversation (e.g. excluding Vault_drx, choosing
+`min_dominance`) — the output stays a reviewable draft, never auto-applied, same as `analyze.py` already
+promises. Option A (a "Connect Spotify" browser-side OAuth for pre-fork, instant onboarding) is a real, larger
+feature, deliberately deferred — write it up as its own `design/proposals/` doc, same treatment as
+`artist_in_playlist.md`, but do not build it now.
+
+56. **Upgrade `analyze.py`'s classification to match what's now proven**, incorporating the measured thresholds
+    from `measure_round_2.py`/decision 52 (artist-dominance detection matching `artist_in_playlist`'s own
+    `min_tracks`/`min_dominance` bar, so a near-single-artist playlist is suggested as a plain `artist_in: [...]`
+    rule the way the six real ones were hand-written) and language/genre-pure detection consistent with the
+    same audit. Keep the existing era/explicit-refine-only behavior. This is a quality upgrade to already-shipped
+    code, not a new mechanism.
+57. **First-pass "Analyze my library" runs without a live MusicBrainz enrichment pass**, relying on
+    artist/language signals (script detection, already-cached genre if any) only — a fresh fork's cache is empty,
+    and a full MusicBrainz pass is ~15-25 min, a bad first-run experience. Genre-based draft suggestions are
+    therefore best-effort on a brand-new fork and improve automatically once the user's first real sync (or a
+    later re-analyze) has populated the enrichment cache. State this plainly in the UI/Setup guide rather than
+    silently under-delivering on genre. If measured runtime without network is still slow, report that number
+    and revisit.
+58. **Trigger mechanism reuses run-now's existing PAT component and scope exactly** (`Actions: write` only — no
+    `Contents: write` needed on the user's token, since the commit-back happens via the workflow's own
+    `GITHUB_TOKEN` inside Actions, same as every other commit-back in this project). New, separate workflow
+    `analyze.yml` (not a mode on `sync.yml` — different risk shape: this workflow never touches Liked Songs or
+    playlist contents at all, only reads playlists and writes one file, so keep its guards simple and distinct
+    from `sync.yml`'s). It writes/overwrites a committed `config.draft.yaml` at the repo root (public, no
+    secrets, same threat model as `config.yaml` already being public).
+59. **Site UI**: an "Analyze my library" option on the Configure page, alongside the existing templates
+    (Sort by language / Sort by artist / Start blank) — dispatches `analyze.yml` via the shared PAT/run-now
+    machinery, shows a running/polling state, and once complete offers "Import my draft" which pulls
+    `config.draft.yaml` via the existing import-by-file mechanism into the Configure editor as an unsaved draft —
+    it never touches the live `config.yaml` until the user explicitly hits Save. Reuse `docs/assets/github-pat.js`
+    and `run-now.js`'s polling pattern rather than building new dispatch/poll logic from scratch.
+60. Update the README/Setup guide to mention this as the recommended first step after secrets are set, before
+    hand-writing any rules. Full quality gate suite (decision 30) re-run — new UI surface on Configure.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
