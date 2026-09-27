@@ -17,6 +17,9 @@
 > - Safety: journal-before-remove, verify-after, reconcile totals, `--restore`; see `BUILD_SPEC.md`.
 > - Planning docs live in `design/`; `docs/` is the Pages site. Build order is in `BUILD_SPEC.md`.
 > - Exact write-request shapes: `spotify-api-explore/FINDINGS.md` §6 (pending live write tests).
+> - **Why we can't get genre/popularity/audio-features at all, ever, from Spotify:** settled, cited, see
+>   `design/why-no-richer-spotify-metadata.md` — it's Extended Quota Mode (grandfathered pre-2025 access we
+>   can't newly qualify for), not a missing endpoint we haven't found.
 
 ## 1. What this is
 
