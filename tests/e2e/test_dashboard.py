@@ -987,3 +987,26 @@ def test_rules_view_shows_dynamic_badge_for_auto_rule(dash):
     expect(row).to_be_visible()
     assert "auto" in row.inner_text()
     assert "Resolved per song" in row.inner_text()
+
+
+# ------------------------------------------------------------------ any catch-all (Master decisions 12/decision 51)
+def test_explain_shows_catch_all_sentence(dash):
+    def patch(data):
+        data = json.loads(json.dumps(data))
+        s = next(s for s in data["songs"] if s["title"] == "Nameless Loop 04")
+        s["decision"] = "will_move"
+        s["rule"] = "Catch-all -> Sink"
+        s["target_playlist"] = "SpotiSort Sink"
+        trace = s["explain"]["trace"]
+        trace.insert(0, {
+            "rule": "Catch-all -> Sink", "enabled": True, "threshold_days": 14,
+            "conditions": [{"key": "any", "wanted": True, "actual": True, "passed": True}],
+            "result": "matched",
+        })
+        s["explain"]["decided_by"] = "Catch-all -> Sink"
+        return data
+
+    page = dash("inbox", setup=lambda p: patch_json(p, "latest-plan.json", patch))
+    _, dlg = open_explain(page, "Nameless Loop 04")
+    narrative = dlg.locator('[data-testid="explain-narrative"]').inner_text()
+    assert "Nothing more specific matched first" in narrative and "SpotiSort Sink" in narrative

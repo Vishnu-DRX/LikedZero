@@ -63,6 +63,10 @@
     artist_in_playlist: {
       label: 'Artist has a confident home playlist (auto-routed)', kind: 'flag',
       hint: 'No value to enter here — uses the min_tracks/min_dominance settings above the rule list. Set Target playlist to "auto".'
+    },
+    any: {
+      label: 'Catch-all (matches every song)', kind: 'flag',
+      hint: 'Matches unconditionally. Put this rule LAST — everything above it is tried first, and this only catches what nothing else did.'
     }
   };
 
@@ -74,6 +78,7 @@
     if (cond.key === 'release_year_after') return 'released after ' + cond.value;
     if (cond.key === 'track_name_contains') return 'have "' + cond.value + '" in the title';
     if (cond.key === 'album_name_contains') return 'are on an album with "' + cond.value + '" in the title';
+    if (cond.key === 'any') return 'are anything (catch-all)';
     return d.label;
   }
 

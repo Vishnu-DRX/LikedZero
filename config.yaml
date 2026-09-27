@@ -1,7 +1,7 @@
 # SpotiSort live config.
 # "Hindi -> Dil" and "Malayalam -> NewAgeMadrasMail" are live, both at the default 14-day threshold
 # (decision 37: the test-only days_threshold: 0 override is gone now that --restore/top were proven live).
-# Japanese, English, the artist_in_playlist auto-router and the catch-all stay disabled until reviewed.
+# Japanese, English, the artist_in_playlist auto-router and the real catch-all stay disabled until reviewed.
 default_days_threshold: 14
 language_playlists:
   "Dil": hindi
@@ -83,9 +83,16 @@ rules:
     match:
       language_in: [english]
     target_playlist: "The Simulation Archives"
-  - name: "Vault catch-all (draft, top)"
+  # Master decisions 12/decision 51: the real catch-all (Q6), replacing the release_year_after: 1900 hack.
+  # `match: {any: true}` unconditionally matches -- chosen over extending `fallback_playlist` to an object
+  # because a real rule gets the full explain trace, Rules-view/shadowing treatment and target_position that
+  # `fallback_playlist` structurally can't (see design/reports/phase-catch-all.md for the reasoning). Targets
+  # "SpotiSort Sink" per BUILD_SPEC.md decision 51 (the user's confirmed, purpose-built empty playlist for
+  # this) -- must be the LAST rule so it only ever catches what nothing else, including artist_in_playlist,
+  # already claimed.
+  - name: "Catch-all -> SpotiSort Sink (draft)"
     enabled: false
     match:
-      release_year_after: 1900     # catch-all: any song with a release date
-    target_playlist: "Vault_drx"
+      any: true
+    target_playlist: "SpotiSort Sink"
     target_position: top

@@ -694,3 +694,40 @@ def test_redact_plan_leaves_artist_routing_playlist_name_untouched():
     (s,) = red["songs"]
     assert s["artist_routing"] == {"playlist": "Chill", "track_count": 9, "artist_total": 10}
     assert s["title"] is None and s["uri"] is None
+
+
+# ------------------------------------------------------------------ any catch-all (Master decisions 12/decision 51)
+
+def test_any_rule_appears_normally_in_playlists_out():
+    cfg = Config(default_days_threshold=14, rules=(R("sink", {"any": True}, "Chill"),))
+    p = plan([], cfg=cfg)
+    names = {row["name"] for row in p["playlists"]}
+    assert "Chill" in names  # unlike an "auto" rule, a literal target still gets its own Playlists row
+
+
+def test_any_rule_status_ok_when_it_wins_some_songs():
+    cfg = Config(default_days_threshold=14, rules=(R("catchall", {"any": True}, "Chill"),))
+    p = plan([trk(1, "Anyone")], cfg=cfg)
+    assert rule_of(p, "catchall")["status"] == "ok"
+    assert rule_of(p, "catchall")["would_match"] == 1 and rule_of(p, "catchall")["wins"] == 1
+
+
+def test_any_rule_shadowed_status_when_placed_before_a_specific_rule():
+    cfg = Config(default_days_threshold=14, rules=(
+        R("catchall", {"any": True}, "Chill"),
+        R("specific", {"artist_in": ["Bonobo"]}, "Hindi"),
+    ))
+    p = plan([trk(1, "Bonobo")], cfg=cfg)
+    assert rule_of(p, "catchall")["status"] == "ok"  # it still wins this one song
+    assert rule_of(p, "specific")["status"] == "shadowed"
+
+
+def test_any_placed_last_never_shadows_earlier_specific_rules():
+    cfg = Config(default_days_threshold=14, rules=(
+        R("specific", {"artist_in": ["Bonobo"]}, "Hindi"),
+        R("catchall", {"any": True}, "Chill"),
+    ))
+    p = plan([trk(1, "Bonobo"), trk(2, "SomeoneElse")], cfg=cfg)
+    assert rule_of(p, "specific")["status"] == "ok"
+    assert rule_of(p, "catchall")["status"] == "ok"
+    assert rule_of(p, "catchall")["would_match"] == 2 and rule_of(p, "catchall")["wins"] == 1

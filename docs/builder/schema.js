@@ -26,6 +26,7 @@
     { key: 'rules[].match.track_name_contains', type: 'non-empty string', def: '-', note: 'Case-insensitive substring of the track title.' },
     { key: 'rules[].match.album_name_contains', type: 'non-empty string', def: '-', note: 'Case-insensitive substring of the album title.' },
     { key: 'rules[].match.artist_in_playlist', type: 'true (only)', def: '-', note: 'Gate for auto-routing (design/proposals/artist_in_playlist.md). Requires target_playlist: auto.' },
+    { key: 'rules[].match.any', type: 'true (only)', def: '-', note: 'Matches unconditionally — the real catch-all. Put this rule last; everything above it is tried first.' },
     { key: 'rules[].target_playlist', type: 'non-empty string, or "auto"', def: 'required', note: 'Name of an existing playlist you own or collaborate on. "auto" is only valid with match.artist_in_playlist and is resolved per song.' },
     { key: 'rules[].days_threshold', type: 'integer >= 0', def: 'default_days_threshold', note: 'Per-rule override of the global threshold.' },
     { key: 'rules[].create_missing_playlists', type: 'boolean', def: 'false', note: 'If true, SpotiSort creates the target playlist when it does not exist.' },

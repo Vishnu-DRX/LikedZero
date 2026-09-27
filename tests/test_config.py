@@ -598,3 +598,27 @@ def test_artist_in_playlist_can_combine_with_other_match_keys():
 def test_two_artist_in_playlist_rules_are_both_valid():
     cfg = _cfg(rules=[_auto_rule(name="a"), _auto_rule(name="b")])
     assert len(cfg.rules) == 2 and all(r.target_playlist == "auto" for r in cfg.rules)
+
+
+# ---- Master decisions 12/decision 51: the real catch-all (match: {any: true})
+
+def test_any_match_key_valid():
+    cfg = _cfg(rules=[{"name": "sink", "match": {"any": True}, "target_playlist": "SpotiSort Sink"}])
+    assert cfg.rules[0].match == {"any": True}
+    assert cfg.rules[0].target_playlist == "SpotiSort Sink"
+
+
+def test_any_match_key_must_be_true():
+    with pytest.raises(ConfigError, match="'any' must be true"):
+        _cfg(rules=[{"name": "bad", "match": {"any": False}, "target_playlist": "P"}])
+
+
+def test_any_does_not_require_auto_target():
+    """Unlike artist_in_playlist, `any` targets a normal literal playlist name -- no auto sentinel involved."""
+    cfg = _cfg(rules=[{"name": "sink", "match": {"any": True}, "target_playlist": "Literal Name"}])
+    assert cfg.rules[0].target_playlist == "Literal Name"
+
+
+def test_any_can_combine_with_other_match_keys():
+    cfg = _cfg(rules=[{"name": "r", "match": {"any": True, "explicit": True}, "target_playlist": "P"}])
+    assert cfg.rules[0].match == {"any": True, "explicit": True}

@@ -90,6 +90,8 @@ def check_key(track: Track, enrichment: Enrichment | None, key: str, wanted: Any
     if key == "album_name_contains":
         ok = bool(wanted.strip()) and _fold(wanted) in _fold(track.album_name)
         return ok, track.album_name, wanted if ok else None
+    if key == "any":
+        return True, True, True  # decision 51: the real catch-all -- matches unconditionally
     if key == "artist_in_playlist":
         home = enrichment.artist_home_playlist if enrichment else None
         if home is None:

@@ -644,3 +644,46 @@ def test_artist_in_playlist_shadowed_rule_detected_via_explain():
     tr = ex(make_track(), [earlier, later], enrichment=with_home("Fuel", 9, 10))
     assert results(tr) == ["matched", "not_reached_but_would_match"]
     assert tr["decided_by"] == "earlier"
+
+
+# ---------------------------------------------------------------- any (Master decisions 12/decision 51)
+
+def test_any_matches_unconditionally():
+    assert run(make_track(), [rule({"any": True})]) is not None
+
+
+def test_any_matches_regardless_of_enrichment():
+    assert run(make_track(), [rule({"any": True})], enrichment=None) is not None
+    assert run(make_track(explicit=True, artists=()), [rule({"any": True})]) is not None
+
+
+def test_any_is_last_resort_behind_a_specific_rule():
+    specific = rule({"artist_in": ["Bonobo"]}, "specific", "SpecificTarget")
+    sink = rule({"any": True}, "sink", "Sink")
+    m = run(make_track(), [specific, sink])
+    assert m is not None and m.rule.name == "specific"
+    m2 = run(make_track(artists=()), [specific, sink])
+    assert m2 is not None and m2.rule.name == "sink"
+
+
+def test_any_check_key_actual_and_hit():
+    from src.rules_engine import check_key
+
+    ok, actual, hit = check_key(make_track(), None, "any", True)
+    assert ok is True and actual is True and hit is True
+
+
+def test_any_explain_trace_shadowing():
+    earlier = rule({"any": True}, "earlier", "Sink")
+    later = rule({"artist_in": ["Bonobo"]}, "later", "Chill")
+    tr = ex(make_track(), [earlier, later])
+    assert results(tr) == ["matched", "not_reached_but_would_match"]
+    assert tr["decided_by"] == "earlier"
+
+
+def test_any_placed_last_lets_specific_rules_win():
+    specific = rule({"artist_in": ["Bonobo"]}, "specific", "Chill")
+    sink = rule({"any": True}, "sink", "Sink")
+    tr = ex(make_track(), [specific, sink])
+    assert results(tr) == ["matched", "not_reached_but_would_match"]
+    assert tr["decided_by"] == "specific"

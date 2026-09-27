@@ -13,7 +13,7 @@
   var INT_MATCH_KEYS = ['release_year_before', 'release_year_after'];
   var STR_MATCH_KEYS = ['track_name_contains', 'album_name_contains'];
   var BOOL_MATCH_KEYS = ['explicit'];
-  var TRUE_ONLY_MATCH_KEYS = ['artist_in_playlist']; // no defined meaning for false; only true is a valid gate
+  var TRUE_ONLY_MATCH_KEYS = ['artist_in_playlist', 'any']; // no defined meaning for false; only true is a valid gate
   var MATCH_KEYS = LIST_MATCH_KEYS.concat(INT_MATCH_KEYS, STR_MATCH_KEYS, BOOL_MATCH_KEYS, TRUE_ONLY_MATCH_KEYS);
 
   function has(list, key) { return list.indexOf(key) !== -1; }

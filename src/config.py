@@ -38,7 +38,7 @@ LIST_MATCH_KEYS = {"artist_in", "genre_contains", "language_in"}
 INT_MATCH_KEYS = {"release_year_before", "release_year_after"}
 STR_MATCH_KEYS = {"track_name_contains", "album_name_contains"}
 BOOL_MATCH_KEYS = {"explicit"}
-TRUE_ONLY_MATCH_KEYS = {"artist_in_playlist"}  # no defined meaning for `false`; only `true` is a valid gate
+TRUE_ONLY_MATCH_KEYS = {"artist_in_playlist", "any"}  # no defined meaning for `false`; only `true` is a valid gate
 MATCH_KEYS = LIST_MATCH_KEYS | INT_MATCH_KEYS | STR_MATCH_KEYS | BOOL_MATCH_KEYS | TRUE_ONLY_MATCH_KEYS
 
 

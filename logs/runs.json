@@ -1,8 +1,47 @@
 {
  "version": 1,
- "generated_at": "2026-09-27T17:36:36+00:00",
+ "generated_at": "2026-09-27T17:58:03+00:00",
  "schedule": null,
  "runs": [
+  {
+   "run_id": "20260927T175803Z",
+   "time": "2026-09-27T17:58:03+00:00",
+   "mode": "dry_run",
+   "what_if": false,
+   "planned_moves": 7,
+   "moved": 0,
+   "too_young": 0,
+   "no_match": 768,
+   "blocked": 0,
+   "target_problems": 0,
+   "errors": 0,
+   "warnings": 0,
+   "liked_before": 775,
+   "liked_after": 775,
+   "duration_seconds": 12.7,
+   "verdict": "dry_run",
+   "rule_counts": {
+    "Hindi -> Dil": 0,
+    "Malayalam -> NewAgeMadrasMail": 0,
+    "Anavae -> Anavae binge list": 4,
+    "Linkin Park -> Dead Dreams' Disco": 0,
+    "Queen -> Her Highness": 0,
+    "Twenty One Pilots -> Riffs in the air": 1,
+    "Klasey Jones -> The Klasey Universe": 1,
+    "The Midnight -> Midnight Mixer": 1,
+    "Route to artist's home playlist (draft)": 0,
+    "Japanese -> nani mo wakaranai (draft)": 0,
+    "English -> The Simulation Archives (draft, weak signal)": 0,
+    "Catch-all -> SpotiSort Sink (draft)": 0
+   },
+   "moves_by_playlist": {
+    "Anavae binge list": 4,
+    "Riffs in the air": 1,
+    "The Klasey Universe": 1,
+    "Midnight Mixer": 1
+   },
+   "log": "2026-09-27.json"
+  },
   {
    "run_id": "20260927T173636Z",
    "time": "2026-09-27T17:36:36+00:00",

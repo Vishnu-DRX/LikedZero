@@ -269,6 +269,7 @@ def test_full_build_with_globals_and_all_keys(builder):
     add_cond(r, "explicit").select_option("false")
     add_cond(r, "track_name_contains").fill("remix")
     add_cond(r, "album_name_contains").fill("deluxe")
+    add_cond(r, "any")  # a flag condition, no value to fill; combining with other keys is allowed, just unusual
     # artist_in_playlist is deliberately not addable here: it requires target_playlist: auto, incompatible
     # with this rule's literal "Kitchen Sink" target, so it's the one key left in the dropdown.
     remaining = r.locator("select[id$='-add-cond'] option:not([value=''])").all_text_contents()
@@ -286,7 +287,7 @@ def test_full_build_with_globals_and_all_keys(builder):
     assert got.match == {
         "artist_in": ["Bonobo"], "genre_contains": ["ambient"], "language_in": ["english"],
         "release_year_before": 2020, "release_year_after": 1990, "explicit": False,
-        "track_name_contains": "remix", "album_name_contains": "deluxe",
+        "track_name_contains": "remix", "album_name_contains": "deluxe", "any": True,
     }
 
 
@@ -385,6 +386,24 @@ def test_artist_in_playlist_round_trips_through_yaml_import(builder):
     # Vault_drx is deliberately dropped from the re-serialized list: the UI shows it separately (always
     # excluded, non-removable) rather than duplicating it into the user-editable exclude_playlists value.
     assert set(cfg.artist_in_playlist_exclude_playlists) == {"Archive"}
+
+
+# ------------------------------------------------------------------ any catch-all (Master decisions 12/decision 51)
+def test_any_rule_builds_and_validates(builder):
+    r = add_rule(builder, "Catch-all", "SpotiSort Sink")
+    add_cond(r, "any")
+    assert problem_count(builder) == 0, builder.locator("#error-summary").text_content()
+    cfg = validated(preview(builder))
+    (got,) = cfg.rules
+    assert got.match == {"any": True} and got.target_playlist == "SpotiSort Sink"
+
+
+def test_any_shows_catch_all_english_summary(builder):
+    r = add_rule(builder, "Catch-all", "SpotiSort Sink")
+    add_cond(r, "any")
+    goto_review(builder)
+    summary = builder.locator("#plain-summary").inner_text().lower()
+    assert "anything" in summary and "catch-all" in summary
 
 
 # ------------------------------------------------------------------ language aliases
@@ -523,6 +542,9 @@ PARITY = [
     {"rules": [{"name": "bad2", "target_playlist": "Fuel", "match": {"artist_in_playlist": True}}]},
     {"rules": [{"name": "bad3", "target_playlist": "AUTO", "match": {"artist_in_playlist": True}}]},
     {"rules": [{"name": "bad4", "target_playlist": "auto", "match": {"artist_in_playlist": False}}]},
+    {"rules": [{"name": "sink", "target_playlist": "SpotiSort Sink", "match": {"any": True}}]},
+    {"rules": [{"name": "bad5", "target_playlist": "P", "match": {"any": False}}]},
+    {"rules": [{"name": "combo", "target_playlist": "P", "match": {"any": True, "explicit": True}}]},
 ]
 
 

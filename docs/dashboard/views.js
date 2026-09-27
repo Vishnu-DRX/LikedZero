@@ -176,6 +176,14 @@
       base += ' Routed to “' + esc(ar.playlist) + '” — ' + esc(ar.track_count) + ' of the artist’s ' + esc(ar.artist_total) + ' tracked tracks are already there.';
     }
     var trace = (song.explain && song.explain.trace) || [];
+    // decision 51: the real catch-all (match: {any: true}) always trivially passes its own condition, so its
+    // usual sentence ("Matched X, it is old enough...") reads as if something specific was found -- add the
+    // context that nothing more specific matched first.
+    var decidedEntry = trace.filter(function (e) { return e.rule === song.rule; })[0];
+    var isCatchAll = decidedEntry && (decidedEntry.conditions || []).some(function (c) { return c.key === 'any'; });
+    if (isCatchAll && (song.decision === 'will_move' || song.decision === 'too_young')) {
+      base += ' Nothing more specific matched first, so it falls to this catch-all.';
+    }
     var shadow = trace.filter(function (e) { return e.result === 'not_reached_but_would_match'; }).map(function (e) { return e.rule; });
     var tooYoungEarlier = trace.filter(function (e) { return e.result === 'matched_too_young' && e.rule !== song.rule; }).map(function (e) { return e.rule; });
     if (shadow.length) base += ' It would also match ' + shadow.map(esc).join(', ') + ', but ' + (shadow.length > 1 ? 'those rules run' : 'that rule runs') + ' later and never get' + (shadow.length > 1 ? '' : 's') + ' the chance.';

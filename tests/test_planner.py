@@ -555,3 +555,29 @@ def test_build_plan_skips_when_resolved_target_playlist_missing():
     plan = build_plan([t], {t.id: home("Ghost Playlist", 9, 10)}, cfg(r), NOW, [])
     assert plan.moves == [] and len(plan.skipped_playlist_missing) == 1
     assert plan.skipped_playlist_missing[0]["target_playlist"] == "Ghost Playlist"
+
+
+# ------------------------------------------------------------------ any catch-all (Master decisions 12/decision 51)
+
+def test_decide_any_catches_when_nothing_else_matches():
+    specific = rule({"artist_in": ["Nobody"]}, "specific", "Chill")
+    sink = rule({"any": True}, "sink", "Sink")
+    d = decide(track(age=30), None, cfg(specific, sink), NOW)
+    assert d.kind == "move" and d.rule_name == "sink" and d.target_name == "Sink"
+
+
+def test_decide_any_too_young_uses_default_threshold():
+    sink = rule({"any": True}, "sink", "Sink")
+    d = decide(track(age=1), None, cfg(sink, default=14), NOW)
+    assert d.kind == "too_young"
+
+
+def test_build_plan_any_catch_all_moves_everything_unclaimed():
+    specific = rule({"artist_in": ["Bonobo"]}, "specific", "Chill")
+    sink = rule({"any": True}, "sink", "Sink", target_position="top")
+    ts = [track(1, "Bonobo", age=30), track(2, "SomeoneElse", age=30)]
+    plan = build_plan(ts, {}, cfg(specific, sink), NOW, [pl("Chill", "idc"), pl("Sink", "ids")])
+    by_pl = {m["uri"]: m["playlist"] for m in plan.moves}
+    assert by_pl["spotify:track:t1"] == "Chill" and by_pl["spotify:track:t2"] == "Sink"
+    sink_move = next(m for m in plan.moves if m["uri"] == "spotify:track:t2")
+    assert sink_move["target_position"] == "top"
