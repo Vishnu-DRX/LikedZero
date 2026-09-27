@@ -1,7 +1,7 @@
 # SpotiSort live config.
-# Only "Malayalam -> NewAgeMadrasMail" is enabled right now, as a one-off live-read test
-# (days_threshold: 0 is test-only, so a freshly liked song shows up immediately instead of after 14 days).
-# Everything else stays disabled until reviewed.
+# "Hindi -> Dil" and "Malayalam -> NewAgeMadrasMail" are live, both at the default 14-day threshold
+# (decision 37: the test-only days_threshold: 0 override is gone now that --restore/top were proven live).
+# Japanese, English and the catch-all stay disabled until reviewed.
 default_days_threshold: 14
 language_playlists:
   "Dil": hindi
@@ -12,14 +12,13 @@ enrichment:
   musicbrainz: true
   english_default: false
 rules:
-  - name: "Hindi -> Dil (draft)"
-    enabled: false
+  - name: "Hindi -> Dil"
+    enabled: true
     match:
       language_in: [hindi]
     target_playlist: "Dil"
-  - name: "Malayalam -> NewAgeMadrasMail (draft)"
+  - name: "Malayalam -> NewAgeMadrasMail"
     enabled: true
-    days_threshold: 0   # test-only: see it move immediately instead of waiting 14 days
     match:
       language_in: [malayalam]
     target_playlist: "NewAgeMadrasMail"
