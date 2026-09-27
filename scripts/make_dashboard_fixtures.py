@@ -193,22 +193,29 @@ def _journal(moves):
 
 
 RUN_SPECS = [
-    # date, time-of-day, mode, what_if, plan_counts, moved, errors, warnings, before, after, secs, rule_counts
+    # date, time-of-day, mode, what_if, plan_counts, moved, errors, warnings, before, after, secs, rule_counts, vanished
     dict(date="2026-09-14", mode="dry_run", what_if=False, plan=dict(will_move=7, too_young=5, no_match=20, blocked=0, target_problem=0),
-         moved=0, errors=0, warnings=0, before=52, after=52, secs=41.2, rc={"Lo-fi study": 3, "English pop": 4}),
+         moved=0, errors=0, warnings=0, before=52, after=52, secs=41.2, rc={"Lo-fi study": 3, "English pop": 4}, vanished=0),
     dict(date="2026-09-15", mode="apply", what_if=False, plan=dict(will_move=6, too_young=4, no_match=18, blocked=0, target_problem=0),
-         moved=6, errors=0, warnings=0, before=52, after=46, secs=88.4, rc={"Lo-fi study": 2, "English pop": 3, "Hindi hits": 1}),
+         moved=6, errors=0, warnings=0, before=52, after=46, secs=88.4, rc={"Lo-fi study": 2, "English pop": 3, "Hindi hits": 1}, vanished=0),
     dict(date="2026-09-16", mode="dry_run", what_if=False, plan=dict(will_move=3, too_young=6, no_match=17, blocked=1, target_problem=0),
-         moved=0, errors=0, warnings=1, before=46, after=46, secs=39.0, rc={"Lo-fi study": 1, "Spanish nights": 2}),
+         moved=0, errors=0, warnings=1, before=46, after=46, secs=39.0, rc={"Lo-fi study": 1, "Spanish nights": 2}, vanished=0),
     dict(date="2026-09-17", mode="apply", what_if=False, plan=dict(will_move=4, too_young=5, no_match=17, blocked=1, target_problem=1),
-         moved=4, errors=0, warnings=3, before=46, after=43, secs=95.7, rc={"Spanish nights": 2, "Lo-fi study": 1, "Rock legends": 1}),
+         moved=4, errors=0, warnings=3, before=46, after=43, secs=95.7, rc={"Spanish nights": 2, "Lo-fi study": 1, "Rock legends": 1}, vanished=0),
     dict(date="2026-09-18", mode="dry_run", what_if=False, plan=dict(will_move=0, too_young=0, no_match=0, blocked=0, target_problem=0),
-         moved=0, errors=1, warnings=0, before=43, after=43, secs=12.3, rc={}),
+         moved=0, errors=1, warnings=0, before=43, after=43, secs=12.3, rc={}, vanished=0),
     dict(date="2026-09-19", mode="dry_run", what_if=False, plan=dict(will_move=5, too_young=7, no_match=25, blocked=2, target_problem=2),
-         moved=0, errors=0, warnings=2, before=41, after=41, secs=44.8, rc={"Hindi hits": 2, "English pop": 3}),
+         moved=0, errors=0, warnings=2, before=41, after=41, secs=44.8, rc={"Hindi hits": 2, "English pop": 3}, vanished=1),
     dict(date="2026-09-20", mode="dry_run", what_if=True, plan=dict(will_move=17, too_young=6, no_match=15, blocked=2, target_problem=3),
-         moved=0, errors=0, warnings=2, before=43, after=43, secs=46.1, rc={"Draft country": 2, "English pop": 5, "Hindi hits": 3}),
+         moved=0, errors=0, warnings=2, before=43, after=43, secs=46.1, rc={"Draft country": 2, "English pop": 5, "Hindi hits": 3}, vanished=0),
 ]
+# Sample vanished-song entries (decision 16), keyed by date, used where a spec's vanished count > 0.
+VANISHED_SONGS = {
+    "2026-09-19": [{"uri": "spotify:track:0000000000000000fake1", "name": "Ghosted Track", "artists": ["Nobody Real"],
+                     "added_at": "2026-08-30T10:00:00+00:00"}],
+    "2026-09-21": [{"uri": "spotify:track:0000000000000000fake2", "name": "Vanished Fixture Song", "artists": ["Nobody Real"],
+                     "added_at": "2026-09-01T10:00:00+00:00"}],
+}
 
 
 def build_runs(out: Path, plan: dict) -> dict:
@@ -218,7 +225,7 @@ def build_runs(out: Path, plan: dict) -> dict:
         runs_path.unlink()
     latest_spec = dict(date="2026-09-21", mode="dry_run", what_if=False, plan=plan["counts"], moved=0, errors=0,
                        warnings=min(plan["counts"]["target_problem"], 2), before=plan["liked_total"], after=plan["liked_total"], secs=42.5,
-                       rc={r["name"]: r["wins"] for r in plan["rules"] if r["wins"]})
+                       rc={r["name"]: r["wins"] for r in plan["rules"] if r["wins"]}, vanished=1)
     index = None
     for spec in RUN_SPECS + [latest_spec]:
         hour = 6
@@ -228,7 +235,7 @@ def build_runs(out: Path, plan: dict) -> dict:
         entry = run_entry(run_id=run_id, now=when, mode=spec["mode"], plan_counts=spec["plan"], moved=spec["moved"],
                           errors=spec["errors"], warnings=spec["warnings"], liked_before=spec["before"],
                           liked_after=spec["after"], duration_s=spec["secs"], rule_counts=spec["rc"], log_file=log_file,
-                          what_if=spec["what_if"])
+                          what_if=spec["what_if"], vanished=spec["vanished"])
         atomic_write_json(out / log_file, _run_log(spec, entry, plan))
         # decision 34: the Overview reads a top-level `schedule` field from runs.json (built by
         # src.artifacts.schedule_info from the workflow's SPOTISORT_CRON). The demo fixtures show a fixed
@@ -273,6 +280,7 @@ def _run_log(spec: dict, entry: dict, plan: dict) -> dict:
         "evaluated": spec["before"], "moved": moved, "skipped_no_match": spec["plan"]["no_match"],
         "skipped_too_young": young, "skipped_playlist_missing": missing, "errors": errors, "warnings": warnings,
         "journal": _journal(moved) if apply else [],
+        "vanished": VANISHED_SONGS.get(spec["date"], []) if spec.get("vanished") else [],
         "liked_before": spec["before"], "liked_after": spec["after"], "verdict": entry["verdict"],
         "rule_counts": entry["rule_counts"], "config_hash": config_hash(CONFIG_TEXT), "plan_counts": dict(spec["plan"]),
         "http_audit": ({"GET api.spotify.com": 31, "POST api.spotify.com": 2, "PUT api.spotify.com": 0, "DELETE api.spotify.com": 3}

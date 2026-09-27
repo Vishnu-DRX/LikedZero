@@ -256,6 +256,7 @@
   "warning 2: target playlist 'Fake Jazz Vault' not found"
  ],
  "journal": [],
+ "vanished": [],
  "liked_before": 43,
  "liked_after": 43,
  "verdict": "dry_run",

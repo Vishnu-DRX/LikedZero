@@ -263,6 +263,10 @@
       else if (last.errors || last.warnings || mismatches) health = badge('warn', 'Healthy, with warnings');
       else health = badge('ok', 'Healthy');
       html += '<p class="callout" data-testid="health"><strong>Overall:</strong> ' + health + '</p>';
+      if (ctx.source === 'repo') {
+        html += '<p><button type="button" class="btn primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
+          '<span class="small muted">Dispatches the Sync workflow on GitHub with your own token; nothing runs from this page itself.</span></p>';
+      }
 
       html += '<div class="grid">';
       if (last) {
@@ -723,8 +727,11 @@
         '<details><summary>Show as a table</summary><div class="table-wrap"><table><thead><tr><th scope="col">Run</th><th scope="col">Mode</th><th scope="col" class="num">Before</th><th scope="col" class="num">After</th><th scope="col">Verdict</th></tr></thead><tbody>' +
         runs.map(function (r) { return '<tr><td>' + esc(D.fmtTime(r.time)) + '</td><td>' + esc(r.mode) + '</td><td class="num">' + esc(r.liked_before) + '</td><td class="num">' + esc(r.liked_after) + '</td><td>' + verdictBadge(r.verdict) + '</td></tr>'; }).join('') + '</tbody></table></div></details></div>';
 
+      var latestRun = runs[0];
       var logsP = Promise.all(applyRuns.map(function (r) { return D.fetchLog(ctx.base, r.log); }));
-      return logsP.then(function (logs) {
+      var latestLogP = D.fetchLog(ctx.base, latestRun.log);
+      return Promise.all([logsP, latestLogP]).then(function (both) {
+        var logs = both[0], latestRes = both[1];
         h += '<h3>Apply runs</h3>';
         if (!applyRuns.length) h += '<div class="empty" data-empty="apply"><h3>No apply runs yet</h3><p>Every run so far was a dry run, so nothing has been removed from Liked Songs and there is nothing to restore.</p></div>';
         applyRuns.forEach(function (r, i) {
@@ -738,7 +745,19 @@
           h += '<details><summary>Journal of removals (' + (d.journal || []).length + ')</summary>' + journalTable(d.journal, !!d.titles_hidden) + '</details>';
           h += '<p class="small"><a href="#/runs/' + encodeURIComponent(r.run_id) + '">Full run detail</a></p></section>';
         });
-        h += '<h3>Vanished-song warnings</h3><div class="card" data-testid="vanished"><p>' + badge('neutral', 'Not available yet') + '</p><p class="small">Spotify has been seen silently dropping liked songs. A future guardian will remember which songs were liked at each run and warn here when one disappears without SpotiSort removing it. Nothing is monitored yet, so an empty list would not mean everything is fine.</p></div>';
+        var latest = latestRes && latestRes.status === 'ok' ? latestRes.data : null;
+        var vanished = (latest && latest.vanished) || [];
+        var vanBody;
+        if (!latest) {
+          vanBody = '<p>' + badge('neutral', 'Unknown') + '</p><p class="small">The latest run log (<code>' + esc(latestRun.log) + '</code>) could not be loaded, so the guardian check cannot be shown.</p>';
+        } else if (vanished.length) {
+          vanBody = '<p>' + badge('bad', plural(vanished.length, 'song') + ' vanished') + '</p>' +
+            '<p class="small">These were in Liked Songs as of the previous run, are gone now, and SpotiSort did not remove them.</p>' +
+            journalTable(vanished.map(function (v) { return { name: v.name, artists: v.artists, original_added_at: v.added_at, target_playlist_id: '—', uri: v.uri }; }), !!latest.titles_hidden);
+        } else {
+          vanBody = '<p>' + badge('ok', 'None') + '</p><p class="small">No previously-liked song has disappeared outside SpotiSort’s own moves, as of the run at ' + esc(D.fmtTime(latestRun.time)) + '.</p>';
+        }
+        h += '<h3>Vanished-song warnings</h3><div class="card" data-testid="vanished">' + vanBody + '</div>';
         return h;
       });
     }

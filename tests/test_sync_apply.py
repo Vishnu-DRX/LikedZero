@@ -57,6 +57,7 @@ def use(monkeypatch, fs):
 
 def argv(tmp, cfg, *extra):
     return ["--config", str(cfg), "--logs-dir", str(tmp / "logs"), "--cache", str(tmp / "cache.json"),
+            "--guardian-cache", str(tmp / "guardian.json"),
             "--no-network", "--env", str(tmp / "nonexistent.env"), *extra]
 
 

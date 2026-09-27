@@ -235,6 +235,9 @@ details > summary { cursor: pointer; font-weight: var(--weight-medium); padding:
 .drawer-body { overflow-y: auto; padding: var(--space-4); flex: 1; overscroll-behavior: contain; }
 .drawer-body h3 { font-size: var(--text-md); margin: var(--space-5) 0 var(--space-2); }
 .drawer-body h3:first-child { margin-top: 0; }
+#run-now-body .field { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
+#run-now-body ol.steps { padding-left: 1.25rem; display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+#run-now-body input[type="checkbox"] { margin-right: var(--space-2); }
 @media (prefers-reduced-motion: no-preference) {
   .drawer { animation: slide-in var(--motion-base) var(--motion-ease); }
   @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }

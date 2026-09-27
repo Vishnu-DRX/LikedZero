@@ -123,6 +123,16 @@
   "warning 2: target playlist 'Fake Jazz Vault' not found"
  ],
  "journal": [],
+ "vanished": [
+  {
+   "uri": "spotify:track:0000000000000000fake1",
+   "name": "Ghosted Track",
+   "artists": [
+    "Nobody Real"
+   ],
+   "added_at": "2026-08-30T10:00:00+00:00"
+  }
+ ],
  "liked_before": 41,
  "liked_after": 41,
  "verdict": "dry_run",

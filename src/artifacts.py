@@ -221,7 +221,7 @@ def build_latest_plan(
 def run_entry(
     *, run_id: str, now: datetime, mode: str, plan_counts: Mapping[str, int], moved: int, errors: int, warnings: int,
     liked_before: int, liked_after: int, duration_s: float, rule_counts: Mapping[str, int], log_file: str, what_if: bool = False,
-    reconcile_ok: bool | None = None, moves_by_playlist: Mapping[str, int] | None = None,
+    reconcile_ok: bool | None = None, moves_by_playlist: Mapping[str, int] | None = None, vanished: int = 0,
 ) -> dict[str, Any]:
     if reconcile_ok is False:
         verdict = "mismatch"
@@ -252,6 +252,7 @@ def run_entry(
         "verdict": verdict,
         "rule_counts": dict(rule_counts),
         "moves_by_playlist": dict(moves_by_playlist or {}),
+        "vanished": vanished,
         "log": log_file,
     }
 
@@ -301,6 +302,8 @@ def redact_log(log: dict[str, Any]) -> dict[str, Any]:
                 row["artist"] = None
     for j in out.get("journal", []):
         j["name"], j["artists"] = None, None
+    for v in out.get("vanished", []):
+        v["name"], v["artists"] = None, None
     return out
 
 

@@ -26,7 +26,7 @@ from .enrichment.enricher import Enricher
 from .enrichment.musicbrainz import MusicBrainz
 from dataclasses import replace
 
-from . import artifacts
+from . import artifacts, guardian
 from .planner import Plan, build_plan, targets_needed
 from .signals import gate, load_precision
 from .apply import DEFAULT_MAX_MOVES, HARD_MAX_MOVES, EXIT_TOO_MANY, TooManyMoves, apply_moves, load_journal, restore_from_log
@@ -65,6 +65,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--config", default="config.yaml")
     p.add_argument("--env", default=".env")
     p.add_argument("--cache", default=str(DEFAULT_PATH))
+    p.add_argument("--guardian-cache", default=str(guardian.DEFAULT_PATH),
+                   help="liked-songs snapshot for the vanished-song guardian (decision 16)")
     p.add_argument("--logs-dir", default="logs")
     p.add_argument("--limit", type=int, default=None, help="plan at most N moves (oldest liked first)")
     p.add_argument("--since", default=None, help="only consider songs liked on/after YYYY-MM-DD")
@@ -194,6 +196,7 @@ def run(args: argparse.Namespace) -> int:
 
     all_tracks = list(client.iter_saved_tracks())
     liked_uris_before = {t.uri for t in all_tracks}
+    previous_snapshot = guardian.load_snapshot(args.guardian_cache)
     tracks = select_tracks(all_tracks, args.newest, only_uris)
     playlists = list(client.iter_my_playlists())
     lmap, lang_warnings, _ = build_language_map(client, config, playlists)
@@ -271,8 +274,19 @@ def run(args: argparse.Namespace) -> int:
         print("FATAL: a write call reached the Spotify API during a dry run", file=sys.stderr)
         return 3
 
+    removed_by_tool = set(result.removed) if result is not None else set()
+    current_after_uris = liked_uris_before - removed_by_tool
+    vanished = guardian.find_vanished(previous_snapshot, current_after_uris, removed_by_tool)
+    if vanished:
+        plan.warnings.append(
+            f"guardian: {len(vanished)} previously-liked song(s) vanished from Liked Songs since the "
+            "last run without SpotiSort removing them"
+        )
+    guardian.save_snapshot(args.guardian_cache, [t for t in all_tracks if t.uri in current_after_uris])
+
     duration = time.monotonic() - started
     log = base_log(duration, not args.apply)
+    log["vanished"] = vanished
     liked_after = len(liked_uris_before)
     if result is not None:
         liked_after = result.liked_after if result.liked_after is not None else len(liked_uris_before)
@@ -294,6 +308,7 @@ def run(args: argparse.Namespace) -> int:
             duration_s=duration, rule_counts=rule_counts, log_file=out.name, what_if=args.what_if_enable_all,
             reconcile_ok=(result.reconcile.get("ok") if result and result.reconcile else None),
             moves_by_playlist=dict(Counter(m["playlist"] for m in plan.moves if m["uri"] in (set(result.removed) if result else {m["uri"] for m in plan.moves}))),
+            vanished=len(vanished),
         ),
         now,
         schedule=artifacts.schedule_info(args.cron, now),

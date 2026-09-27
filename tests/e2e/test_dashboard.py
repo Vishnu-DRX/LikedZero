@@ -327,7 +327,9 @@ def test_safety_timeline_restore_reconcile(dash):
     assert "Mismatch" in joined and "expected 42, found 43" in joined
     cards.first.locator("summary").click()
     assert cards.first.locator('[data-testid="journal"] tbody tr').count() >= 1
-    assert "Not available yet" in text(page, '[data-testid="vanished"]')
+    # the latest run (2026-09-21) has one vanished song (decision 16 demo fixture)
+    van = text(page, '[data-testid="vanished"]')
+    assert "vanished" in van and "Vanished Fixture Song" in van
     # timeline data table alternative
     page.locator("summary", has_text="Show as a table").click()
     expect(page.locator("details[open] table tbody tr").first).to_be_visible()
@@ -566,6 +568,78 @@ def test_storage_blocked_does_not_break_the_page(make_page, site):
     page.add_init_script("Object.defineProperty(window, 'localStorage', {get(){ throw new Error('blocked') }})")
     page.goto(f"{site}dashboard/?source=fixtures#/overview")
     page.wait_for_selector('#view-root[data-state="ready"] [data-card="liked"]')
+
+
+# ------------------------------------------------------------------ run now (decision 39)
+def set_repo(page, owner_repo="octo/spot"):
+    serve_data(page, "https://raw.githubusercontent.com/**")
+    page.locator("#repo-url").fill(f"https://raw.githubusercontent.com/{owner_repo}/main/logs")
+    page.get_by_role("button", name="Save URL").click()
+    page.wait_for_selector('[data-testid="run-now-btn"]')
+
+
+def test_run_now_button_only_offered_on_repo_source(dash):
+    page = dash("overview")  # default source=fixtures
+    expect(page.locator('[data-testid="run-now-btn"]')).to_have_count(0)
+
+
+def test_run_now_connect_step_prefills_the_token_url(dash):
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+    expect(page.locator("#run-now-dialog")).to_be_visible()
+    body = page.locator("#run-now-body").inner_text()
+    assert "personal access token" in body.lower() and "Only select repositories" in body
+    href = page.locator("#run-now-body a").first.get_attribute("href")
+    assert href.startswith("https://github.com/settings/personal-access-tokens/new?")
+    assert "target_name=octo" in href and "contents=write" in href and "actions=write" in href
+    page.locator("#run-now-dialog [data-close]").first.click()
+    expect(page.locator("#run-now-dialog")).to_be_hidden()
+
+
+def test_run_now_connect_verify_and_dispatch(dash):
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+
+    page.route("https://api.github.com/repos/octo/spot", lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
+    page.locator("#run-now-token").fill("github_pat_fake_token")
+    page.get_by_role("button", name="Save & verify").click()
+    page.wait_for_selector("#run-now-dispatch")
+    assert "Connected to" in page.locator("#run-now-body").inner_text()
+
+    # a live run needs "newest" filled in -- no dispatch call is even attempted
+    calls = []
+
+    def handle_dispatch(route):
+        calls.append(route.request.post_data)
+        route.fulfill(status=204)
+
+    page.route("https://api.github.com/repos/octo/spot/actions/workflows/sync.yml/dispatches", handle_dispatch)
+    page.locator("#run-now-dry").uncheck()
+    page.get_by_role("button", name="Dispatch the Sync workflow").click()
+    assert "needs" in page.locator("#run-now-status").inner_text()
+    assert calls == []
+
+    page.locator("#run-now-dry").check()
+    page.get_by_role("button", name="Dispatch the Sync workflow").click()
+    page.wait_for_selector("text=Dispatched")
+    assert len(calls) == 1 and '"dry_run":"true"' in calls[0]
+    assert "actions/workflows/sync.yml" in page.locator("#run-now-body").inner_html()
+
+    page.get_by_role("button", name="Forget token").click()
+    expect(page.locator("#run-now-token")).to_be_visible()
+
+
+def test_run_now_bad_token_shows_github_message_and_does_not_save(dash):
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+    page.route("https://api.github.com/repos/octo/spot", lambda r: r.fulfill(status=401, content_type="application/json", body="{}"))
+    page.locator("#run-now-token").fill("github_pat_bad_token")
+    page.get_by_role("button", name="Save & verify").click()
+    page.wait_for_selector("text=rejected the token")
+    expect(page.locator("#run-now-token")).to_be_visible()
 
 
 def test_hostile_titles_are_escaped(dash):

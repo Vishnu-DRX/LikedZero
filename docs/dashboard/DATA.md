@@ -15,15 +15,18 @@ unless `titles_hidden` is set (see below).
 ## `runs.json` — rolling index (newest first, max 90)
 `{version, generated_at, schedule:{cron, description, next_run}|null, runs:[{run_id, time, mode ("dry_run"|"apply"), what_if, planned_moves, moved, too_young, no_match,
 blocked, target_problems, errors, warnings, liked_before, liked_after, duration_seconds, verdict ("dry_run"|"ok"|"mismatch"|"error"),
-rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, log:"YYYY-MM-DD.json"}]}`
+rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, vanished:int, log:"YYYY-MM-DD.json"}]}`
 `schedule` is written by the workflow from its cron (decision 34); null/absent = "Not scheduled" on the Overview.
 
 ## `YYYY-MM-DD.json` — per-run log (fetched on demand from `runs[].log`)
 `{date, run_id, mode, dry_run, what_if, evaluated, moved:[{track, artist, uri, playlist, playlist_id, rule, matched, age_days,
 threshold_days, already_in_target, original_added_at, target_position}], skipped_no_match, skipped_too_young:[...],
 skipped_playlist_missing:[{track,target_playlist,rule,reason,would_create}], errors:[str], warnings:[str],
-journal:[{uri,name,artists,original_added_at,target_playlist_id}], liked_before, liked_after, verdict, rule_counts, config_hash,
-plan_counts, http_audit:{"GET api.spotify.com":n,...}, runtime_seconds, titles_hidden (present+true when logging.include_track_names is false on a GitHub Actions run: track/artist fields are null; local runs always keep titles)}`
+journal:[{uri,name,artists,original_added_at,target_playlist_id}], vanished:[{uri,name,artists,added_at}] (decision 16: liked
+since the previous run, gone now, not removed by this run itself -- every run reports this, dry or apply), liked_before,
+liked_after, verdict, rule_counts, config_hash, plan_counts, http_audit:{"GET api.spotify.com":n,...}, runtime_seconds,
+titles_hidden (present+true when logging.include_track_names is false on a GitHub Actions run: track/artist fields on
+`moved`/`journal`/`vanished` are null; local runs always keep titles)}`
 Apply runs (Phase 4) add `reconcile:{expected_after, actual_after, ok}`, `restore_command` (string), `batches:[{playlist_id, size, committed}]`.
 
 ## `latest-plan.json` — inbox snapshot

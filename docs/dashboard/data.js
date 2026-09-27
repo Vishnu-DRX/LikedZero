@@ -203,11 +203,20 @@
   }
   function isStale(iso) { return now() - Date.parse(iso) > STALE_MS; }
 
+  // {owner, repo} of the fork whose logs the Repo source reads, or null (e.g. "files"/"fixtures" sources, or
+  // a Repo base the visitor hasn't configured yet). Used by the run-now button (Phase 8b) to know which repo's
+  // workflow to dispatch -- always the same repo the dashboard is already reading logs from.
+  function repoOwnerName() {
+    var base = repoBase();
+    var m = /^https:\/\/raw\.githubusercontent\.com\/([\w.-]+)\/([\w.-]+)\//.exec(base || '');
+    return m ? { owner: m[1], repo: m[2] } : null;
+  }
+
   window.DashData = {
     FILES: FILES, COMMANDS: COMMANDS, LABELS: LABELS, SOURCES: SOURCES, SOURCE_LABELS: SOURCE_LABELS, KEY: KEY,
     FILES_MARKER: FILES_MARKER,
     store: store, params: params, currentSource: currentSource, isGithubPages: isGithubPages,
-    deriveRepoBase: deriveRepoBase, repoBase: repoBase,
+    deriveRepoBase: deriveRepoBase, repoBase: repoBase, repoOwnerName: repoOwnerName,
     normalizeRepoBase: normalizeRepoBase, validRepoBase: validRepoBase, baseFor: baseFor,
     now: now, loadAll: loadAll, fetchLog: fetchLog, clearLogCache: clearLogCache,
     readLocalFiles: readLocalFiles, clearLocalFiles: clearLocalFiles, localFileNames: localFileNames,

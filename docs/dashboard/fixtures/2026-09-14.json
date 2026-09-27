@@ -133,6 +133,7 @@
  "errors": [],
  "warnings": [],
  "journal": [],
+ "vanished": [],
  "liked_before": 52,
  "liked_after": 52,
  "verdict": "dry_run",
