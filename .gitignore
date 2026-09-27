@@ -64,6 +64,9 @@ logs/backtest-detail.*
 logs/screens/
 logs/local/
 
+# artist_in_playlist measurement detail (contains real playlist names); the committed report is counts-only
+logs/measure-artist_in_playlist-detail.md
+
 # atomic-write temp files
 logs/.tmp-*
 .cache/.enrichment-*.tmp
