@@ -201,8 +201,8 @@ only after Q1/Q6/Q3 land and are seen to hold up.
 - `.claude/settings.json`'s hardened deny pattern is reasoned about, not automatically tested (no pytest
   coverage of Claude Code's own permission engine exists in this repo).
 - The CI browser-matrix fail-loudly fix is verified locally by deliberately requesting a nonexistent browser
-  name; the real `e2e` GitHub Actions run on this push is the actual confirmation that chromium+firefox+webkit
-  all still launch there.
+  name; the real `e2e` GitHub Actions run on this push **confirms it** — `gh run watch 36316760072`, all three
+  browsers installed and passed (2m43s), plus `Tests` and `lighthouse` both green on the same push.
 - `docs/dashboard/data.js`'s default-branch resolution is only eventually correct (first load on a non-`main`
   fork still briefly assumes `main` before the background fetch corrects it for the next load) — acceptable
   since Repo mode only ever *reads*, but worth knowing.
