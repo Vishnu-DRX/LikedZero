@@ -66,16 +66,6 @@ jobs:
           restore-keys: |
             enrichment-v1-
 
-      # Liked-songs guardian snapshot (decision 16): also private, also never committed. Same
-      # always-miss/restore-keys-fallback trick so every run saves a fresh copy for the next one.
-      - name: Restore guardian snapshot
-        uses: actions/cache@v4
-        with:
-          path: .cache/liked-snapshot.json
-          key: guardian-v1-${{ github.run_id }}
-          restore-keys: |
-            guardian-v1-
-
       - name: Check configuration exists
         run: |
           test -f config.yaml || { echo "config.yaml is missing. Create it with the Configure page and commit it."; exit 1; }

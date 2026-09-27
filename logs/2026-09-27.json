@@ -1,18 +1,10 @@
 {
  "date": "2026-09-27",
  "dry_run": true,
- "evaluated": 774,
+ "evaluated": 772,
  "moved": [],
- "skipped_no_match": 773,
- "skipped_too_young": [
-  {
-   "track": null,
-   "artist": null,
-   "rule": "Hindi -> Dil",
-   "age_days": 0.0,
-   "threshold_days": 14
-  }
- ],
+ "skipped_no_match": 772,
+ "skipped_too_young": [],
  "skipped_playlist_missing": [],
  "errors": [],
  "warnings": [],
@@ -21,15 +13,15 @@
   "POST accounts.spotify.com": 1,
   "GET api.spotify.com": 26
  },
- "runtime_seconds": 5.0,
- "run_id": "20260927T063119Z",
+ "runtime_seconds": 8.6,
+ "run_id": "20260927T132607Z",
  "mode": "dry_run",
  "what_if": false,
- "liked_before": 774,
- "liked_after": 774,
+ "liked_before": 772,
+ "liked_after": 772,
  "verdict": "dry_run",
  "rule_counts": {
-  "Hindi -> Dil": 1,
+  "Hindi -> Dil": 0,
   "Malayalam -> NewAgeMadrasMail": 0,
   "Japanese -> nani mo wakaranai (draft)": 0,
   "English -> The Simulation Archives (draft, weak signal)": 0,
@@ -38,11 +30,9 @@
  "config_hash": "ec55cc629a16",
  "plan_counts": {
   "will_move": 0,
-  "too_young": 1,
-  "no_match": 773,
+  "too_young": 0,
+  "no_match": 772,
   "target_problem": 0,
   "blocked": 0
- },
- "vanished": [],
- "titles_hidden": true
+ }
 }

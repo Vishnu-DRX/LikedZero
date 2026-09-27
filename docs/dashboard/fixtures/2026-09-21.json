@@ -382,19 +382,6 @@
   "target playlist 'Fake Jazz Vault' is missing"
  ],
  "journal": [],
- "vanished": [
-  {
-   "uri": "spotify:track:0000000000000000fake2",
-   "name": "Vanished Fixture Song",
-   "artists": [
-    "Nobody Real"
-   ],
-   "added_at": "2026-09-01T10:00:00+00:00"
-  }
- ],
- "guardian": {
-  "baseline": "ok"
- },
  "liked_before": 42,
  "liked_after": 42,
  "verdict": "dry_run",

@@ -36,7 +36,6 @@
     "English pop": 7
    },
    "moves_by_playlist": {},
-   "vanished": 1,
    "log": "2026-09-21.json"
   },
   {
@@ -62,7 +61,6 @@
     "Hindi hits": 3
    },
    "moves_by_playlist": {},
-   "vanished": 0,
    "log": "2026-09-20.json"
   },
   {
@@ -87,7 +85,6 @@
     "English pop": 3
    },
    "moves_by_playlist": {},
-   "vanished": 1,
    "log": "2026-09-19.json"
   },
   {
@@ -109,7 +106,6 @@
    "verdict": "error",
    "rule_counts": {},
    "moves_by_playlist": {},
-   "vanished": 0,
    "log": "2026-09-18.json"
   },
   {
@@ -135,7 +131,6 @@
     "Rock legends": 1
    },
    "moves_by_playlist": {},
-   "vanished": 0,
    "log": "2026-09-17.json"
   },
   {
@@ -160,7 +155,6 @@
     "Spanish nights": 2
    },
    "moves_by_playlist": {},
-   "vanished": 0,
    "log": "2026-09-16.json"
   },
   {
@@ -186,7 +180,6 @@
     "Hindi hits": 1
    },
    "moves_by_playlist": {},
-   "vanished": 0,
    "log": "2026-09-15.json"
   },
   {
@@ -211,7 +204,6 @@
     "English pop": 4
    },
    "moves_by_playlist": {},
-   "vanished": 0,
    "log": "2026-09-14.json"
   }
  ]

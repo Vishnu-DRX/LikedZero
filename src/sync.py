@@ -26,7 +26,7 @@ from .enrichment.enricher import Enricher
 from .enrichment.musicbrainz import MusicBrainz
 from dataclasses import replace
 
-from . import artifacts, guardian
+from . import artifacts
 from .planner import Plan, build_plan, targets_needed
 from .signals import gate, load_precision
 from .apply import DEFAULT_MAX_MOVES, HARD_MAX_MOVES, EXIT_TOO_MANY, TooManyMoves, apply_moves, load_journal, restore_from_log
@@ -69,8 +69,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--config", default="config.yaml")
     p.add_argument("--env", default=".env")
     p.add_argument("--cache", default=str(DEFAULT_PATH))
-    p.add_argument("--guardian-cache", default=str(guardian.DEFAULT_PATH),
-                   help="liked-songs snapshot for the vanished-song guardian (decision 16)")
     p.add_argument("--logs-dir", default="logs")
     p.add_argument("--limit", type=int, default=None, help="plan at most N moves (oldest liked first)")
     p.add_argument("--since", default=None, help="only consider songs liked on/after YYYY-MM-DD")
@@ -207,7 +205,6 @@ def run(args: argparse.Namespace) -> int:
 
     all_tracks = list(client.iter_saved_tracks())
     liked_uris_before = {t.uri for t in all_tracks}
-    previous_snapshot = guardian.load_snapshot(args.guardian_cache)
     tracks = select_tracks(all_tracks, args.newest, only_uris)
     playlists = list(client.iter_my_playlists())
     lmap, lang_warnings, _ = build_language_map(client, config, playlists)
@@ -288,24 +285,9 @@ def run(args: argparse.Namespace) -> int:
         print("FATAL: a write call reached the Spotify API during a dry run", file=sys.stderr)
         return 3
 
-    removed_by_tool = set(result.removed) if result is not None else set()
-    current_after_uris = liked_uris_before - removed_by_tool
-    guardian_baseline = "missing" if previous_snapshot is None else "ok"
-    vanished = guardian.find_vanished(previous_snapshot or {}, current_after_uris, removed_by_tool)
-    if vanished:
-        # P1-7: an un-like is a normal, deliberate action (the inbox-email equivalent of deleting a message);
-        # this can't distinguish that from Spotify silently dropping a song, so it must read as a prompt to
-        # look, not an accusation.
-        plan.warnings.append(
-            f"guardian: {len(vanished)} song(s) no longer liked (by you or Spotify) since the last run"
-        )
-    guardian.save_snapshot(args.guardian_cache, [t for t in all_tracks if t.uri in current_after_uris])
-
     hide = hide_titles(args, config)
     duration = time.monotonic() - started
     log = base_log(duration, not args.apply)
-    log["vanished"] = vanished
-    log["guardian"] = {"baseline": guardian_baseline}
     liked_after = len(liked_uris_before)
     if result is not None:
         liked_after = result.liked_after if result.liked_after is not None else len(liked_uris_before)
@@ -341,7 +323,6 @@ def run(args: argparse.Namespace) -> int:
                 m["playlist"] for m in plan.moves
                 if m["uri"] in (set(result.removed) if result else (set() if aborted else {m["uri"] for m in plan.moves}))
             )),
-            vanished=len(vanished),
             aborted=aborted,
         ),
         now,

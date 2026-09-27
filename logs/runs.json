@@ -1,8 +1,35 @@
 {
  "version": 1,
- "generated_at": "2026-09-27T06:31:19+00:00",
+ "generated_at": "2026-09-27T13:26:07+00:00",
  "schedule": null,
  "runs": [
+  {
+   "run_id": "20260927T132607Z",
+   "time": "2026-09-27T13:26:07+00:00",
+   "mode": "dry_run",
+   "what_if": false,
+   "planned_moves": 0,
+   "moved": 0,
+   "too_young": 0,
+   "no_match": 772,
+   "blocked": 0,
+   "target_problems": 0,
+   "errors": 0,
+   "warnings": 0,
+   "liked_before": 772,
+   "liked_after": 772,
+   "duration_seconds": 8.6,
+   "verdict": "dry_run",
+   "rule_counts": {
+    "Hindi -> Dil": 0,
+    "Malayalam -> NewAgeMadrasMail": 0,
+    "Japanese -> nani mo wakaranai (draft)": 0,
+    "English -> The Simulation Archives (draft, weak signal)": 0,
+    "Vault catch-all (draft, top)": 0
+   },
+   "moves_by_playlist": {},
+   "log": "2026-09-27.json"
+  },
   {
    "run_id": "20260927T063119Z",
    "time": "2026-09-27T06:31:19+00:00",

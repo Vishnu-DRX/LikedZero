@@ -58,7 +58,6 @@ def use(monkeypatch, fs):
 
 def argv(tmp, cfg, *extra):
     return ["--config", str(cfg), "--logs-dir", str(tmp / "logs"), "--cache", str(tmp / "cache.json"),
-            "--guardian-cache", str(tmp / "guardian.json"),
             "--no-network", "--env", str(tmp / "nonexistent.env"), *extra]
 
 
@@ -244,8 +243,6 @@ def test_allow_unselected_above_max_moves_still_writes_an_honest_log(env, monkey
     entry = runs["runs"][0]
     assert entry["verdict"] == "aborted_too_many"
     assert entry["moved"] == 0 and entry["moves_by_playlist"] == {}
-    guardian_snap = json.loads((tmp / "guardian.json").read_text(encoding="utf-8"))
-    assert sorted(guardian_snap["tracks"]) == sorted(uri(i) for i in range(1, 5))
 
 
 def test_default_cap_is_50_through_the_cli(env, monkeypatch):

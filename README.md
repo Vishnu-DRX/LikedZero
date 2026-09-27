@@ -7,7 +7,7 @@ start every run yourself (locally, via the dashboard's **Run now** button, or vi
 
 ## Status
 
-The core sorter, safety machinery (dry-run, journal, verify, reconcile, restore, the liked-songs guardian),
+The core sorter, safety machinery (dry-run, journal, verify, reconcile, restore),
 MusicBrainz/script/playlist-based language enrichment, and the Pages site (Home, Setup guide, Configure,
 Dashboard) are all built and covered by tests. `--apply` is available and guarded (see Safety guarantees
 below). Scheduling is deliberately not enabled yet — see "Going unattended" below.
@@ -99,7 +99,7 @@ everything below.
 - **Rules** asks "what does each rule do?": how many songs each rule matches and wins, when it last matched, and flags for problem rules.
 - **Playlists** asks "can every target be written to?": found, missing, not writable or ambiguous, its size and how many songs the next run adds.
 - **Runs** is the history, with a detail page per run and a side-by-side comparison of two runs.
-- **Safety** asks "has anything been lost, and can I undo it?": the liked-count timeline, reconcile result and restore command for each apply run, the journal of removals, and the liked-songs guardian's warnings (songs no longer liked, by you or Spotify, since the last run — with a clear "no baseline yet" state on the very first run).
+- **Safety** asks "has anything been lost, and can I undo it?": the liked-count timeline, reconcile result and restore command for each apply run, and the journal of removals.
 - **Signals** asks "how far can each language signal be trusted?": coverage, and precision per signal and language.
 - **Backtest** asks "would the rules route songs correctly?": precision and recall per playlist, confusions and worst misroutes. Names appear only in Local mode; elsewhere playlists are P01, P02 and rules R01, R02.
 
@@ -125,8 +125,6 @@ from your old Liked Songs archive, not a live inbox.
   dashboard says so plainly, rather than silently disappearing.
 - Journal before any removal; verify after every move; reconcile against the journal on each run; restore from
   the journal (`--restore`) if needed.
-- The liked-songs guardian snapshots your library each run and warns if something you didn't remove goes
-  missing (by you or Spotify), distinguishing "nothing vanished" from "no baseline to compare against yet".
 - Only `spotify:track:` URIs are touched. Only playlists you own or that are collaborative are written to.
 - Committed public logs never carry a song's title, artist or URI by default (a bare URI resolves to a real
   song in one request, so it's stripped too) — only counts and decisions.

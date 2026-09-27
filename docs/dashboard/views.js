@@ -806,11 +806,8 @@
         '<details><summary>Show as a table</summary><div class="table-wrap"><table><thead><tr><th scope="col">Run</th><th scope="col">Mode</th><th scope="col" class="num">Before</th><th scope="col" class="num">After</th><th scope="col">Verdict</th></tr></thead><tbody>' +
         runs.map(function (r) { return '<tr><td>' + esc(D.fmtTime(r.time)) + '</td><td>' + esc(r.mode) + '</td><td class="num">' + esc(r.liked_before) + '</td><td class="num">' + esc(r.liked_after) + '</td><td>' + verdictBadge(r.verdict) + '</td></tr>'; }).join('') + '</tbody></table></div></details></div>';
 
-      var latestRun = runs[0];
       var logsP = Promise.all(applyRuns.map(function (r) { return D.fetchLog(ctx.base, r.log); }));
-      var latestLogP = D.fetchLog(ctx.base, latestRun.log);
-      return Promise.all([logsP, latestLogP]).then(function (both) {
-        var logs = both[0], latestRes = both[1];
+      return logsP.then(function (logs) {
         h += '<h3>Apply runs</h3>';
         if (!applyRuns.length) h += '<div class="empty" data-empty="apply"><h3>No apply runs yet</h3><p>Every run so far was a dry run, so nothing has been removed from Liked Songs and there is nothing to restore.</p></div>';
         applyRuns.forEach(function (r, i) {
@@ -827,24 +824,6 @@
           h += '<details><summary>Journal of removals (' + (d.journal || []).length + ')</summary>' + journalTable(d.journal, !!d.titles_hidden) + '</details>';
           h += '<p class="small"><a href="#/runs/' + encodeURIComponent(r.run_id) + '">Full run detail</a></p></section>';
         });
-        var latest = latestRes && latestRes.status === 'ok' ? latestRes.data : null;
-        var vanished = (latest && latest.vanished) || [];
-        var baseline = latest && latest.guardian && latest.guardian.baseline;
-        var vanBody;
-        if (!latest) {
-          vanBody = '<p>' + badge('neutral', 'Unknown') + '</p><p class="small">The latest run log (<code>' + esc(latestRun.log) + '</code>) could not be loaded, so the guardian check cannot be shown.</p>';
-        } else if (baseline === 'missing') {
-          // P1-7: no prior snapshot to compare against (first run, or actions/cache evicted it after 7 days
-          // unused) must never look like "0 vanished" -- that would be a clean bill of health it didn't earn.
-          vanBody = '<p>' + badge('neutral', 'No baseline yet') + '</p><p class="small">This run had nothing to compare against (first run, or the snapshot expired from disuse). The next run will be able to check.</p>';
-        } else if (vanished.length) {
-          vanBody = '<p>' + badge('warn', plural(vanished.length, 'song') + ' no longer liked') + '</p>' +
-            '<p class="small">These were liked as of the previous run and are not liked now, by you or Spotify — SpotiSort did not remove them. Worth a look, not necessarily a problem.</p>' +
-            journalTable(vanished.map(function (v) { return { name: v.name, artists: v.artists, original_added_at: v.added_at, target_playlist_id: '—', uri: v.uri }; }), !!latest.titles_hidden);
-        } else {
-          vanBody = '<p>' + badge('ok', 'None') + '</p><p class="small">No previously-liked song has disappeared outside SpotiSort’s own moves, as of the run at ' + esc(D.fmtTime(latestRun.time)) + '.</p>';
-        }
-        h += '<h3>Vanished-song warnings</h3><div class="card" data-testid="vanished">' + vanBody + '</div>';
         return h;
       });
     }

@@ -110,7 +110,6 @@ def env(tmp_path):
 def argv(tmp_path, cfg, *extra):
     return [
         "--config", str(cfg), "--logs-dir", str(tmp_path / "logs"), "--cache", str(tmp_path / "cache.json"),
-        "--guardian-cache", str(tmp_path / "guardian.json"),
         "--no-network", "--env", str(tmp_path / "nonexistent.env"), *extra,
     ]
 

@@ -336,9 +336,6 @@ def test_safety_timeline_restore_reconcile(dash):
     assert "Mismatch" in joined and "expected 42, found 43" in joined
     cards.first.locator("summary").click()
     assert cards.first.locator('[data-testid="journal"] tbody tr').count() >= 1
-    # the latest run (2026-09-21) has one no-longer-liked song (decision 16 demo fixture)
-    van = text(page, '[data-testid="vanished"]')
-    assert "no longer liked" in van and "Vanished Fixture Song" in van
     # timeline data table alternative
     page.locator("summary", has_text="Show as a table").click()
     expect(page.locator("details[open] table tbody tr").first).to_be_visible()

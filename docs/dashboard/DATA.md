@@ -15,21 +15,17 @@ unless `titles_hidden` is set (see below).
 ## `runs.json` — rolling index (newest first, max 90)
 `{version, generated_at, schedule:{cron, description, next_run}|null, runs:[{run_id, time, mode ("dry_run"|"apply"), what_if, planned_moves, moved, too_young, no_match,
 blocked, target_problems, errors, warnings, liked_before, liked_after, duration_seconds, verdict ("dry_run"|"ok"|"mismatch"|"error"),
-rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, vanished:int, log:"YYYY-MM-DD.json"}]}`
+rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, log:"YYYY-MM-DD.json"}]}`
 `schedule` is written by the workflow from its cron (decision 34); null/absent = "Not scheduled" on the Overview.
 
 ## `YYYY-MM-DD.json` — per-run log (fetched on demand from `runs[].log`)
 `{date, run_id, mode, dry_run, what_if, evaluated, moved:[{track, artist, uri, playlist, playlist_id, rule, matched, age_days,
 threshold_days, already_in_target, original_added_at, target_position}], skipped_no_match, skipped_too_young:[...],
 skipped_playlist_missing:[{track,target_playlist,rule,reason,would_create}], errors:[str], warnings:[str],
-journal:[{uri,name,artists,original_added_at,target_playlist_id}], vanished:[{uri,name,artists,added_at}] (decision 16: liked
-since the previous run, gone now, not removed by this run itself -- every run reports this, dry or apply),
-guardian:{baseline:"missing"|"ok"} (P1-7, 2026-09-27 review: "missing" = nothing to compare against yet -- first
-run, or the actions/cache snapshot expired from 7 days' disuse -- must never be shown the same as "ok" with 0
-vanished, which is a real clean bill of health), liked_before,
+journal:[{uri,name,artists,original_added_at,target_playlist_id}], liked_before,
 liked_after, verdict, rule_counts, config_hash, plan_counts, http_audit:{"GET api.spotify.com":n,...}, runtime_seconds,
 titles_hidden (present+true when logging.include_track_names is false on a GitHub Actions run: track/artist AND uri
-fields on `moved`/`journal`/`vanished` are null, `moved_uris`/`still_liked` are emptied -- P1-4, 2026-09-27 review: a
+fields on `moved`/`journal` are null, `moved_uris`/`still_liked` are emptied -- P1-4, 2026-09-27 review: a
 bare uri resolves to a real song in one request, so hiding titles alone was not private; local runs always keep
 everything, and the real journal for `--restore` survives separately in the git-ignored `restore-journal.json`)}`
 Apply runs (Phase 4) add `reconcile:{expected_after, actual_after, ok}`, `restore_command` (string), `batches:[{playlist_id, size, committed}]`.
