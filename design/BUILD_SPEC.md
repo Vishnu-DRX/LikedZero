@@ -252,6 +252,40 @@ after stating the risk). Accepted as a one-off, not a precedent for skipping fut
     without a broad token: use the same guided fine-grained-PAT pattern planned for Phase 7 (Contents + Actions:write
     on this repo only), so build that auth component once and share it between 8b and Phase 7 rather than duplicating it.
 
+## Master decisions 7 (UI cleanup pass, across the whole site) — binding, do before/alongside Phase 7
+User feedback: buttons that look like underlined links, doubts about fork-genericness, and an overwhelming
+dashboard ("he won't read or understand shit"). Applies site-wide (Home, Setup guide, Configure, Dashboard).
+40. **Action vs navigation audit.** Any element that *performs an action* (run now, save configuration, restore a
+    version, connect a token, dismiss, copy, download, open a drawer) must use the button component (filled/pill,
+    secondary, ghost or icon per decision 23) — never a bare underlined link. An element that *navigates* (to
+    another page, an anchor, an external site like GitHub) stays a link, but nav-bar/menu links use the nav
+    component style, not inline underlined text. Produce a short table in the phase report: every clickable
+    control, its purpose, and which component it now uses; grep for stray `<a>`/`text-link`-styled elements that
+    trigger JS actions and fix each one.
+41. **Fork-genericness audit (make every flow work for a stranger's fork, not just this account).** Grep the
+    entire `docs/` tree for the literal strings `Vishnu-DRX` and `SpotiSort` outside of: (a) `docs/site.config.json`
+    (the author-credit file, intentionally the maintainer's), and (b) the canonical "upstream" star/credit link
+    required by decision 26. Every other reference — Repo-mode data source, run-now, Phase 7's save-to-GitHub,
+    the Setup guide's example commands, screenshot alt text used as a fallback — must be derived at runtime from
+    where the page is actually served/configured (owner/repo from `location.hostname`+`pathname` on `*.github.io`,
+    or an explicit override for local testing), never hardcoded. Add an automated test that serves the built site
+    under a **second, fake origin** (e.g. `someoneelse.github.io/their-fork/`) and asserts: Repo mode reads from
+    that owner/repo, run-now and Phase 7's save target that owner/repo, and the upstream credit link still points
+    at the real canonical repo unchanged. This test is required proof, not optional.
+42. **Dashboard simplification (progressive disclosure).** Add a **Simple / Detailed** toggle (same persisted-
+    preference pattern as Configure's Basic/Advanced; Simple is the default for a first-time visitor). Simple mode
+    shows only: Overview's one-sentence status + 4 KPI cards, Inbox with 3 columns (song, status in plain words,
+    why — opens the existing Explain drawer) and no raw tables of numbers, and a single "Everything looks fine /
+    needs attention" banner in place of the Signals/Backtest/Runs views. Detailed mode is everything already built
+    (all 8 views, unchanged). Every metric/label that isn't plain English gets a tooltip (decision 24's pattern) in
+    BOTH modes — this is on top of the toggle, not instead of it, since Detailed users still need the glossary.
+    Add one dismissible first-visit callout pointing at the mode toggle ("Prefer more detail? Switch to Detailed").
+    Proof: a fresh-viewer Playwright test asserting Simple is the default and readable without opening the glossary;
+    axe/Lighthouse gates (decision 30) re-run on both modes.
+43. Re-run the full quality gate suite (decision 30: axe, Lighthouse, 3-browser Playwright) after this pass, since
+    layout/DOM changes can regress CLS/contrast that were already fixed once (see the two CLS fixes in the last
+    implementation round).
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
