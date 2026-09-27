@@ -9,6 +9,7 @@ Run: python -m pytest tests/e2e -q -m e2e
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -102,7 +103,7 @@ def test_save_to_github_targets_the_viewers_own_fork(make_page, site):
     assert f"target_name={OWNER}" in href
     assert "actions=write" not in href  # Phase 7 only ever asks for Contents, unlike run-now
 
-    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}})))
     page.locator("#gh-token").fill("github_pat_fake_token")
     page.get_by_role("button", name="Save & verify").click()
     page.wait_for_selector("#gh-commit-msg")

@@ -36,8 +36,8 @@ def rule(match, name="r", target="P", **kw) -> Rule:
     return Rule(name=name, target_playlist=target, match=match, **kw)
 
 
-def cfg(*rules, default=14, fallback=None) -> Config:
-    return Config(default_days_threshold=default, fallback_playlist=fallback, rules=tuple(rules))
+def cfg(*rules, default=14, fallback=None, inbox_since=None) -> Config:
+    return Config(default_days_threshold=default, fallback_playlist=fallback, rules=tuple(rules), inbox_since=inbox_since)
 
 
 BONOBO = {"artist_in": ["Bonobo"]}
@@ -341,6 +341,34 @@ def test_plan_since_filter_keeps_on_or_after():
 def test_plan_since_excludes_tracks_without_added_at():
     p = plan_for([track(1, age=None), track(2)], cfg(rule(BONOBO)), [pl("P")], since=days_ago(500))
     assert p.evaluated == 1
+
+
+# ------------------------------------------------------------------ inbox_since (decision 45/P1-2)
+
+def test_inbox_since_excludes_older_tracks_even_with_no_selector():
+    ts = [track(1, age=100), track(2, age=40), track(3, age=20)]
+    p = plan_for(ts, cfg(rule(BONOBO), inbox_since=days_ago(40).date()), [pl("P")])
+    assert {m["uri"] for m in p.moves} == {"spotify:track:t2", "spotify:track:t3"}
+    assert p.evaluated == 2
+
+
+def test_inbox_since_cannot_be_bypassed_by_a_wider_since_selector():
+    """P1-2: inbox_since is a hard floor -- a --since selector older than it must not widen the window."""
+    ts = [track(1, age=100), track(2, age=40), track(3, age=20)]
+    p = plan_for(ts, cfg(rule(BONOBO), inbox_since=days_ago(40).date()), [pl("P")], since=days_ago(500))
+    assert {m["uri"] for m in p.moves} == {"spotify:track:t2", "spotify:track:t3"}
+
+
+def test_since_selector_can_still_narrow_inside_inbox_since():
+    ts = [track(1, age=100), track(2, age=40), track(3, age=20)]
+    p = plan_for(ts, cfg(rule(BONOBO), inbox_since=days_ago(100).date()), [pl("P")], since=days_ago(40))
+    assert {m["uri"] for m in p.moves} == {"spotify:track:t2", "spotify:track:t3"}
+
+
+def test_inbox_since_none_evaluates_the_whole_library_as_before():
+    ts = [track(1, age=100), track(2, age=40)]
+    p = plan_for(ts, cfg(rule(BONOBO)), [pl("P")])
+    assert p.evaluated == 2
 
 
 def test_plan_no_match_counter():

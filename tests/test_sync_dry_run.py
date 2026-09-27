@@ -516,12 +516,11 @@ def test_end_to_end_committed_run_hides_titles_by_default(env, monkeypatch):
     assert run(tmp, cfg) == 0
     log = read_log(tmp)
     assert log["titles_hidden"] is True
-    assert all(m["track"] is None and m["artist"] is None for m in log["moved"])
-    assert {m["uri"] for m in log["moved"]} == {"spotify:track:t1", "spotify:track:t2", "spotify:track:t6"}
-    assert all(j["name"] is None for j in log["journal"])
+    assert all(m["track"] is None and m["artist"] is None and m["uri"] is None for m in log["moved"])
+    assert all(j["name"] is None and j["uri"] is None for j in log["journal"])
     plan = json.loads((tmp / "logs" / "latest-plan.json").read_text(encoding="utf-8"))
     assert plan["titles_hidden"] is True
-    assert all(s["title"] is None and s["artists"] == [] for s in plan["songs"])
+    assert all(s["title"] is None and s["artists"] == [] and s["uri"] is None for s in plan["songs"])
 
 
 def test_end_to_end_committed_run_with_opt_in_keeps_titles(env, monkeypatch):

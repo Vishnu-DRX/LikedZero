@@ -61,11 +61,30 @@
     return isGithubPages() ? 'repo' : 'fixtures';
   }
 
+  // decision 46/P2: a fork's default branch is not always "main". This resolves eventually-correctly, the
+  // same pattern shell.js's star count already uses: an immediate "main" fallback (never blocks this load),
+  // cached in sessionStorage once the real branch is known so the *next* load already has it right.
+  var BRANCH_KEY_PREFIX = 'spotisort.defaultBranch.';
+  function cachedDefaultBranch(owner, repo) {
+    try { return sessionStorage.getItem(BRANCH_KEY_PREFIX + owner + '/' + repo) || null; } catch (e) { return null; }
+  }
+  function refreshDefaultBranch(owner, repo) {
+    fetch('https://api.github.com/repos/' + owner + '/' + repo, { headers: { Accept: 'application/vnd.github+json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.default_branch) return;
+        try { sessionStorage.setItem(BRANCH_KEY_PREFIX + owner + '/' + repo, data.default_branch); } catch (e) { /* ignore */ }
+      }).catch(function () { /* offline / rate-limited / blocked: silent, no UI change */ });
+  }
+
   function deriveRepoBase() {
     var m = /^([^.]+)\.github\.io$/i.exec(location.hostname);
     var seg = location.pathname.split('/')[1];
-    if (m && seg && seg.indexOf('.') < 0) return 'https://raw.githubusercontent.com/' + m[1] + '/' + seg + '/main/logs/';
-    return '';
+    if (!(m && seg && seg.indexOf('.') < 0)) return '';
+    var owner = m[1], repo = seg;
+    var branch = cachedDefaultBranch(owner, repo) || 'main';
+    refreshDefaultBranch(owner, repo);
+    return 'https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + branch + '/logs/';
   }
 
   function normalizeRepoBase(v) {

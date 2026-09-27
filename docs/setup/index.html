@@ -107,12 +107,13 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
     <li class="setup-step">
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
-        <h2>Allow Actions to write, and enable Pages</h2>
-        <p>In your fork: <strong>Settings → Actions → General → Workflow permissions</strong>, select <strong>Read and write permissions</strong>, and save. This lets the scheduled run commit its own logs back to your repo.</p>
+        <h2>Enable Actions, allow it to write, and enable Pages</h2>
+        <p>GitHub disables Actions on every new fork. In your fork's <strong>Actions</strong> tab, click <strong>"I understand my workflows, go ahead and enable them"</strong> — without this, the Sync workflow cannot run at all, even manually.</p>
+        <p>Then: <strong>Settings → Actions → General → Workflow permissions</strong>, select <strong>Read and write permissions</strong>, and save. This lets a run commit its own logs back to your repo.</p>
         <p>Then: <strong>Settings → Pages</strong>, set source to <strong>Deploy from a branch</strong>, branch <code>main</code>, folder <code>/docs</code>.</p>
         <div class="banner banner-success" role="note">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
-          <div class="banner-body"><strong>You should see:</strong> a Pages URL like <code>https://&lt;you&gt;.github.io/SpotiSort/</code> serving your own copy of this site within a few minutes.</div>
+          <div class="banner-body"><strong>You should see:</strong> the Actions tab lists workflows instead of the disabled notice, and a Pages URL like <code>https://&lt;you&gt;.github.io/SpotiSort/</code> serving your own copy of this site within a few minutes.</div>
         </div>
       </div>
     </li>
@@ -121,7 +122,7 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
         <h2>Create your config</h2>
-        <p>Open <a href="../builder/">Configure</a> on your Pages site, build your rules, and select <strong>Save configuration</strong>. Put the downloaded <code>config.yaml</code> in your repo's root and commit it.</p>
+        <p>Open <a href="../builder/">Configure</a> on your Pages site and build your rules. Either click <strong>Save to GitHub</strong> to commit <code>config.yaml</code> straight to your fork (it walks you through connecting a token, scoped to just this repo), or click <strong>Save configuration</strong> and put the downloaded file in your repo's root yourself.</p>
         <div class="banner banner-success" role="note">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
           <div class="banner-body"><strong>You should see:</strong> <code>config.yaml</code> at the top level of your repo, matching what Configure previewed.</div>
@@ -133,7 +134,7 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
         <h2>First dry run</h2>
-        <p>On GitHub: <strong>Actions → Sync → Run workflow</strong>, leave <strong>dry run</strong> ticked, and run it. Then open your <a href="../dashboard/">Dashboard</a> and read the Overview and Inbox views.</p>
+        <p>Either use the <strong>Run now</strong> button on your <a href="../dashboard/">Dashboard</a>'s Overview (once you connect a token the same way as Save to GitHub), or go to GitHub: <strong>Actions → Sync → Run workflow</strong>, leave <strong>dry run</strong> ticked, and run it. Then open the Dashboard and read the Overview and Inbox views.</p>
         <div class="banner banner-success" role="note">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
           <div class="banner-body"><strong>You should see:</strong> a green run in the Actions tab, and the dashboard showing what it would have moved — with nothing actually moved yet.</div>
@@ -145,8 +146,8 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
         <h2>Go live, later</h2>
-        <p>When the dry run looks right, live runs are still guarded: a <strong>newest N</strong> selector and a <strong>max-moves cap</strong> stop any single run from touching more than you expect.</p>
-        <p>By default, committed run logs hide song titles (<code>logging.include_track_names: false</code>) — public logs carry counts and URIs only. Turn it on in Configure if you want your own logs to show titles, or open the log files locally in the dashboard to see titles regardless of this setting.</p>
+        <p>When the dry run looks right, live runs are still guarded: a <strong>newest N</strong> selector and a <strong>max-moves cap</strong> stop any single run from touching more than you expect. SpotiSort only ever runs when you start it (manually, via Run now, or via Actions) — there is no schedule by default. If you later want one, set <code>inbox_since</code> in Configure first (required so an unattended run can never reach your old library), then ask in the repo's Setup guide/README for how to enable the `schedule:` trigger.</p>
+        <p>By default, committed run logs hide song titles (<code>logging.include_track_names: false</code>) — public logs carry counts and decisions only, with no song-identifying links (a bare Spotify URI resolves to a real song in one request, so those are stripped too). Turn it on in Configure if you want your own logs to show titles, or open the log files locally in the dashboard to see titles regardless of this setting.</p>
       </div>
     </li>
   </ol>
@@ -155,9 +156,9 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
     <h2 id="trouble-heading">If something goes wrong</h2>
     <ul>
       <li><strong>Login window doesn't open:</strong> re-run <code>python -m src.spotify_client --setup</code>; make sure nothing else is using port 8888.</li>
-      <li><strong>Actions run fails immediately:</strong> check both secrets are set (Settings → Secrets and variables → Actions) and that Workflow permissions are Read and write.</li>
+      <li><strong>Actions run fails immediately:</strong> check Actions is enabled on the repo (Actions tab), both secrets are set (Settings → Secrets and variables → Actions), and Workflow permissions are Read and write.</li>
       <li><strong>Pages shows a 404:</strong> confirm the Pages source is <code>main</code> / <code>/docs</code> and wait a few minutes after enabling it.</li>
-      <li><strong>Dashboard says data is stale:</strong> that's expected until a scheduled or manual run has completed and committed a new log.</li>
+      <li><strong>Dashboard says data is stale:</strong> that's expected until a run (Run now, Actions, or local) has completed and committed a new log.</li>
       <li>Still stuck? Open an issue on the <a href="https://github.com/Vishnu-DRX/SpotiSort/issues" rel="noopener">upstream repository</a>.</li>
     </ul>
   </section>

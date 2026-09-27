@@ -211,6 +211,7 @@ def build_latest_plan(
         "liked_total": len(tracks),
         "default_days_threshold": config.default_days_threshold,
         "english_default": config.english_default,
+        "inbox_since": config.inbox_since.isoformat() if config.inbox_since else None,
         "counts": counts,
         "rules": rules_out,
         "playlists": playlists_out,
@@ -222,8 +223,11 @@ def run_entry(
     *, run_id: str, now: datetime, mode: str, plan_counts: Mapping[str, int], moved: int, errors: int, warnings: int,
     liked_before: int, liked_after: int, duration_s: float, rule_counts: Mapping[str, int], log_file: str, what_if: bool = False,
     reconcile_ok: bool | None = None, moves_by_playlist: Mapping[str, int] | None = None, vanished: int = 0,
+    aborted: str | None = None,
 ) -> dict[str, Any]:
-    if reconcile_ok is False:
+    if aborted:
+        verdict = aborted  # P1-3: an abort before any write must never be reported as "ok"
+    elif reconcile_ok is False:
         verdict = "mismatch"
     elif errors:
         verdict = "error"
@@ -277,11 +281,14 @@ def update_runs_index(path: str | Path, entry: dict[str, Any], now: datetime, sc
 
 
 def redact_plan(plan: dict[str, Any]) -> dict[str, Any]:
-    """Copy of a latest-plan snapshot with song titles/artists removed (URIs, counts, decisions and rules stay)."""
+    """Copy of a latest-plan snapshot with every song-identifying field removed (counts, decisions and rules
+    stay). P1-4 (2026-09-27 review): a bare ``spotify:track:`` URI resolves to a real song in one request
+    (open.spotify.com/track/<id>), so hiding titles/artists alone did not make this private -- the uri must go
+    too, and so must any other free-text match condition that could name the song."""
     out = json.loads(json.dumps(plan))
     out["titles_hidden"] = True
     for s in out.get("songs", []):
-        s["title"], s["artists"] = None, []
+        s["title"], s["artists"], s["uri"] = None, [], None
         for entry in (s.get("explain") or {}).get("trace", []):
             for c in entry.get("conditions", []):
                 if c.get("key") in TITLE_CONDITION_KEYS:
@@ -290,21 +297,39 @@ def redact_plan(plan: dict[str, Any]) -> dict[str, Any]:
 
 
 def redact_log(log: dict[str, Any]) -> dict[str, Any]:
-    """Copy of a run log with song titles/artists removed (journal keeps URI, dates and playlist ids for --restore)."""
+    """Copy of a run log with every song-identifying field removed, including the uri (see `redact_plan`) --
+    this copy is what gets committed publicly. The real journal (needed for --restore) is preserved
+    separately by `sync.run`'s private, git-ignored restore-journal file, never by this committed copy."""
     out = json.loads(json.dumps(log))
     out["titles_hidden"] = True
     for m in out.get("moved", []):
-        m["track"], m["artist"] = None, None
+        m["track"], m["artist"], m["uri"] = None, None, None
     for key in ("skipped_too_young", "skipped_playlist_missing"):
         for row in out.get(key, []):
             row["track"] = None
             if "artist" in row:
                 row["artist"] = None
     for j in out.get("journal", []):
-        j["name"], j["artists"] = None, None
+        j["name"], j["artists"], j["uri"] = None, None, None
     for v in out.get("vanished", []):
-        v["name"], v["artists"] = None, None
+        v["name"], v["artists"], v["uri"] = None, None, None
+    if "moved_uris" in out:
+        out["moved_uris"] = []
+    if "still_liked" in out:
+        out["still_liked"] = []
     return out
+
+
+def restore_journal_payload(log: Mapping[str, Any]) -> dict[str, Any]:
+    """The real (never redacted) journal of an apply run, shaped so the file itself is a valid `--restore`
+    argument (`apply.load_journal` requires `mode: "apply"` and `dry_run: false`). P1-4 (2026-09-27 review):
+    once `redact_log` also strips the uri from the committed public log, this is the only place --restore's
+    real data survives -- written to a git-ignored local file and picked up by the workflow's own journal
+    artifact upload, never committed."""
+    return {
+        "date": log.get("date"), "run_id": log.get("run_id"), "mode": log.get("mode"), "dry_run": False,
+        "restore_command": log.get("restore_command"), "journal": log.get("journal", []),
+    }
 
 
 def schedule_info(cron: str | None, now: datetime) -> dict[str, Any] | None:

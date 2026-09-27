@@ -8,7 +8,10 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     env:
-      SPOTISORT_BROWSERS: auto
+      # decision 46/P2: "auto" silently skips any browser that fails to launch (it did locally: 2 passed,
+      # 175 skipped, still reported "green"). CI installs all three below, so a missing one here should fail
+      # the job loudly instead of quietly shrinking coverage.
+      SPOTISORT_BROWSERS: chromium,firefox,webkit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

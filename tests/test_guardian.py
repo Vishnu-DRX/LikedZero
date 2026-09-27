@@ -25,14 +25,15 @@ rules:
 
 # ------------------------------------------------------------------ pure functions
 
-def test_load_snapshot_missing_file_is_empty(tmp_path):
-    assert guardian.load_snapshot(tmp_path / "nope.json") == {}
+def test_load_snapshot_missing_file_means_no_baseline(tmp_path):
+    """P1-7 (2026-09-27 review): None (no baseline) must never be confused with {} (baseline had 0 songs)."""
+    assert guardian.load_snapshot(tmp_path / "nope.json") is None
 
 
-def test_load_snapshot_corrupt_file_is_empty(tmp_path):
+def test_load_snapshot_corrupt_file_means_no_baseline(tmp_path):
     p = tmp_path / "snap.json"
     p.write_text("not json", encoding="utf-8")
-    assert guardian.load_snapshot(p) == {}
+    assert guardian.load_snapshot(p) is None
 
 
 def test_save_then_load_round_trips(tmp_path):
@@ -92,6 +93,7 @@ def test_first_run_has_no_vanished_and_writes_a_snapshot(env, monkeypatch):
     assert sync.main(argv(tmp, cfg)) == 0
     log = latest_log(tmp)
     assert log["vanished"] == []
+    assert log["guardian"] == {"baseline": "missing"}  # P1-7: no prior snapshot existed for this run
     snap = guardian.load_snapshot(tmp / "guardian.json")
     assert set(snap) == {uri(1), uri(2)}
 
@@ -106,9 +108,24 @@ def test_second_run_reports_a_song_that_vanished_outside_the_tool(env, monkeypat
 
     assert sync.main(argv(tmp, cfg)) == 0
     log = latest_log(tmp)
+    assert log["guardian"] == {"baseline": "ok"}  # a real snapshot existed to compare against
     assert [v["uri"] for v in log["vanished"]] == [uri(2)]
     assert log["vanished"][0]["name"] == "Song 2"
-    assert any("guardian" in w and "vanished" in w for w in log["warnings"])
+    # P1-7: worded as a neutral prompt to look, not an accusation -- un-liking is a normal, deliberate action
+    assert any("guardian" in w and "no longer liked" in w for w in log["warnings"])
+
+
+def test_third_run_with_nothing_vanished_reports_baseline_ok_not_missing(env, monkeypatch):
+    """P1-7: a real baseline with 0 vanished songs must read differently from no baseline at all -- both would
+    otherwise look identical ("0 vanished"), but one is a genuine clean bill of health and the other isn't."""
+    tmp, cfg = env
+    fake = _fs_with([make_track(1, age_days=1)])
+    monkeypatch.setattr(sync, "SpotifyClient", client_factory(fake))
+    assert sync.main(argv(tmp, cfg)) == 0  # baseline: missing
+    assert sync.main(argv(tmp, cfg)) == 0  # baseline: ok, nothing vanished
+    log = latest_log(tmp)
+    assert log["guardian"] == {"baseline": "ok"}
+    assert log["vanished"] == []
 
 
 def test_songs_the_run_itself_moves_are_never_flagged_as_vanished(env, monkeypatch):

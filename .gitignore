@@ -67,3 +67,7 @@ logs/local/
 # atomic-write temp files
 logs/.tmp-*
 .cache/.enrichment-*.tmp
+
+# Real --restore journal (P1-4, decision 44): never committed, even though logs/2*.json now IS (with the
+# uri redacted). The Actions workflow uploads this as its own artifact instead.
+logs/restore-journal.json

@@ -142,6 +142,9 @@
   }
  ],
  "vanished": [],
+ "guardian": {
+  "baseline": "ok"
+ },
  "liked_before": 46,
  "liked_after": 43,
  "verdict": "mismatch",

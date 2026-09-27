@@ -96,7 +96,13 @@ def build_plan(
     membership = membership or {}
     plan = Plan()
     warned: set[str] = set()
-    candidates = [t for t in tracks if since is None or (t.added_at is not None and t.added_at >= since)]
+    # decision 45/P1-2: config.inbox_since is a hard floor enforced here, in the planner, so no selector
+    # (--only-uris, --newest, --allow-unselected) can ever put a song liked before it into a plan.
+    since_floor = since
+    if config.inbox_since is not None:
+        cfg_since = datetime.combine(config.inbox_since, datetime.min.time(), tzinfo=now.tzinfo)
+        since_floor = cfg_since if since_floor is None else max(since_floor, cfg_since)
+    candidates = [t for t in tracks if since_floor is None or (t.added_at is not None and t.added_at >= since_floor)]
     candidates.sort(key=lambda t: (t.added_at is None, t.added_at))  # oldest liked first
     for t in candidates:
         plan.evaluated += 1

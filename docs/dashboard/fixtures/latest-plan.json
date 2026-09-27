@@ -9,6 +9,7 @@
  "liked_total": 42,
  "default_days_threshold": 14,
  "english_default": true,
+ "inbox_since": "2026-08-01",
  "counts": {
   "will_move": 21,
   "too_young": 6,

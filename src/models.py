@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 
@@ -77,6 +77,7 @@ class Config:
     musicbrainz: bool = True  # enrichment.musicbrainz
     english_default: bool = False  # enrichment.english_default (weak guess; off unless asked for)
     include_track_names: bool = False  # logging.include_track_names: committed logs carry titles only if true
+    inbox_since: date | None = None  # decision 45/P1-2: never evaluate a song liked before this date
 
 
 @dataclass(frozen=True)

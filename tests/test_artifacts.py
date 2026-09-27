@@ -9,8 +9,8 @@ import pytest
 
 from src import artifacts
 from src.artifacts import (
-    atomic_write_json, build_latest_plan, config_hash, iso, redact_log, redact_plan, run_entry, schedule_info,
-    update_runs_index,
+    atomic_write_json, build_latest_plan, config_hash, iso, redact_log, redact_plan, restore_journal_payload,
+    run_entry, schedule_info, update_runs_index,
 )
 from src.models import Artist, Config, Enrichment, Playlist, Rule, Track
 
@@ -488,12 +488,13 @@ def test_redact_plan_removes_titles_and_artists_but_keeps_everything_else():
     assert redacted["titles_hidden"] is True
     assert "titles_hidden" not in original  # the source snapshot is untouched
     for song in redacted["songs"]:
-        assert song["title"] is None and song["artists"] == []
-    # everything that isn't a name is preserved byte-for-byte
+        assert song["title"] is None and song["artists"] == [] and song["uri"] is None  # P1-4: a bare uri
+        # resolves to a real song in one request, so hiding titles/artists alone was not private
+    # everything that isn't identifying is preserved byte-for-byte
     stripped = json.loads(json.dumps(original))
     for orig_song, red_song in zip(stripped["songs"], redacted["songs"]):
         for key in orig_song:
-            if key not in ("title", "artists", "explain"):
+            if key not in ("title", "artists", "uri", "explain"):
                 assert red_song[key] == orig_song[key], key
     assert redacted["counts"] == original["counts"] and redacted["rules"] == original["rules"]
 
@@ -528,16 +529,36 @@ def test_redact_log_removes_track_and_artist_everywhere_they_appear():
     redacted = redact_log(log)
     assert redacted["titles_hidden"] is True
     assert redacted["moved"][0]["track"] is None and redacted["moved"][0]["artist"] is None
-    assert redacted["moved"][0]["uri"] == "spotify:track:t1" and redacted["moved"][0]["playlist"] == "Chill"
+    assert redacted["moved"][0]["uri"] is None and redacted["moved"][0]["playlist"] == "Chill"
     assert redacted["skipped_too_young"][0]["track"] is None and redacted["skipped_too_young"][0]["artist"] is None
     assert redacted["skipped_too_young"][0]["rule"] == "chill"
     assert redacted["skipped_playlist_missing"][0]["track"] is None
     assert redacted["skipped_playlist_missing"][0]["target_playlist"] == "Ghost"  # playlist name is not a song name
     assert redacted["journal"][0]["name"] is None and redacted["journal"][0]["artists"] is None
-    assert redacted["journal"][0]["uri"] == "spotify:track:t1"  # restore still works from a redacted log's journal
+    # P1-4 (2026-09-27 review): a bare uri resolves to a real song in one request, so the committed journal's
+    # uri is gone too -- --restore no longer works from this file; sync.py's restore-journal.json carries the
+    # real journal instead, and is never committed.
+    assert redacted["journal"][0]["uri"] is None
     assert redacted["journal"][0]["target_playlist_id"] == "id-Chill"
-    assert redacted["journal"][0]["original_added_at"] == "2026-08-01T00:00:00+00:00"
-    assert redacted["evaluated"] == 5
+
+
+def test_redact_log_empties_moved_uris_and_still_liked():
+    log = {"moved": [], "skipped_too_young": [], "skipped_playlist_missing": [], "journal": [],
+           "moved_uris": ["spotify:track:t1", "spotify:track:t2"], "still_liked": ["spotify:track:t3"],
+           "evaluated": 0, "errors": [], "warnings": []}
+    redacted = redact_log(log)
+    assert redacted["moved_uris"] == [] and redacted["still_liked"] == []
+
+
+def test_restore_journal_payload_is_a_valid_restore_argument():
+    from src.artifacts import restore_journal_payload
+
+    log = {"date": "2026-09-27", "run_id": "r1", "mode": "apply", "restore_command": "python -m src.sync --restore x --apply",
+           "journal": [{"uri": "spotify:track:t1", "name": "Song", "artists": "Bonobo",
+                        "original_added_at": "2026-08-01T00:00:00+00:00", "target_playlist_id": "id-Chill"}]}
+    payload = restore_journal_payload(log)
+    assert payload["mode"] == "apply" and payload["dry_run"] is False
+    assert payload["journal"] == log["journal"]
 
 
 def test_redact_log_handles_missing_optional_sections():

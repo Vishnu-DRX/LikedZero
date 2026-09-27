@@ -29,7 +29,7 @@ def test_fixtures_regenerate_identically(tmp_path):
 
 
 PLAN_KEYS = {"version", "generated_at", "run_id", "mode", "what_if", "inbox_kind", "config_hash", "liked_total", "default_days_threshold",
-             "english_default", "counts", "rules", "playlists", "songs"}
+             "english_default", "inbox_since", "counts", "rules", "playlists", "songs"}
 RULE_KEYS = {"name", "enabled", "target_playlist", "target_position", "threshold_days", "conditions", "uses_language",
              "weak_signals_possible", "would_match", "wins", "target_status", "status"}
 SONG_KEYS = {"title", "artists", "uri", "added_at", "age_days", "decision", "reason", "rule", "target_playlist", "target_status",
@@ -37,7 +37,7 @@ SONG_KEYS = {"title", "artists", "uri", "added_at", "age_days", "decision", "rea
 RUN_KEYS = {"run_id", "time", "mode", "what_if", "planned_moves", "moved", "too_young", "no_match", "blocked", "target_problems", "errors",
             "warnings", "liked_before", "liked_after", "duration_seconds", "verdict", "rule_counts", "moves_by_playlist", "vanished", "log"}
 LOG_KEYS = {"date", "run_id", "mode", "dry_run", "what_if", "evaluated", "moved", "skipped_no_match", "skipped_too_young",
-            "skipped_playlist_missing", "errors", "warnings", "journal", "vanished", "liked_before", "liked_after", "verdict", "rule_counts",
+            "skipped_playlist_missing", "errors", "warnings", "journal", "vanished", "guardian", "liked_before", "liked_after", "verdict", "rule_counts",
             "config_hash", "plan_counts", "http_audit", "runtime_seconds"}
 MOVED_KEYS = {"track", "artist", "uri", "playlist", "playlist_id", "rule", "matched", "age_days", "threshold_days",
               "already_in_target", "original_added_at", "target_position"}

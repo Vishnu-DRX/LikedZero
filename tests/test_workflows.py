@@ -60,8 +60,26 @@ def test_sync_never_interpolates_inputs_into_shell(sync):
 def test_sync_live_run_requires_newest_selector_and_cap():
     run = next(s["run"] for s in load("sync.yml")["jobs"]["sync"]["steps"] if s.get("name") == "Sync")
     assert "--apply" in run and "--newest" in run and "--max-moves" in run
-    assert "--allow-unselected" not in run  # no unselected live run from the manual dispatch (decision 12)
     assert "exit 2" in run  # a live run without 'newest' is refused before python starts
+    # decision 12: the manual-dispatch branch specifically never uses --allow-unselected -- only the
+    # schedule branch (decision 45/P1-2) does, and only when SPOTISORT_SCHEDULED_APPLY is set.
+    dispatch_branch = run.split('if [ "${IS_SCHEDULE:-false}"')[0]
+    assert "--allow-unselected" not in dispatch_branch
+
+
+def test_sync_schedule_branch_requires_the_apply_variable_and_uses_allow_unselected():
+    """decision 45/P1-2: wired but dormant -- there is no `schedule:` trigger yet (decision 38), so
+    IS_SCHEDULE is always false today; this just proves the logic is correct for when one is added."""
+    run = next(s["run"] for s in load("sync.yml")["jobs"]["sync"]["steps"] if s.get("name") == "Sync")
+    schedule_branch = run.split('if [ "${IS_SCHEDULE:-false}"')[1].split("elif")[0]
+    assert "SPOTISORT_SCHEDULED_APPLY" in schedule_branch
+    assert "--apply --allow-unselected" in schedule_branch
+    assert "--newest" not in schedule_branch  # a schedule cannot supply one
+
+
+def test_sync_has_no_schedule_trigger_yet(sync):
+    """decision 38: no schedule is being enabled by this change -- only the (dormant) logic for one."""
+    assert "schedule" not in sync["on"]
 
 
 def test_sync_has_no_unselected_input(sync):
@@ -85,6 +103,20 @@ def test_sync_permissions_and_bot_identity(sync):
 
 def test_tests_workflow_is_read_only():
     assert load("tests.yml")["permissions"] == {"contents": "read"}
+
+
+def test_journal_artifact_comes_from_the_private_restore_journal_not_the_committed_log(sync):
+    """P1-4 (2026-09-27 review): the committed day's log has its uri redacted, so --restore can't work from it
+    any more; the workflow must source the artifact from the never-committed restore-journal.json instead."""
+    steps = sync["jobs"]["sync"]["steps"]
+    prep = next(s["run"] for s in steps if s.get("name") == "Prepare journal for artifact upload")
+    assert "restore-journal.json" in prep
+    assert "log.get('journal'" not in prep  # no longer parses it back out of the (redacted) day's log
+
+
+def test_journal_artifact_wording_is_not_overclaimed_as_private():
+    text = (WF / "sync.yml").read_text(encoding="utf-8")
+    assert "signed-in GitHub user" in text  # P1-4: an artifact on a public repo is not actually private
 
 
 def test_sync_step_marks_itself_as_a_committed_run_and_only_that_step(sync):

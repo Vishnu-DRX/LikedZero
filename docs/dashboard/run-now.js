@@ -7,6 +7,9 @@
 
   var body = document.getElementById('run-now-body');
   var esc = window.DashViews.esc;
+  // P1-5: run-now's own scope set -- Configure's Save-to-GitHub uses a different set (Contents only), so the
+  // two features never share (or collide over) the same sessionStorage slot even in the same tab.
+  var SCOPES = [{ name: 'contents', level: 'write' }, { name: 'actions', level: 'write' }];
 
   function render() {
     var rn = window.DashData.repoOwnerName();
@@ -14,7 +17,7 @@
       body.innerHTML = '<p>Set the Repo data source above to your fork’s raw GitHub folder URL first, then reopen this.</p>';
       return;
     }
-    var token = window.GithubPAT.get(rn.owner, rn.repo);
+    var token = window.GithubPAT.get(rn.owner, rn.repo, SCOPES);
     if (token) renderRun(rn, token);
     else renderConnect(rn);
   }
@@ -24,8 +27,7 @@
       owner: rn.owner,
       name: 'SpotiSort run-now (' + rn.repo + ')',
       description: 'Lets the SpotiSort dashboard dispatch the Sync workflow on ' + rn.owner + '/' + rn.repo + '. Delete this token any time from github.com/settings/tokens?type=beta.',
-      scopes: [{ name: 'contents', level: 'write' }, { name: 'actions', level: 'write' }],
-      expiresInDays: 90,
+      scopes: SCOPES,
     });
     body.innerHTML =
       '<ol class="steps">' +
@@ -44,9 +46,10 @@
       var tok = input.value.trim();
       if (!tok) { status.textContent = 'Paste a token first.'; return; }
       status.textContent = 'Checking with GitHub…';
-      window.GithubPAT.verify(rn.owner, rn.repo, tok).then(function (res) {
+      window.GithubPAT.verify(rn.owner, rn.repo, tok, SCOPES).then(function (res) {
         if (!res.ok) { status.textContent = res.message; return; }
-        window.GithubPAT.set(rn.owner, rn.repo, tok);
+        window.GithubPAT.set(rn.owner, rn.repo, SCOPES, tok);
+        if (res.defaultBranch) window.GithubPAT.setDefaultBranch(rn.owner, rn.repo, res.defaultBranch);
         render();
       });
     });
@@ -65,7 +68,7 @@
       '<button type="button" class="btn primary" id="run-now-dispatch">Dispatch the Sync workflow</button>';
 
     document.getElementById('run-now-disconnect').addEventListener('click', function () {
-      window.GithubPAT.clear(rn.owner, rn.repo);
+      window.GithubPAT.clear(rn.owner, rn.repo, SCOPES);
       render();
     });
     document.getElementById('run-now-dispatch').addEventListener('click', function () {
@@ -79,7 +82,7 @@
       }
       status.textContent = 'Dispatching…';
       window.GithubPAT.dispatchWorkflow({
-        owner: rn.owner, repo: rn.repo, workflow: 'sync.yml', ref: 'main',
+        owner: rn.owner, repo: rn.repo, workflow: 'sync.yml', ref: window.GithubPAT.getDefaultBranch(rn.owner, rn.repo) || 'main',
         inputs: { dry_run: String(dry), newest: newest, max_moves: maxMoves },
         token: token,
       }).then(function (res) {
@@ -89,7 +92,7 @@
         } else {
           status.textContent = res.message;
           if (/token|401|403/i.test(res.message)) {
-            window.GithubPAT.clear(rn.owner, rn.repo);
+            window.GithubPAT.clear(rn.owner, rn.repo, SCOPES);
             setTimeout(render, 1500);
           }
         }

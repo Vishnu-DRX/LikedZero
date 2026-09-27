@@ -100,6 +100,14 @@
                 <p class="hint" id="g-fallback-hint">e.g. Inbox Overflow. Blank leaves unmatched songs alone.</p>
                 <p class="err" id="err-g-fallback"></p>
               </div>
+              <div class="field">
+                <label class="label" for="g-inbox-since">Inbox start date
+                  <button class="help" data-tip="Songs liked before this date are never evaluated, no matter how a run is started. Required before an unattended (scheduled) run is allowed, so a future schedule can never reach your old library." aria-label="Why does this matter?">?</button>
+                </label>
+                <input id="g-inbox-since" class="input" type="date" autocomplete="off" aria-describedby="g-inbox-since-hint err-g-inbox-since" />
+                <p class="hint" id="g-inbox-since-hint">Blank means every song is in scope (fine for manual runs; a scheduled run will require this to be set).</p>
+                <p class="err" id="err-g-inbox-since"></p>
+              </div>
               <div class="wizard-nav"><span></span><button type="button" class="btn btn-primary" data-next>Next: Languages</button></div>
             </section>
 
@@ -128,8 +136,8 @@
                   <span class="switch-ui" aria-hidden="true"></span>
                   <span class="switch-label">Include song titles in committed run logs</span>
                 </label>
-                <button class="help" data-tip="Off by default: your committed logs on GitHub only show counts and links, not song titles. Turn on if you're fine with that being public in your fork." aria-label="Why does this matter?">?</button>
-                <p class="hint">logging.include_track_names — off means public logs show counts and links only, not titles.</p>
+                <button class="help" data-tip="Off by default: your committed logs on GitHub show counts and decisions only, not song titles or which songs they are. Turn on if you're fine with real song titles and links being public in your fork." aria-label="Why does this matter?">?</button>
+                <p class="hint">logging.include_track_names — off means public logs show counts and decisions only, no titles and no song-identifying links.</p>
               </div>
 
               <div class="wizard-nav"><button type="button" class="btn btn-secondary" data-back>Back</button><button type="button" class="btn btn-primary" data-next>Next: Rules</button></div>

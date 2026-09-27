@@ -18,10 +18,10 @@
       "Read(./explore_output.json)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
-      "Bash(python src/sync.py --apply:*)",
-      "Bash(python -m src.sync --apply:*)",
-      "PowerShell(python src/sync.py --apply:*)",
-      "PowerShell(python -m src.sync --apply:*)"
+      "Bash(python src/sync.py*--apply*)",
+      "Bash(python -m src.sync*--apply*)",
+      "PowerShell(python src/sync.py*--apply*)",
+      "PowerShell(python -m src.sync*--apply*)"
     ]
   }
 }

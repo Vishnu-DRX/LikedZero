@@ -14,6 +14,7 @@ from src import sync
 TODAY = datetime.now(timezone.utc).date().isoformat()
 CONFIG = """\
 default_days_threshold: 14
+inbox_since: 2020-01-01
 rules:
   - name: chill
     match:
@@ -209,13 +210,42 @@ def test_allow_unselected_works(env, monkeypatch):
     assert fs.liked == [] and len(fs.items["chill1"]) == 4
 
 
-def test_allow_unselected_above_max_moves_exits_4_and_writes_nothing(env, monkeypatch, capsys):
+def test_allow_unselected_without_inbox_since_is_refused(tmp_path, monkeypatch, capsys):
+    """P1-2/decision 45: an unattended run must never be able to reach the whole legacy library just
+    because a schedule was turned on -- inbox_since is required, not merely recommended, for it."""
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("default_days_threshold: 14\nrules:\n  - name: chill\n    match:\n      artist_in: [\"Bonobo\"]\n    target_playlist: Chill\n", encoding="utf-8")
+    fs = use(monkeypatch, make_fs(4))
+    assert go(tmp_path, cfg, "--apply", "--allow-unselected") == 2
+    assert fs.calls == []
+    assert "inbox_since" in capsys.readouterr().err
+
+
+def test_allow_unselected_above_max_moves_exits_4_and_touches_nothing_in_spotify(env, monkeypatch, capsys):
     tmp, cfg = env
     fs = use(monkeypatch, make_fs(4))
     assert go(tmp, cfg, "--apply", "--allow-unselected", "--max-moves", "3") == 4
     assert fs.write_calls() == [] and len(fs.liked) == 4 and fs.items["chill1"] == []
-    assert [f for f in logs_written(tmp) if f.endswith(".json")] == []  # no run log, no runs.json, no latest-plan
     assert "max-moves" in capsys.readouterr().err
+
+
+def test_allow_unselected_above_max_moves_still_writes_an_honest_log(env, monkeypatch):
+    """P1-3 (review 2026-09-27): an abort before apply_moves ever writes must still tell the dashboard,
+    not leave it showing the previous run as current while only the Actions tab is red."""
+    tmp, cfg = env
+    use(monkeypatch, make_fs(4))
+    assert go(tmp, cfg, "--apply", "--allow-unselected", "--max-moves", "3") == 4
+    assert sorted(logs_written(tmp)) == sorted([f"{TODAY}.json", "latest-plan.json", "runs.json", "restore-journal.json"])
+    log = read_log(tmp)
+    assert log["verdict"] == "aborted_too_many"
+    assert log["journal"] == [] and log["moved"]  # the plan is shown (4 would-be moves); nothing was journaled
+    assert log["liked_before"] == log["liked_after"] == 4
+    runs = json.loads((tmp / "logs" / "runs.json").read_text(encoding="utf-8"))
+    entry = runs["runs"][0]
+    assert entry["verdict"] == "aborted_too_many"
+    assert entry["moved"] == 0 and entry["moves_by_playlist"] == {}
+    guardian_snap = json.loads((tmp / "guardian.json").read_text(encoding="utf-8"))
+    assert sorted(guardian_snap["tracks"]) == sorted(uri(i) for i in range(1, 5))
 
 
 def test_default_cap_is_50_through_the_cli(env, monkeypatch):

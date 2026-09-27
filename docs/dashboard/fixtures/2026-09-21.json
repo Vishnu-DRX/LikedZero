@@ -392,6 +392,9 @@
    "added_at": "2026-09-01T10:00:00+00:00"
   }
  ],
+ "guardian": {
+  "baseline": "ok"
+ },
  "liked_before": 42,
  "liked_after": 42,
  "verdict": "dry_run",

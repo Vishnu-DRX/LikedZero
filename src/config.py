@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ TOP_LEVEL_KEYS = {
     "language_playlists",
     "enrichment",
     "logging",
+    "inbox_since",
 }
 ENRICHMENT_KEYS = {"musicbrainz", "english_default"}
 LOGGING_KEYS = {"include_track_names"}
@@ -154,6 +156,21 @@ def parse_config(data: Any) -> Config:
     if fallback is not None and not _nonempty_str(fallback):
         errors.append("'fallback_playlist' must be a playlist name or null")
 
+    inbox_since: date | None = None
+    raw_since = data.get("inbox_since")
+    if raw_since is not None:
+        if isinstance(raw_since, datetime):
+            inbox_since = raw_since.date()
+        elif isinstance(raw_since, date):
+            inbox_since = raw_since
+        elif isinstance(raw_since, str):
+            try:
+                inbox_since = date.fromisoformat(raw_since.strip())
+            except ValueError:
+                errors.append("'inbox_since' must be a date (YYYY-MM-DD) or null")
+        else:
+            errors.append("'inbox_since' must be a date (YYYY-MM-DD) or null")
+
     lang_playlists: dict[str, str] = {}
     raw_lp = data.get("language_playlists", {})
     if raw_lp is None:
@@ -234,6 +251,7 @@ def parse_config(data: Any) -> Config:
         musicbrainz=musicbrainz,
         english_default=english_default,
         include_track_names=include_names,
+        inbox_since=inbox_since,
     )
 
 

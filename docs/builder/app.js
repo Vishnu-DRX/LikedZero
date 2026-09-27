@@ -87,7 +87,7 @@
   var nextId = 1;
   function blankState() {
     return {
-      defaultDays: '14', fallback: '', musicbrainz: true, englishDefault: false, includeTrackNames: false,
+      defaultDays: '14', fallback: '', inboxSince: '', musicbrainz: true, englishDefault: false, includeTrackNames: false,
       langPlaylists: [], rules: [], revealAll: false
     };
   }
@@ -159,6 +159,7 @@
   function syncGlobalControls() {
     $('g-days').value = state.defaultDays;
     $('g-fallback').value = state.fallback;
+    $('g-inbox-since').value = state.inboxSince;
     $('g-mb').checked = state.musicbrainz;
     $('g-en').checked = state.englishDefault;
     $('g-log').checked = state.includeTrackNames;
@@ -194,6 +195,7 @@
     data.enrichment = { musicbrainz: state.musicbrainz, english_default: state.englishDefault };
     data.logging = { include_track_names: state.includeTrackNames };
     data.fallback_playlist = state.fallback === '' ? null : state.fallback;
+    data.inbox_since = state.inboxSince.trim() === '' ? null : state.inboxSince.trim();
     data.rules = state.rules.map(function (r) {
       var match = {};
       r.match.forEach(function (c) {
@@ -230,7 +232,7 @@
       if (f === 'match') return r.match.length ? null : 'r' + r.id + '-add-cond';
       return fid(r, f);
     }
-    return { default_days_threshold: 'g-days', fallback_playlist: 'g-fallback', 'enrichment.musicbrainz': 'g-mb', 'enrichment.english_default': 'g-en', 'logging.include_track_names': 'g-log' }[e.field] || null;
+    return { default_days_threshold: 'g-days', fallback_playlist: 'g-fallback', inbox_since: 'g-inbox-since', 'enrichment.musicbrainz': 'g-mb', 'enrichment.english_default': 'g-en', 'logging.include_track_names': 'g-log' }[e.field] || null;
   }
   function slotIdFor(e) {
     if (e.lpRowId) return 'err-lp' + e.lpRowId;
@@ -239,7 +241,7 @@
       if (!r || !e.field) return null;
       return 'err-' + fid(r, e.field);
     }
-    return { default_days_threshold: 'err-g-days', fallback_playlist: 'err-g-fallback' }[e.field] || null;
+    return { default_days_threshold: 'err-g-days', fallback_playlist: 'err-g-fallback', inbox_since: 'err-g-inbox-since' }[e.field] || null;
   }
 
   var debouncedAutosave = debounce(function () { saveDraft(); }, 400);
@@ -679,6 +681,9 @@
     var next = blankState();
     next.defaultDays = raw.default_days_threshold === undefined || raw.default_days_threshold === null ? '' : String(raw.default_days_threshold);
     next.fallback = raw.fallback_playlist === undefined || raw.fallback_playlist === null ? '' : String(raw.fallback_playlist);
+    if (raw.inbox_since === undefined || raw.inbox_since === null) next.inboxSince = '';
+    else if (raw.inbox_since instanceof Date) next.inboxSince = raw.inbox_since.toISOString().slice(0, 10);
+    else next.inboxSince = String(raw.inbox_since);
     if (raw.enrichment && typeof raw.enrichment === 'object' && typeof raw.enrichment.musicbrainz === 'boolean') next.musicbrainz = raw.enrichment.musicbrainz;
     if (raw.enrichment && typeof raw.enrichment === 'object' && typeof raw.enrichment.english_default === 'boolean') next.englishDefault = raw.enrichment.english_default;
     if (raw.logging && typeof raw.logging === 'object' && typeof raw.logging.include_track_names === 'boolean') next.includeTrackNames = raw.logging.include_track_names;
@@ -926,6 +931,10 @@
   // ---------------------------------------------------------------- Save to GitHub (Phase 7, decision 39/41)
   // Reuses the shared PAT component (assets/github-pat.js) built for the dashboard's run-now button --
   // same deep-link-and-paste flow, same sessionStorage-only token, just Contents: write instead of +Actions.
+  // P1-5: this exact scope set is also this feature's own sessionStorage key, so it can never collide with
+  // run-now's Contents+Actions token even in the same tab.
+  var GH_SCOPES = [{ name: 'contents', level: 'write' }];
+
   function ownerRepoParts() {
     var onPages = /\.github\.io$/i.test(location.hostname);
     var owner = onPages ? location.hostname.replace(/\.github\.io$/i, '') : null;
@@ -954,7 +963,7 @@
       ghSaveBody(h('p', { text: 'This only works once the site is published on GitHub Pages, at <you>.github.io/<your-fork>/ -- it could not tell which repository to save to from this address.' }));
       return;
     }
-    var token = window.GithubPAT.get(rr.owner, rr.repo);
+    var token = window.GithubPAT.get(rr.owner, rr.repo, GH_SCOPES);
     if (token) renderGithubCommitForm(rr, token); else renderGithubConnect(rr);
   }
 
@@ -962,7 +971,7 @@
     var url = window.GithubPAT.tokenUrl({
       owner: rr.owner, name: 'SpotiSort Configure (' + rr.repo + ')',
       description: 'Lets Configure commit config.yaml to ' + rr.owner + '/' + rr.repo + '. Delete this token any time.',
-      scopes: [{ name: 'contents', level: 'write' }], expiresInDays: 90,
+      scopes: GH_SCOPES,
     });
     var status = h('p', { class: 'status', role: 'status' });
     var input = h('input', { class: 'input', id: 'gh-token', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'github_pat_…' });
@@ -980,9 +989,9 @@
           var tok = input.value.trim();
           if (!tok) { status.textContent = 'Paste a token first.'; return; }
           status.textContent = 'Checking with GitHub…';
-          window.GithubPAT.verify(rr.owner, rr.repo, tok).then(function (res) {
+          window.GithubPAT.verify(rr.owner, rr.repo, tok, GH_SCOPES).then(function (res) {
             if (!res.ok) { status.textContent = res.message; return; }
-            window.GithubPAT.set(rr.owner, rr.repo, tok);
+            window.GithubPAT.set(rr.owner, rr.repo, GH_SCOPES, tok);
             renderGithubCommitForm(rr, tok);
           });
         },
@@ -1003,7 +1012,10 @@
   }
 
   function githubPutFile(rr, token, message, sha) {
-    var body = { message: message, content: b64EncodeUtf8(current.yaml), branch: 'main' };
+    // decision 46/P2: no `branch` field -- GitHub's Contents API defaults a PUT to the repo's real default
+    // branch when it's omitted, same as the GET above already does. Hardcoding "main" here forced a write to
+    // the wrong branch on any fork whose default branch is something else.
+    var body = { message: message, content: b64EncodeUtf8(current.yaml) };
     if (sha) body.sha = sha;
     return fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/contents/config.yaml', {
       method: 'PUT',
@@ -1016,14 +1028,14 @@
     var msgInput = h('input', { class: 'input', id: 'gh-commit-msg', type: 'text', value: 'Update config.yaml via Configure' });
     var status = h('p', { class: 'status', role: 'status' });
     ghSaveBody(
-      h('p', { class: 'hint', text: 'Commits config.yaml straight to ' + rr.owner + '/' + rr.repo + ' (branch main).' }),
+      h('p', { class: 'hint', text: 'Commits config.yaml straight to ' + rr.owner + '/' + rr.repo + ' (its default branch).' }),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'gh-commit-msg', text: 'Commit message' }), msgInput),
       status,
       h('div', { class: 'actions' },
         h('button', { type: 'button', class: 'btn btn-primary', text: 'Commit', onclick: function () { doGithubCommit(rr, token, msgInput.value, null); } }),
         h('button', {
           type: 'button', class: 'btn btn-secondary btn-sm', text: 'Forget token',
-          onclick: function () { window.GithubPAT.clear(rr.owner, rr.repo); renderGithubConnect(rr); },
+          onclick: function () { window.GithubPAT.clear(rr.owner, rr.repo, GH_SCOPES); renderGithubConnect(rr); },
         }))
     );
   }
@@ -1042,7 +1054,7 @@
         } else if (res.status === 409) {
           renderGithubConflict(rr, token, msg);
         } else if (res.status === 401) {
-          window.GithubPAT.clear(rr.owner, rr.repo);
+          window.GithubPAT.clear(rr.owner, rr.repo, GH_SCOPES);
           renderGithubConnect(rr);
           var s = document.querySelector('#github-save-body .status');
           if (s) s.textContent = 'GitHub rejected the token (invalid or expired). Reconnect above.';
@@ -1103,7 +1115,7 @@
     if (!list || !hint) return;
     rr = rr || ownerRepoParts();
     if (!rr.real) { hint.textContent = 'Only available once this site is published on GitHub Pages.'; list.innerHTML = ''; return; }
-    token = token || window.GithubPAT.get(rr.owner, rr.repo);
+    token = token || window.GithubPAT.get(rr.owner, rr.repo, GH_SCOPES);
     if (!token) {
       hint.innerHTML = '';
       hint.appendChild(document.createTextNode('Connect via '));
@@ -1211,6 +1223,8 @@
     $('g-days').addEventListener('change', pushHistory);
     $('g-fallback').addEventListener('input', function (e) { state.fallback = e.target.value; update(); });
     $('g-fallback').addEventListener('change', pushHistory);
+    $('g-inbox-since').addEventListener('input', function (e) { state.inboxSince = e.target.value; update(); });
+    $('g-inbox-since').addEventListener('change', pushHistory);
     $('g-mb').addEventListener('change', function (e) { state.musicbrainz = e.target.checked; update(); pushHistory(); });
     $('g-en').addEventListener('change', function (e) { state.englishDefault = e.target.checked; update(); pushHistory(); });
     $('g-log').addEventListener('change', function (e) {

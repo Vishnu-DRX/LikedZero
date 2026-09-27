@@ -269,6 +269,14 @@
       else if (last.errors || last.warnings || mismatches) health = badge('warn', 'Healthy, with warnings');
       else health = badge('ok', 'Healthy');
       html += '<p class="callout" data-testid="health"><strong>Overall:</strong> ' + health + '</p>';
+      // decision 45/P1-2: inbox_since is the one guard that would stop a future schedule from reaching the
+      // whole legacy library, so its absence is worth surfacing here even though nothing runs on a schedule
+      // yet (decision 38).
+      if (p && p.inbox_since) {
+        html += '<p class="small muted" data-testid="inbox-since">Inbox since <strong>' + esc(D.fmtDate(p.inbox_since)) + '</strong> — songs liked before that are never evaluated.</p>';
+      } else if (p) {
+        html += '<p class="small" data-testid="inbox-since">' + badge('neutral', 'No inbox start date') + ' Every liked song is in scope for manual runs. Set <code>inbox_since</code> in Configure before ever enabling a schedule.</p>';
+      }
       if (ctx.source === 'repo') {
         html += '<p><button type="button" class="btn primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
           '<span class="small muted">Dispatches the Sync workflow on GitHub with your own token; nothing runs from this page itself.</span></p>';
@@ -470,7 +478,13 @@
         lastRows = rows;
       }
       var lastRows = [];
-      function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+      function csvCell(v) {
+        var s = String(v == null ? '' : v);
+        // decision 46/P2: a cell starting with = + - @ executes as a formula in Excel/Sheets when the CSV
+        // is opened -- prefix with a literal quote character so it's read as text instead.
+        if (/^[=+\-@]/.test(s)) s = "'" + s;
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
       function exportCsv() {
         var hidden = !!p.titles_hidden;
         var head = ['Song', 'Artists', 'Age (days)', 'Decision', 'Rule', 'Target playlist', 'Eligible on', 'Language'];
@@ -641,7 +655,10 @@
     if (l.reconcile) {
       h += '<h4>Reconcile</h4><p>' + (l.reconcile.ok ? badge('ok', 'Reconcile OK') : badge('bad', 'Mismatch')) + ' expected ' + esc(l.reconcile.expected_after) + ' liked songs after the run, found ' + esc(l.reconcile.actual_after) + '.</p>';
     }
-    if (l.restore_command) h += '<h4>Restore</h4><div class="copy-row"><code>' + esc(l.restore_command) + '</code><button type="button" class="btn secondary small" data-copy="' + esc(l.restore_command) + '">Copy</button></div>';
+    if (l.restore_command) {
+      h += '<h4>Restore</h4><div class="copy-row"><code>' + esc(l.restore_command) + '</code><button type="button" class="btn secondary small" data-copy="' + esc(l.restore_command) + '">Copy</button></div>';
+      if (l.titles_hidden) h += '<p class="small muted">The committed log no longer carries the real journal (its uris are redacted, decision 44). Download this run’s <code>journal</code> artifact from the Actions run page first, then run the command above against wherever you saved it.</p>';
+    }
     h += '</div>';
     var hidden = !!l.titles_hidden;
     h += listBlock('Errors', l.errors, 'No errors.') + listBlock('Warnings', l.warnings, 'No warnings.');
@@ -802,19 +819,27 @@
           h += '<p class="small muted">' + esc(r.moved) + ' moved &middot; liked songs ' + esc(r.liked_before) + ' &rarr; ' + esc(r.liked_after) + '</p>';
           if (!d) { h += '<p class="small">The run log <code>' + esc(r.log) + '</code> could not be loaded' + (l && l.message ? ': ' + esc(l.message) : ' (not found)') + '.</p></section>'; return; }
           if (d.reconcile) h += '<p><strong>Reconcile:</strong> ' + (d.reconcile.ok ? badge('ok', 'OK') : badge('bad', 'Mismatch')) + ' expected ' + esc(d.reconcile.expected_after) + ', found ' + esc(d.reconcile.actual_after) + '.</p>';
-          if (d.restore_command) h += '<p class="small" style="margin-bottom:4px">Restore command</p><div class="copy-row"><code>' + esc(d.restore_command) + '</code><button type="button" class="btn secondary small" data-copy="' + esc(d.restore_command) + '">Copy</button></div>';
+          if (d.restore_command) {
+            h += '<p class="small" style="margin-bottom:4px">Restore command</p><div class="copy-row"><code>' + esc(d.restore_command) + '</code><button type="button" class="btn secondary small" data-copy="' + esc(d.restore_command) + '">Copy</button></div>';
+            if (d.titles_hidden) h += '<p class="small muted">Download this run’s <code>journal</code> artifact from the Actions run page first (the committed log’s uris are redacted, decision 44).</p>';
+          }
           (d.warnings || []).forEach(function (w) { h += '<p class="small">' + badge('warn', 'Warning') + ' ' + esc(w) + '</p>'; });
           h += '<details><summary>Journal of removals (' + (d.journal || []).length + ')</summary>' + journalTable(d.journal, !!d.titles_hidden) + '</details>';
           h += '<p class="small"><a href="#/runs/' + encodeURIComponent(r.run_id) + '">Full run detail</a></p></section>';
         });
         var latest = latestRes && latestRes.status === 'ok' ? latestRes.data : null;
         var vanished = (latest && latest.vanished) || [];
+        var baseline = latest && latest.guardian && latest.guardian.baseline;
         var vanBody;
         if (!latest) {
           vanBody = '<p>' + badge('neutral', 'Unknown') + '</p><p class="small">The latest run log (<code>' + esc(latestRun.log) + '</code>) could not be loaded, so the guardian check cannot be shown.</p>';
+        } else if (baseline === 'missing') {
+          // P1-7: no prior snapshot to compare against (first run, or actions/cache evicted it after 7 days
+          // unused) must never look like "0 vanished" -- that would be a clean bill of health it didn't earn.
+          vanBody = '<p>' + badge('neutral', 'No baseline yet') + '</p><p class="small">This run had nothing to compare against (first run, or the snapshot expired from disuse). The next run will be able to check.</p>';
         } else if (vanished.length) {
-          vanBody = '<p>' + badge('bad', plural(vanished.length, 'song') + ' vanished') + '</p>' +
-            '<p class="small">These were in Liked Songs as of the previous run, are gone now, and SpotiSort did not remove them.</p>' +
+          vanBody = '<p>' + badge('warn', plural(vanished.length, 'song') + ' no longer liked') + '</p>' +
+            '<p class="small">These were liked as of the previous run and are not liked now, by you or Spotify — SpotiSort did not remove them. Worth a look, not necessarily a problem.</p>' +
             journalTable(vanished.map(function (v) { return { name: v.name, artists: v.artists, original_added_at: v.added_at, target_playlist_id: '—', uri: v.uri }; }), !!latest.titles_hidden);
         } else {
           vanBody = '<p>' + badge('ok', 'None') + '</p><p class="small">No previously-liked song has disappeared outside SpotiSort’s own moves, as of the run at ' + esc(D.fmtTime(latestRun.time)) + '.</p>';

@@ -163,14 +163,31 @@ def _launch_one(pw, name):
 
 @pytest.fixture(scope="session")
 def available_browsers(playwright_instance):
-    """{name: Browser} for every browser family that could be launched (soft-skips missing ones)."""
+    """{name: Browser} for every browser family that could be launched.
+
+    decision 46/P2: "auto" (the local-dev default) soft-skips whatever isn't installed -- but an EXPLICIT
+    SPOTISORT_BROWSERS list (what CI sets) is a promise that those browsers exist; a launch failure there is a
+    real CI/environment problem and must fail the run loudly, not quietly shrink coverage to whichever browser
+    happened to work while every test still reports green.
+    """
     wanted = os.environ.get("SPOTISORT_BROWSERS", "auto")
-    names = ["chromium", "firefox", "webkit"] if wanted == "auto" else [n.strip() for n in wanted.split(",") if n.strip()]
+    explicit = wanted != "auto"
+    names = ["chromium", "firefox", "webkit"] if not explicit else [n.strip() for n in wanted.split(",") if n.strip()]
     out = {}
+    missing = []
     for name in names:
         b = _launch_one(playwright_instance, name)
         if b is not None:
             out[name] = b
+        else:
+            missing.append(name)
+    if explicit and missing:
+        for b in out.values():
+            b.close()
+        raise RuntimeError(
+            f"SPOTISORT_BROWSERS={wanted!r} explicitly requested {missing}, but launching failed. "
+            "Run `python -m playwright install --with-deps " + " ".join(missing) + "` or fix SPOTISORT_BROWSERS."
+        )
     yield out
     for b in out.values():
         b.close()

@@ -6,6 +6,7 @@
   var SCHEMA = [
     { key: 'default_days_threshold', type: 'integer >= 0', def: '14', note: 'Whole days a song waits in Liked Songs before any rule can match it.' },
     { key: 'fallback_playlist', type: 'string or null', def: 'null', note: 'Playlist for unmatched songs. null leaves them in Liked Songs.' },
+    { key: 'inbox_since', type: 'date (YYYY-MM-DD) or null', def: 'null', note: 'Songs liked before this date are never evaluated, no matter how a run is started. Required before an unattended (scheduled) run is allowed.' },
     { key: 'language_playlists', type: 'map<string,string>', def: '{}', note: 'Playlist name -> language (canonical English name, ISO code or native name accepted as input).' },
     { key: 'enrichment.musicbrainz', type: 'boolean', def: 'true', note: 'Look up genre/language on MusicBrainz (free, 1 req/s).' },
     { key: 'enrichment.english_default', type: 'boolean', def: 'false', note: 'Weak guess: assume English for Latin-script songs by US/GB/AU/CA/IE/NZ artists.' },

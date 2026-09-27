@@ -9,7 +9,7 @@ Everything uses fixed timestamps, so regenerating is byte-for-byte reproducible 
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,6 +91,7 @@ _S = [
 CONFIG = Config(
     default_days_threshold=14,
     english_default=True,
+    inbox_since=date(2026, 8, 1),
     rules=(
         Rule("Malayalam favourites", "Fake Malayalam Mix", {"language_in": ["malayalam"]}, days_threshold=7),
         Rule("Hindi hits", "Fake Hindi Hits", {"language_in": ["hindi"]}, target_position="top"),
@@ -281,6 +282,7 @@ def _run_log(spec: dict, entry: dict, plan: dict) -> dict:
         "skipped_too_young": young, "skipped_playlist_missing": missing, "errors": errors, "warnings": warnings,
         "journal": _journal(moved) if apply else [],
         "vanished": VANISHED_SONGS.get(spec["date"], []) if spec.get("vanished") else [],
+        "guardian": {"baseline": "missing" if spec["date"] == "2026-09-14" else "ok"},  # P1-7: first run has none
         "liked_before": spec["before"], "liked_after": spec["after"], "verdict": entry["verdict"],
         "rule_counts": entry["rule_counts"], "config_hash": config_hash(CONFIG_TEXT), "plan_counts": dict(spec["plan"]),
         "http_audit": ({"GET api.spotify.com": 31, "POST api.spotify.com": 2, "PUT api.spotify.com": 0, "DELETE api.spotify.com": 3}

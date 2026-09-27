@@ -131,6 +131,32 @@ def test_rules_not_a_list_rejected():
     assert "'rules' must be a list" in joined({"rules": {"a": 1}})
 
 
+# ------------------------------------------------------------- inbox_since (decision 45/P1-2)
+
+def test_inbox_since_defaults_to_none():
+    assert parse_config({}).inbox_since is None
+
+
+def test_inbox_since_accepts_an_unquoted_yaml_date():
+    from datetime import date
+    import yaml
+
+    cfg = parse_config(yaml.safe_load("inbox_since: 2026-09-20\nrules: []\n"))
+    assert cfg.inbox_since == date(2026, 9, 20)
+
+
+def test_inbox_since_accepts_a_quoted_iso_string():
+    from datetime import date
+
+    cfg = parse_config({"inbox_since": "2026-09-20"})
+    assert cfg.inbox_since == date(2026, 9, 20)
+
+
+@pytest.mark.parametrize("value", [5, True, "not-a-date", "2026-13-40", ["2026-09-20"]])
+def test_inbox_since_rejects_bad_values(value):
+    assert "inbox_since" in joined({"inbox_since": value})
+
+
 def test_release_year_boundaries_accepted():
     cfg = parse_config({"rules": [mk_rule(match={"release_year_before": 9999, "release_year_after": 1})]})
     assert cfg.rules[0].match == {"release_year_before": 9999, "release_year_after": 1}

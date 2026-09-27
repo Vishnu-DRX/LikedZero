@@ -80,6 +80,9 @@
  ],
  "journal": [],
  "vanished": [],
+ "guardian": {
+  "baseline": "ok"
+ },
  "liked_before": 46,
  "liked_after": 46,
  "verdict": "dry_run",

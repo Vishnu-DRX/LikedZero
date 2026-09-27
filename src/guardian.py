@@ -19,13 +19,16 @@ from .models import Track
 DEFAULT_PATH = Path(".cache/liked-snapshot.json")
 
 
-def load_snapshot(path: str | Path) -> dict[str, dict[str, Any]]:
+def load_snapshot(path: str | Path) -> dict[str, dict[str, Any]] | None:
+    """None means "no baseline yet" (first run, or `actions/cache` evicted it after 7 days unused) --
+    P1-7 (2026-09-27 review): that must never be confused with "baseline exists and had 0 songs", or a
+    missing baseline silently reports as a clean "0 vanished" instead of "nothing to compare against"."""
     try:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {}
+        return None
     tracks = raw.get("tracks") if isinstance(raw, dict) else None
-    return tracks if isinstance(tracks, dict) else {}
+    return tracks if isinstance(tracks, dict) else None
 
 
 def save_snapshot(path: str | Path, tracks: list[Track]) -> None:

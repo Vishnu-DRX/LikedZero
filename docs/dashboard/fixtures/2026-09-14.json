@@ -134,6 +134,9 @@
  "warnings": [],
  "journal": [],
  "vanished": [],
+ "guardian": {
+  "baseline": "missing"
+ },
  "liked_before": 52,
  "liked_after": 52,
  "verdict": "dry_run",

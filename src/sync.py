@@ -33,6 +33,10 @@ from .apply import DEFAULT_MAX_MOVES, HARD_MAX_MOVES, EXIT_TOO_MANY, TooManyMove
 from .spotify_client import SpotifyClient, SpotifyError, load_env, validate_track_uris
 
 SAVE_EVERY = 25
+# P1-4: never committed (see .gitignore) -- the real journal for --restore, once redact_log strips the
+# committed copy's uri. Overwritten every apply run; the workflow uploads it as a private-ish Actions artifact
+# before the "Commit run logs" step ever touches the (by-then redacted) day's log.
+RESTORE_JOURNAL_NAME = "restore-journal.json"
 
 
 class AuditSession(requests.Session):
@@ -188,6 +192,13 @@ def run(args: argparse.Namespace) -> int:
     except (ConfigError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    if args.apply and args.allow_unselected and config.inbox_since is None:
+        # decision 45/P1-2: an unattended run (no --newest/--only-uris) must never be able to reach the whole
+        # legacy library just because a schedule was turned on -- inbox_since is the one guard that survives
+        # regardless of selector (enforced again in the planner itself).
+        print("error: --allow-unselected requires 'inbox_since' set in config.yaml (decision 45) -- "
+              "set it to the date your fresh inbox starts before enabling an unattended run.", file=sys.stderr)
+        return 2
 
     session = AuditSession()
     client = SpotifyClient.from_env(dry_run=not args.apply, session=session)
@@ -254,6 +265,7 @@ def run(args: argparse.Namespace) -> int:
     result = None
     moved = 0
     exit_code = 0
+    aborted: str | None = None  # P1-3: an abort before apply_moves still gets a real log, not silence
     if args.apply:
         def write_journal(journal: list[dict[str, Any]]) -> None:  # runs BEFORE any removal from Liked Songs
             log = base_log(time.monotonic() - started, False)
@@ -267,37 +279,55 @@ def run(args: argparse.Namespace) -> int:
             )
         except TooManyMoves as exc:
             print(f"error: {exc}", file=sys.stderr)
-            return EXIT_TOO_MANY
-        moved = len(result.removed)
-        exit_code = result.exit_code
+            aborted = "aborted_too_many"
+            exit_code = EXIT_TOO_MANY
+        else:
+            moved = len(result.removed)
+            exit_code = result.exit_code
     elif session.write_calls_to_api():  # cannot happen (client refuses), but verify rather than assume
         print("FATAL: a write call reached the Spotify API during a dry run", file=sys.stderr)
         return 3
 
     removed_by_tool = set(result.removed) if result is not None else set()
     current_after_uris = liked_uris_before - removed_by_tool
-    vanished = guardian.find_vanished(previous_snapshot, current_after_uris, removed_by_tool)
+    guardian_baseline = "missing" if previous_snapshot is None else "ok"
+    vanished = guardian.find_vanished(previous_snapshot or {}, current_after_uris, removed_by_tool)
     if vanished:
+        # P1-7: an un-like is a normal, deliberate action (the inbox-email equivalent of deleting a message);
+        # this can't distinguish that from Spotify silently dropping a song, so it must read as a prompt to
+        # look, not an accusation.
         plan.warnings.append(
-            f"guardian: {len(vanished)} previously-liked song(s) vanished from Liked Songs since the "
-            "last run without SpotiSort removing them"
+            f"guardian: {len(vanished)} song(s) no longer liked (by you or Spotify) since the last run"
         )
     guardian.save_snapshot(args.guardian_cache, [t for t in all_tracks if t.uri in current_after_uris])
 
+    hide = hide_titles(args, config)
     duration = time.monotonic() - started
     log = base_log(duration, not args.apply)
     log["vanished"] = vanished
+    log["guardian"] = {"baseline": guardian_baseline}
     liked_after = len(liked_uris_before)
     if result is not None:
         liked_after = result.liked_after if result.liked_after is not None else len(liked_uris_before)
+        # P1-4: once hidden, the committed log's journal/uri no longer carries real data (redact_log strips
+        # it), so --restore against that committed file can't work anymore -- point at the private,
+        # git-ignored restore-journal file (bundled into the workflow's own journal artifact) instead.
+        restore_command = (
+            f"python -m src.sync --restore {out.as_posix()} --apply" if not hide
+            else f"python -m src.sync --restore {(logs_dir / RESTORE_JOURNAL_NAME).as_posix()} --apply"
+        )
         log.update({
             "journal": result.journal, "errors": result.errors, "warnings": plan.warnings + result.warnings,
             "batches": result.batches, "reconcile": result.reconcile, "liked_after": liked_after,
             "moved_uris": result.removed, "still_liked": result.still_liked,
-            "restore_command": f"python -m src.sync --restore {out.as_posix()} --apply",
+            "restore_command": restore_command,
             "verdict": "ok" if result.ok else ("mismatch" if result.reconcile and not result.reconcile.get("ok") else "error"),
         })
-    hide = hide_titles(args, config)
+    elif aborted:
+        log["verdict"] = aborted
+        log["journal"] = []  # nothing was journaled: apply_moves raised before touching anything
+    if log.get("mode") == "apply":
+        artifacts.atomic_write_json(logs_dir / RESTORE_JOURNAL_NAME, artifacts.restore_journal_payload(log))
     artifacts.atomic_write_json(out, artifacts.redact_log(log) if hide else log)
     artifacts.atomic_write_json(logs_dir / "latest-plan.json", artifacts.redact_plan(snapshot) if hide else snapshot)
     artifacts.update_runs_index(
@@ -307,13 +337,17 @@ def run(args: argparse.Namespace) -> int:
             warnings=len(log["warnings"]), liked_before=len(liked_uris_before), liked_after=liked_after,
             duration_s=duration, rule_counts=rule_counts, log_file=out.name, what_if=args.what_if_enable_all,
             reconcile_ok=(result.reconcile.get("ok") if result and result.reconcile else None),
-            moves_by_playlist=dict(Counter(m["playlist"] for m in plan.moves if m["uri"] in (set(result.removed) if result else {m["uri"] for m in plan.moves}))),
+            moves_by_playlist=dict(Counter(
+                m["playlist"] for m in plan.moves
+                if m["uri"] in (set(result.removed) if result else (set() if aborted else {m["uri"] for m in plan.moves}))
+            )),
             vanished=len(vanished),
+            aborted=aborted,
         ),
         now,
         schedule=artifacts.schedule_info(args.cron, now),
     )
-    print_summary(plan, out, applied=result)
+    print_summary(plan, out, applied=result, aborted=aborted)
     return exit_code
 
 
@@ -345,8 +379,10 @@ def run_restore(args: argparse.Namespace, logs_dir: Path, started: float) -> int
     return res.exit_code
 
 
-def print_summary(plan: Plan, out: Path, applied=None) -> None:
-    if applied is None:
+def print_summary(plan: Plan, out: Path, applied=None, aborted: str | None = None) -> None:
+    if aborted:
+        print(f"ABORTED ({aborted}): evaluated {plan.evaluated} liked songs; nothing was written to Spotify.")
+    elif applied is None:
         print(f"DRY RUN: evaluated {plan.evaluated} liked songs; no writes performed.")
     else:
         print(f"APPLIED: evaluated {plan.evaluated} liked songs; moved {len(applied.removed)}, "

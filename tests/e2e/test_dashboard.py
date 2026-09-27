@@ -88,6 +88,7 @@ def test_overview_answers_is_it_healthy(dash):
     nxt = text(page, '[data-testid="next"]')
     assert f"move {c['will_move']} songs" in nxt and "nothing has been written" in nxt
     assert "Data freshness" in text(page, '[data-testid="freshness"]')
+    assert "2026-08-01" in text(page, '[data-testid="inbox-since"]')  # decision 45/P1-2
     expect(page.locator('[data-banner="stale"]')).to_have_count(0)
     expect(page.locator('[data-banner="legacy"]')).to_have_count(0)
     expect(page.locator('[data-banner="what-if"]')).to_have_count(0)
@@ -335,9 +336,9 @@ def test_safety_timeline_restore_reconcile(dash):
     assert "Mismatch" in joined and "expected 42, found 43" in joined
     cards.first.locator("summary").click()
     assert cards.first.locator('[data-testid="journal"] tbody tr').count() >= 1
-    # the latest run (2026-09-21) has one vanished song (decision 16 demo fixture)
+    # the latest run (2026-09-21) has one no-longer-liked song (decision 16 demo fixture)
     van = text(page, '[data-testid="vanished"]')
-    assert "vanished" in van and "Vanished Fixture Song" in van
+    assert "no longer liked" in van and "Vanished Fixture Song" in van
     # timeline data table alternative
     page.locator("summary", has_text="Show as a table").click()
     expect(page.locator("details[open] table tbody tr").first).to_be_visible()
@@ -610,7 +611,8 @@ def test_run_now_connect_verify_and_dispatch(dash):
     set_repo(page)
     page.locator('[data-testid="run-now-btn"]').click()
 
-    page.route("https://api.github.com/repos/octo/spot", lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
+    page.route("https://api.github.com/repos/octo/spot", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}})))
+    page.route("https://api.github.com/repos/octo/spot/actions/workflows", lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
     page.locator("#run-now-token").fill("github_pat_fake_token")
     page.get_by_role("button", name="Save & verify").click()
     page.wait_for_selector("#run-now-dispatch")
@@ -639,6 +641,30 @@ def test_run_now_connect_verify_and_dispatch(dash):
     expect(page.locator("#run-now-token")).to_be_visible()
 
 
+def test_run_now_dispatches_to_the_repos_real_default_branch(dash):
+    """decision 46/P2: a fork's default branch is not always "main" -- run-now must dispatch to whatever
+    branch verify() actually learned from GitHub, not a hardcoded guess."""
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+    page.route("https://api.github.com/repos/octo/spot", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}, "default_branch": "trunk"})))
+    page.route("https://api.github.com/repos/octo/spot/actions/workflows", lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
+    page.locator("#run-now-token").fill("github_pat_fake_token")
+    page.get_by_role("button", name="Save & verify").click()
+    page.wait_for_selector("#run-now-dispatch")
+
+    calls = []
+
+    def handle_dispatch(route):
+        calls.append(json.loads(route.request.post_data))
+        route.fulfill(status=204)
+
+    page.route("https://api.github.com/repos/octo/spot/actions/workflows/sync.yml/dispatches", handle_dispatch)
+    page.get_by_role("button", name="Dispatch the Sync workflow").click()
+    page.wait_for_selector("text=Dispatched")
+    assert calls[0]["ref"] == "trunk"
+
+
 def test_run_now_bad_token_shows_github_message_and_does_not_save(dash):
     page = dash("overview", source="repo")
     set_repo(page)
@@ -648,6 +674,45 @@ def test_run_now_bad_token_shows_github_message_and_does_not_save(dash):
     page.get_by_role("button", name="Save & verify").click()
     page.wait_for_selector("text=rejected the token")
     expect(page.locator("#run-now-token")).to_be_visible()
+
+
+def test_run_now_token_url_defaults_to_a_7_day_expiry(dash):
+    """P1-6 (2026-09-27 review): this token can edit code a scheduled workflow then runs with the Spotify
+    refresh token in its environment, so a long-lived default (90 days) was too generous."""
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+    href = page.locator("#run-now-body a").first.get_attribute("href")
+    assert "expires_in=7" in href
+
+
+def test_run_now_verify_rejects_a_token_without_write_access(dash):
+    """P1-5/P1-6: GET /repos/{o}/{r} succeeds for ANY valid token on a public repo regardless of its actual
+    scope, so checking only that call proved almost nothing. verify() must check the real granted permission."""
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+    page.route("https://api.github.com/repos/octo/spot", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": False}})))
+    page.locator("#run-now-token").fill("github_pat_read_only_token")
+    page.get_by_role("button", name="Save & verify").click()
+    page.wait_for_selector("text=no write access")
+    expect(page.locator("#run-now-token")).to_be_visible()
+
+
+def test_run_now_and_save_to_github_tokens_do_not_collide(dash):
+    """P1-5 (2026-09-27 review): before this fix, Configure's Contents-only token and run-now's
+    Contents+Actions token shared one sessionStorage slot keyed by owner/repo alone -- whichever connected
+    second silently overwrote the other's slot, and the loser's next call 403'd and got its token cleared,
+    logging it out too. Simulate Configure having already connected in this tab, then prove run-now still
+    needs its own connect step rather than reusing (and potentially breaking) Configure's token."""
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.evaluate("window.GithubPAT.set('octo', 'spot', [{name:'contents',level:'write'}], 'github_pat_configure_token')")
+    page.locator('[data-testid="run-now-btn"]').click()
+    # run-now must NOT find Configure's token under its own (different) scope key -- it should still show
+    # the connect step, not jump straight to the dispatch form as it would have with the old owner/repo-only key
+    expect(page.locator("#run-now-token")).to_be_visible()
+    expect(page.locator("#run-now-dispatch")).to_have_count(0)
 
 
 # ------------------------------------------------------------------ Simple/Detailed mode (decision 42)
@@ -761,6 +826,25 @@ def test_hostile_titles_are_escaped(dash):
     assert page.evaluate("window.__xss") is None
     assert page.locator("#inbox-results img").count() == 0
     assert page.locator("#inbox-results", has_text="<img src=x").count() == 1
+
+
+def test_csv_export_prevents_formula_injection(dash):
+    """decision 46/P2: a song title starting with = + - @ would otherwise execute as a formula when the
+    exported CSV is opened in Excel/Sheets."""
+    def mutate(d):
+        d["songs"][0]["title"] = "=cmd|'/c calc'!A1"
+        d["songs"][0]["artists"] = ["+1; DROP TABLE"]
+
+    def setup(page):
+        patch_json(page, "latest-plan.json", mutate)
+
+    page = dash("inbox", setup=setup, mode="detailed")
+    with page.expect_download() as info:
+        page.locator("#inbox-csv").click()
+    csv_text = Path(info.value.path()).read_text(encoding="utf-8")
+    assert "\"'=cmd|" in csv_text
+    assert "\"'+1; DROP TABLE\"" in csv_text
+    assert '"=cmd' not in csv_text  # never an unescaped formula-looking cell
 
 
 # ------------------------------------------------------------------ keyboard, routing, theme

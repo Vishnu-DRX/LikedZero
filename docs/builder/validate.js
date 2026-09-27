@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
 
-  var TOP_LEVEL_KEYS = ['default_days_threshold', 'fallback_playlist', 'rules', 'language_playlists', 'enrichment', 'logging'];
+  var TOP_LEVEL_KEYS = ['default_days_threshold', 'fallback_playlist', 'rules', 'language_playlists', 'enrichment', 'logging', 'inbox_since'];
   var ENRICHMENT_KEYS = ['musicbrainz', 'english_default'];
   var LOGGING_KEYS = ['include_track_names'];
   var RULE_KEYS = ['name', 'enabled', 'match', 'target_playlist', 'days_threshold', 'create_missing_playlists', 'target_position'];
@@ -16,7 +16,16 @@
   function has(list, key) { return list.indexOf(key) !== -1; }
   function isInt(v) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v; }
   function nonemptyStr(v) { return typeof v === 'string' && v.trim() !== ''; }
-  function isMap(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+  function isMap(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date); }
+
+  function isValidIsoDate(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return false;
+    var y = +m[1], mo = +m[2], d = +m[3];
+    if (mo < 1 || mo > 12) return false;
+    var dim = [31, (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return d >= 1 && d <= dim[mo - 1];
+  }
 
   // Python repr() of a str, as used in the '!r' messages.
   function pyRepr(s) {
@@ -116,6 +125,13 @@
     var fallback = data.fallback_playlist;
     if (fallback !== undefined && fallback !== null && !nonemptyStr(fallback)) {
       top('fallback_playlist', "'fallback_playlist' must be a playlist name or null");
+    }
+
+    var since = data.inbox_since;
+    if (since !== undefined && since !== null) {
+      var sinceOk = (since instanceof Date && !isNaN(since.getTime())) ||
+        (nonemptyStr(since) && isValidIsoDate(since.trim()));
+      if (!sinceOk) top('inbox_since', "'inbox_since' must be a date (YYYY-MM-DD) or null");
     }
 
     var lp = 'language_playlists' in data ? data.language_playlists : {};

@@ -23,15 +23,21 @@ rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, vanished:in
 threshold_days, already_in_target, original_added_at, target_position}], skipped_no_match, skipped_too_young:[...],
 skipped_playlist_missing:[{track,target_playlist,rule,reason,would_create}], errors:[str], warnings:[str],
 journal:[{uri,name,artists,original_added_at,target_playlist_id}], vanished:[{uri,name,artists,added_at}] (decision 16: liked
-since the previous run, gone now, not removed by this run itself -- every run reports this, dry or apply), liked_before,
+since the previous run, gone now, not removed by this run itself -- every run reports this, dry or apply),
+guardian:{baseline:"missing"|"ok"} (P1-7, 2026-09-27 review: "missing" = nothing to compare against yet -- first
+run, or the actions/cache snapshot expired from 7 days' disuse -- must never be shown the same as "ok" with 0
+vanished, which is a real clean bill of health), liked_before,
 liked_after, verdict, rule_counts, config_hash, plan_counts, http_audit:{"GET api.spotify.com":n,...}, runtime_seconds,
-titles_hidden (present+true when logging.include_track_names is false on a GitHub Actions run: track/artist fields on
-`moved`/`journal`/`vanished` are null; local runs always keep titles)}`
+titles_hidden (present+true when logging.include_track_names is false on a GitHub Actions run: track/artist AND uri
+fields on `moved`/`journal`/`vanished` are null, `moved_uris`/`still_liked` are emptied -- P1-4, 2026-09-27 review: a
+bare uri resolves to a real song in one request, so hiding titles alone was not private; local runs always keep
+everything, and the real journal for `--restore` survives separately in the git-ignored `restore-journal.json`)}`
 Apply runs (Phase 4) add `reconcile:{expected_after, actual_after, ok}`, `restore_command` (string), `batches:[{playlist_id, size, committed}]`.
 
 ## `latest-plan.json` — inbox snapshot
 `{version, generated_at, run_id, mode, what_if, inbox_kind ("legacy_library"|"fresh_inbox"), config_hash, liked_total,
-default_days_threshold, english_default, counts:{will_move,too_young,no_match,target_problem,blocked},
+default_days_threshold, english_default, inbox_since:"YYYY-MM-DD"|null (decision 45/P1-2: songs liked before this
+are never evaluated by any selector; shown on Overview, required before --allow-unselected), counts:{will_move,too_young,no_match,target_problem,blocked},
 rules:[{name, enabled, target_playlist, target_position ("top"|"bottom"), threshold_days, conditions:{key:value}, uses_language,
 weak_signals_possible:[..], would_match, wins, target_status ("resolved"|"missing"|"not_writable"|"ambiguous"),
 status ("ok"|"dead"|"shadowed"|"disabled")}],
@@ -40,7 +46,7 @@ songs:[{title, artists:[..], uri, added_at, age_days, decision ("will_move"|"too
 reason, rule|null, target_playlist|null, target_status|null, eligible_on|null, target_position|null,
 language:{value|null, source ("playlist"|"script"|"hint"|"country_default")|null, confidence 0..1|null, used_for_rules:bool, withheld:{language,source,precision,samples,reason}|null},
 genres:{values:[..], source|null, confidence|null},
-titles_hidden (present+true on a titles-redacted snapshot: title/artists are null; open local files to see them),
+titles_hidden (present+true on a titles-redacted snapshot: title/artists/uri are null; open local files to see them),
 explain:{trace:[{rule, enabled, threshold_days, conditions:[{key,wanted,actual,passed}],
   result ("matched"|"matched_too_young"|"failed"|"not_reached"|"not_reached_but_would_match"|"skipped_disabled"|"skipped_empty")}],
   decided_by|null, age_days}}]}`

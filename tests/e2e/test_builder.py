@@ -420,6 +420,8 @@ PARITY = [
                 "days_threshold": 0}], "language_playlists": {"X": "tamil"},
      "enrichment": {"musicbrainz": False, "english_default": False}, "logging": {"include_track_names": True},
      "fallback_playlist": "F", "default_days_threshold": 0},
+    {"inbox_since": "2026-09-20"}, {"inbox_since": None}, {"inbox_since": "not-a-date"},
+    {"inbox_since": "2026-13-40"}, {"inbox_since": "2026-02-30"}, {"inbox_since": 5}, {"inbox_since": True},
 ]
 
 
@@ -432,6 +434,17 @@ def test_js_validator_matches_python_messages(builder, doc):
     except ConfigError as exc:
         py = exc.errors
     assert js == py
+
+
+def test_inbox_since_field_round_trips_and_validates(builder_basic):
+    page = builder_basic
+    goto_step(page, 1, "Basics")
+    page.locator("#g-inbox-since").fill("2026-09-20")
+    assert preview_data(page)["inbox_since"] == "2026-09-20"
+    assert str(validated(preview(page)).inbox_since) == "2026-09-20"
+    page.locator("#g-inbox-since").fill("")
+    assert preview_data(page)["inbox_since"] is None
+    assert validated(preview(page)).inbox_since is None
 
 
 def test_logging_default_false_and_toggle_updates_yaml(builder_basic):
