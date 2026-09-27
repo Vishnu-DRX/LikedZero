@@ -1,38 +1,208 @@
 {
  "date": "2026-09-27",
  "dry_run": true,
- "evaluated": 772,
- "moved": [],
- "skipped_no_match": 772,
+ "evaluated": 775,
+ "moved": [
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Anavae binge list",
+   "playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1",
+   "rule": "Anavae -> Anavae binge list",
+   "matched": {
+    "artist_in": "Anavae"
+   },
+   "age_days": 1649.2,
+   "threshold_days": 14,
+   "already_in_target": true,
+   "original_added_at": "2022-03-23T11:46:28+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Anavae binge list",
+   "playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1",
+   "rule": "Anavae -> Anavae binge list",
+   "matched": {
+    "artist_in": "Anavae"
+   },
+   "age_days": 1750.3,
+   "threshold_days": 14,
+   "already_in_target": true,
+   "original_added_at": "2021-12-12T10:59:05+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Anavae binge list",
+   "playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1",
+   "rule": "Anavae -> Anavae binge list",
+   "matched": {
+    "artist_in": "Anavae"
+   },
+   "age_days": 1750.3,
+   "threshold_days": 14,
+   "already_in_target": true,
+   "original_added_at": "2021-12-12T10:42:04+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Anavae binge list",
+   "playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1",
+   "rule": "Anavae -> Anavae binge list",
+   "matched": {
+    "artist_in": "Anavae"
+   },
+   "age_days": 1750.3,
+   "threshold_days": 14,
+   "already_in_target": false,
+   "original_added_at": "2021-12-12T10:42:02+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Riffs in the air",
+   "playlist_id": "3Vj7JIBtLWcWdW1gGaCRL4",
+   "rule": "Twenty One Pilots -> Riffs in the air",
+   "matched": {
+    "artist_in": "Twenty One Pilots"
+   },
+   "age_days": 2034.5,
+   "threshold_days": 14,
+   "already_in_target": true,
+   "original_added_at": "2021-03-03T05:04:32+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "The Klasey Universe",
+   "playlist_id": "4r4S15pfyx1OvLTTDc3us4",
+   "rule": "Klasey Jones -> The Klasey Universe",
+   "matched": {
+    "artist_in": "Klasey Jones"
+   },
+   "age_days": 2060.2,
+   "threshold_days": 14,
+   "already_in_target": true,
+   "original_added_at": "2021-02-05T11:27:56+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Midnight Mixer",
+   "playlist_id": "3qiTFxun9TZSXachf6gUzr",
+   "rule": "The Midnight -> Midnight Mixer",
+   "matched": {
+    "artist_in": "The Midnight"
+   },
+   "age_days": 2394.2,
+   "threshold_days": 14,
+   "already_in_target": true,
+   "original_added_at": "2020-03-08T12:44:23+00:00",
+   "target_position": "bottom"
+  }
+ ],
+ "skipped_no_match": 768,
  "skipped_too_young": [],
  "skipped_playlist_missing": [],
  "errors": [],
  "warnings": [],
- "journal": [],
+ "journal": [
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2022-03-23T11:46:28+00:00",
+   "target_playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1"
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2021-12-12T10:59:05+00:00",
+   "target_playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1"
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2021-12-12T10:42:04+00:00",
+   "target_playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1"
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2021-12-12T10:42:02+00:00",
+   "target_playlist_id": "6ZdPaCPlKhMVDsR1Q04sp1"
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2021-03-03T05:04:32+00:00",
+   "target_playlist_id": "3Vj7JIBtLWcWdW1gGaCRL4"
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2021-02-05T11:27:56+00:00",
+   "target_playlist_id": "4r4S15pfyx1OvLTTDc3us4"
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2020-03-08T12:44:23+00:00",
+   "target_playlist_id": "3qiTFxun9TZSXachf6gUzr"
+  }
+ ],
  "http_audit": {
   "POST accounts.spotify.com": 1,
-  "GET api.spotify.com": 26
+  "GET api.spotify.com": 30
  },
- "runtime_seconds": 8.6,
- "run_id": "20260927T132607Z",
+ "runtime_seconds": 14.2,
+ "run_id": "20260927T170505Z",
  "mode": "dry_run",
  "what_if": false,
- "liked_before": 772,
- "liked_after": 772,
+ "liked_before": 775,
+ "liked_after": 775,
  "verdict": "dry_run",
  "rule_counts": {
   "Hindi -> Dil": 0,
   "Malayalam -> NewAgeMadrasMail": 0,
+  "Anavae -> Anavae binge list": 4,
+  "Linkin Park -> Dead Dreams' Disco": 0,
+  "Queen -> Her Highness": 0,
+  "Twenty One Pilots -> Riffs in the air": 1,
+  "Klasey Jones -> The Klasey Universe": 1,
+  "The Midnight -> Midnight Mixer": 1,
   "Japanese -> nani mo wakaranai (draft)": 0,
   "English -> The Simulation Archives (draft, weak signal)": 0,
   "Vault catch-all (draft, top)": 0
  },
- "config_hash": "ec55cc629a16",
+ "config_hash": "293bf6caa67a",
  "plan_counts": {
-  "will_move": 0,
+  "will_move": 7,
   "too_young": 0,
-  "no_match": 772,
+  "no_match": 768,
   "target_problem": 0,
   "blocked": 0
- }
+ },
+ "titles_hidden": true
 }
