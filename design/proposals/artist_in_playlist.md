@@ -86,17 +86,14 @@ this → Q6 (more useful once more of the library is actively routed rather than
 
 ## Operational note: emptying Liked Songs
 
-The user intends to reset Liked Songs to empty before real operation begins. The **guardian** (Phase 8b) will
-report every one of the ~774 currently-liked songs as "no longer liked" the first run after that happens — this
-is a large, correct, but noisy Safety-view entry for a deliberate reset, not a real alarm. Open question for
-the master/user: add a one-time "acknowledge this reset" action so it doesn't read as a mass failure, or leave
-it as a one-off warning to ignore. Not yet decided; flag before the reset happens.
+The user intends to reset Liked Songs to empty before real operation begins — this is what the fresh-inbox
+design (decisions 12-17) was already built for. (The guardian feature that would previously have raised a mass
+false alarm over this reset has been removed entirely, see Master decisions 9 — no longer a concern.)
 
 ## Ask for the master/user
 
 Sign-off needed on: the schema above (`target_playlist: auto`, the exclude list, the strict-max tie rule), the
-`min_tracks` default before the sweep picks a final value, the build order (this → Q6 → Q3), and the guardian
-reset-acknowledgement question just above. Once approved, implementation follows the same pattern as every
-other schema addition: `config.py` + `validate.js` + parity tests together, then planner/rules_engine, then
+`min_tracks` default before the sweep picks a final value, and the build order (this → Q6 → Q3). Once approved,
+implementation follows the same pattern as every other schema addition: `config.py` + `validate.js` + parity tests together, then planner/rules_engine, then
 backtest measurement on the real library *before* enabling any rule that uses it — mirroring how
 `english_default` was gated behind measured precision.

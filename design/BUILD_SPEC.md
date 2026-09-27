@@ -335,6 +335,24 @@ and is true; no report correction needed. Read the review in full; the priority 
     Q9 deliberate re-liked-song handling. Bring a short recommendation back to the master before implementing any of
     these; each needs config.py + validate.js + parity tests together (schema is otherwise frozen).
 
+## Master decisions 9 (2026-09-27) — remove the guardian entirely
+User decision: drop the liked-songs guardian feature (decision 16, built in Phase 8a/8b) completely, not just
+fix its wording. Reasoning: it structurally cannot distinguish an intentional un-like from Spotify silently
+dropping a song, its `actions/cache` baseline evaporates after 7 days of inactivity (reporting "0 vanished"
+misleadingly even after the P1-7 fix distinguished "missing" from "ok"), and the user's planned Liked-Songs
+reset to a fresh, empty inbox (decisions 12-17) would otherwise fire a ~774-song false-alarm on its very first
+run. It is not being replaced by anything.
+48. **Remove:** `src/guardian.py` and its call sites in `src/sync.py` (snapshot write, `log["guardian"]`,
+    `log["vanished"]`), the `runs.json` `vanished` count (`src/artifacts.run_entry`), the Safety view's
+    vanished-song section and baseline-status UI in the dashboard, the `.github/workflows/sync.yml` steps that
+    restore/save the guardian's `actions/cache` snapshot, `tests/test_guardian.py`, and every other reference
+    (fixtures, `DATA.md`, README/Setup guide, `redact_log`'s vanished-redaction branch). Grep for `guardian` and
+    `vanished` across the whole repo and remove every hit rather than leaving a dead code path or a dashboard
+    section with nothing behind it.
+49. Full test suite and quality gates (decision 30) re-run after removal, since it touches the run log schema,
+    `runs.json`, dashboard fixtures/contract tests, and the workflow. Confirm no reference to the removed
+    feature survives in docs or the Setup guide.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
