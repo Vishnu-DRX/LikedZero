@@ -227,6 +227,31 @@ product, not a dev tool. Order: **U1 design system + site shell → U2 Configure
     reviews the dashboard from the public site) → **G2b** (live `SpotiSort Test` protocol, then one real run, then the confirmed
     cron) → Phase 7 (save to GitHub) → 8b (run-now button, guardian). No writes to Spotify before G2b.
 
+## Master decisions 6 (after gate G2 review) — binding
+G2a/G2b reviewed: **accepted**, including the recorded deviation (user explicitly chose to skip the staged
+`SpotiSort Test` step; the session correctly refused to run `--apply` itself and only handed over the command
+after stating the risk). Accepted as a one-off, not a precedent for skipping future verification steps.
+36. **Close the live-proof gap cheaply, now:** run the originally-specified staged protocol post-hoc at low stakes —
+    like one throwaway song, `--apply --newest 1` with a test rule (`target_playlist: "SpotiSort Test"`,
+    `target_position: top`, `days_threshold: 0`) targeting ONLY that disposable playlist, verify add + order in
+    Spotify, then `--restore`, verify the song is back in Liked Songs and gone from the test playlist. This proves
+    `--restore` and `top` insertion live for the first time. Do not touch any real target playlist for this proof.
+37. **`config.yaml` (the user's real, live config) is updated:** remove the `days_threshold: 0` override — real rules
+    use the normal default (14 days, i.e. no per-rule override) now that the mechanism is proven. Enable the
+    **Hindi → Dil** draft alongside the already-enabled Malayalam → NewAgeMadrasMail rule, both at the default
+    threshold. Japanese, English and the catch-all stay disabled (recall/precision too low or wrong signal type for
+    English; catch-all/Vault ordering is unresolved product, decision 17). Re-run a cloud dry-run after committing so
+    the dashboard reflects the real live rule set.
+38. **Cron: stay manual-only for now** (user's choice) — `sync.yml` keeps `workflow_dispatch` only, no `schedule:`
+    trigger, Overview keeps showing "Not scheduled" honestly rather than a guessed time. Revisit once the user has
+    watched a few manual runs.
+39. **Next body of work is Phase 8b before Phase 7:** run-now button (dispatch `workflow_dispatch` from the site) and
+    the liked-songs vanished-song guardian (decision 16) add real safety/visibility value now; Phase 7 (GitHub
+    write-back) is a convenience on top of already-working local Download/Copy and introduces a new auth surface
+    (PAT flow, per the CORS finding) — do it after. The run-now button needs a way to trigger `workflow_dispatch`
+    without a broad token: use the same guided fine-grained-PAT pattern planned for Phase 7 (Contents + Actions:write
+    on this repo only), so build that auth component once and share it between 8b and Phase 7 rather than duplicating it.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
