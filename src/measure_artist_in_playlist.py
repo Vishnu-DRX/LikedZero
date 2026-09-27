@@ -274,15 +274,11 @@ def render_detail(sweeps: Mapping[int, dict[str, Any]], names: Mapping[str, str]
     return "\n".join(lines) + "\n"
 
 
-def run(args: argparse.Namespace) -> int:
-    load_env(args.env)
-    try:
-        config: Config = load_config(args.config)
-    except (ConfigError, OSError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-
-    client = SpotifyClient.from_env(dry_run=True)  # read-only by construction
+def fetch_library(client: SpotifyClient, config: Config) -> dict[str, Any]:
+    """One read of every owned/collaborative, non-empty playlist (excluding `SpotiSort Test`). Shared by every
+    measurement script so a single library snapshot backs every report generated from one run, and so nobody
+    pays for a second full fetch. Returns tracks/truth/names/candidate_ids/lang map, all keyed as elsewhere in
+    this module."""
     playlists = list(client.iter_my_playlists())
     usable: list[Playlist] = [p for p in playlists if p.usable and p.name.casefold() != TEST_PLAYLIST]
 
@@ -318,6 +314,114 @@ def run(args: argparse.Namespace) -> int:
     missing_langs = [lang for lang in INTERACTION_LANGUAGES if lang not in lang_target_id]
     if missing_langs:
         print(f"warning: no language playlist configured for {missing_langs} -- interaction check will be empty for them", file=sys.stderr)
+
+    return {
+        "usable": usable, "tracks": tracks, "truth": truth, "names": names, "candidate_ids": candidate_ids,
+        "excluded_ids": excluded_ids, "lmap": lmap, "lang_target_id": lang_target_id,
+    }
+
+
+# ---------------------------------------------------------------------------------------------- margin sweep
+# Master decisions 10 / decision 50: precision over coverage. A raw min_tracks floor alone let a weak
+# "3-vs-2 split" count the same as a genuinely dominant artist home; a dominance MARGIN (top count must be a
+# clear multiple of the runner-up, not just ahead of it) isolates the paradigm case the user confirmed matters
+# (a playlist effectively dedicated to one or two artists) from the general, noisier population.
+
+def predict_margin(
+    track: Track, truth: Mapping[str, set[str]], artist_counts: Mapping[str, Counter[str]], min_tracks: int, margin: float,
+) -> dict[str, Any]:
+    """Like `predict`, but on top of the min_tracks floor and the strict-max tie rule, the top playlist must
+    also be `margin` times the runner-up's count (a runner-up of 0 trivially passes -- an "infinite margin")."""
+    if not track.artists:
+        return {"status": "no_artist", "target": None}
+    artist_id = track.artists[0].id
+    own_homes = truth.get(track.id, set())
+    raw = artist_counts.get(artist_id, Counter())
+    counts = Counter({pid: n - (1 if pid in own_homes else 0) for pid, n in raw.items()})
+    counts = Counter({pid: n for pid, n in counts.items() if n > 0})
+    if not counts:
+        return {"status": "no_signal", "target": None}
+    ranked = counts.most_common()
+    max_count = ranked[0][1]
+    if max_count < min_tracks:
+        return {"status": "below_floor", "target": None, "max_count": max_count}
+    top = [pid for pid, n in ranked if n == max_count]
+    if len(top) > 1:
+        return {"status": "tie", "target": None, "max_count": max_count, "tied": top}
+    runner_up = ranked[1][1] if len(ranked) > 1 else 0
+    if runner_up > 0 and max_count < margin * runner_up:
+        return {"status": "below_margin", "target": None, "max_count": max_count, "runner_up": runner_up}
+    return {"status": "predicted", "target": top[0], "max_count": max_count, "runner_up": runner_up}
+
+
+def classify_single_playlist_artists(
+    artist_counts: Mapping[str, Counter[str]], min_total: int = 2, share: float = 0.90,
+) -> set[str]:
+    """Artist ids whose candidate-playlist tracks (RAW, not leave-one-out -- this classifies the artist's whole
+    catalog shape, not one held-out track) are >= `share` concentrated in a single playlist, with at least
+    `min_total` tracks total (an artist with exactly 1 track is trivially "100% in one playlist" but carries no
+    signal once that track is the one being held out)."""
+    out = set()
+    for artist_id, counts in artist_counts.items():
+        total = sum(counts.values())
+        if total < min_total:
+            continue
+        if max(counts.values()) / total >= share:
+            out.add(artist_id)
+    return out
+
+
+def sweep_margin(
+    tracks: Sequence[Track], truth: Mapping[str, set[str]], artist_counts: Mapping[str, Counter[str]],
+    min_tracks: int, margin: float, restrict_artist_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Aggregate-only (no per-playlist breakdown -- decision 50 asked for a manageable table). When
+    `restrict_artist_ids` is given, only tracks whose primary artist is in that set count toward every number,
+    so the same function produces both the general-population row and the single-playlist-artist row."""
+    n = skip_no_artist = coverage_n = tie_n = margin_blocked_n = predicted_n = correct_n = 0
+    predictions: dict[str, dict[str, Any]] = {}
+    for t in tracks:
+        if not t.artists:
+            skip_no_artist += 1
+            continue
+        if restrict_artist_ids is not None and t.artists[0].id not in restrict_artist_ids:
+            continue
+        n += 1
+        res = predict_margin(t, truth, artist_counts, min_tracks, margin)
+        predictions[t.id] = res
+        if res["status"] in ("below_floor", "no_signal"):
+            continue
+        coverage_n += 1
+        if res["status"] == "tie":
+            tie_n += 1
+            continue
+        if res["status"] == "below_margin":
+            margin_blocked_n += 1
+            continue
+        predicted_n += 1
+        if res["target"] in truth.get(t.id, ()):
+            correct_n += 1
+    return {
+        "tracks": n, "skipped_no_artist": skip_no_artist, "coverage": _ratio(coverage_n, n),
+        "tie_rate": _ratio(tie_n, coverage_n), "margin_block_rate": _ratio(margin_blocked_n, coverage_n),
+        "predicted": predicted_n, "correct": correct_n, "precision": _ratio(correct_n, predicted_n),
+        "recall": _ratio(correct_n, n), "predictions": predictions,
+    }
+
+
+def run(args: argparse.Namespace) -> int:
+    load_env(args.env)
+    try:
+        config: Config = load_config(args.config)
+    except (ConfigError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    client = SpotifyClient.from_env(dry_run=True)  # read-only by construction
+    lib = fetch_library(client, config)
+    tracks, truth, names = lib["tracks"], lib["truth"], lib["names"]
+    candidate_ids, excluded_ids = lib["candidate_ids"], lib["excluded_ids"]
+    lmap, lang_target_id = lib["lmap"], lib["lang_target_id"]
 
     artist_counts = build_artist_counts(tracks, truth, candidate_ids)
 

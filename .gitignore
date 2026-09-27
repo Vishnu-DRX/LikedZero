@@ -66,6 +66,7 @@ logs/local/
 
 # artist_in_playlist measurement detail (contains real playlist names); the committed report is counts-only
 logs/measure-artist_in_playlist-detail.md
+logs/measure-round-2-detail.md
 
 # atomic-write temp files
 logs/.tmp-*
