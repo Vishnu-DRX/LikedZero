@@ -370,12 +370,12 @@ ever auto-apply, and everything else stays visibly in the inbox (or the Q3 unmat
     their own row, since that's the paradigm case the user just confirmed matters. Only combinations clearing
     ~90% precision are candidates to actually build; report which do, even if coverage is small.
 51. **A real catch-all, name decided: "SpotiSort Sink."** This is Q6 (proper `fallback_playlist`/catch-all,
-    dropping the `release_year_after: 1900` hack) made concrete. The user will create an empty playlist named
-    exactly this (same pattern as `SpotiSort Test`) when ready. Design it properly: `fallback_playlist` accepts
-    `{playlist, target_position}` (or a `match: {any: true}` rule — pick whichever fits the existing engine more
-    cleanly, your call, document the choice), evaluated only after every other enabled rule has failed to match
-    (including `artist_in_playlist` once built). Do not wire a real config to it until the user confirms the
-    playlist exists.
+    dropping the `release_year_after: 1900` hack) made concrete. **Confirmed done: the user created this empty
+    playlist on 2026-09-27** (was pending, now cleared — approved to build). Design it properly: `fallback_playlist`
+    accepts `{playlist, target_position}` (or a `match: {any: true}` rule — pick whichever fits the existing engine
+    more cleanly, your call, document the choice), evaluated only after every other enabled rule has failed to
+    match (including `artist_in_playlist`, now built). Ship the real config pointed at `SpotiSort Sink`, disabled
+    by default like every other rule reaching this config, for the user to review and enable.
 52. **A proper playlist audit, not just the 4 already-mapped language playlists.** Analyze every owned/
     collaborative playlist (reuse/extend `analyze.py`'s existing per-playlist profiling) and classify each one
     by its dominant organizing factor — the three that matter, per the user: **language, genre, artist**. For
