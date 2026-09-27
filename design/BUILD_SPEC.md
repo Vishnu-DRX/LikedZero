@@ -385,6 +385,28 @@ ever auto-apply, and everything else stays visibly in the inbox (or the Q3 unmat
     mixed-no-clear-pattern). This is analysis to inform which playlists get which rule type — not a rule-writing
     or auto-config step. Bring the classification table back for the master/user to turn into real rules.
 
+## Master decisions 11 (2026-09-27) — approve artist_in_playlist (simplified), six rules landed directly
+Measurement round 2 confirmed the paradigm case: restricted to artists whose tracked-playlist tracks are >=90%
+in one playlist, precision is 94-98% (see `design/proposals/artist_in_playlist.md`, now updated with the
+simplified single-dominance-ratio schema — the separate margin knob was redundant and is dropped).
+
+53. **Six explicit `artist_in` rules added directly to `config.yaml`** (no new mechanism needed — these are
+    already-obvious cases, confirmed live): Anavae -> Anavae binge list, Linkin Park -> Dead Dreams' Disco,
+    Queen -> Her Highness, Twenty One Pilots -> Riffs in the air, Klasey Jones -> The Klasey Universe, The
+    Midnight -> Midnight Mixer. Validated with `load_config` locally; pull main before your next config edit to
+    avoid clobbering this. Run a cloud dry-run after pulling so the dashboard reflects the real live rule set.
+54. **Build `artist_in_playlist` per the simplified proposal**: `min_tracks` + `min_dominance` (default 3 / 0.9),
+    `exclude_playlists` (always includes `Vault_drx`), `target_playlist: auto` sentinel. Full pipeline:
+    `config.py`/`validate.js` schema + parity tests, `rules_engine`/`planner` resolution logic, a backtest-
+    integration test reproducing the measured 94-98% precision numbers with the real shipped code (not just the
+    standalone measurement script), dashboard explain-trace wording ("routed to X — N of the artist's M tracks
+    are already there"), Configure UI (Basic mode: a simple on/off + the two numeric defaults; Advanced: the
+    exclude list). **Ship it in `config.yaml` disabled by default** (`enabled: false`, a single draft rule) —
+    the master/user turns it on after reviewing a dry-run with it enabled, same pattern as every other rule that
+    reached this project's live config.
+55. Confirm the interaction/shadowing check (proposal's remaining item 1) actually surfaces on the dashboard
+    once built, and confirm decision 54's item on Vault_drx exclusion holds on the real library.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).

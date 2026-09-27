@@ -22,6 +22,40 @@ rules:
     match:
       language_in: [malayalam]
     target_playlist: "NewAgeMadrasMail"
+  # Six explicit artist rules, added 2026-09-27 per the playlist-classification audit
+  # (design/reports/measurement-round-2.md): each of these playlists is already >=90% one
+  # artist's tracks, confirmed live. Ordered before the drafts below since these are
+  # high-confidence, narrow rules and should be tried first.
+  - name: "Anavae -> Anavae binge list"
+    enabled: true
+    match:
+      artist_in: ["Anavae"]
+    target_playlist: "Anavae binge list"
+  - name: "Linkin Park -> Dead Dreams' Disco"
+    enabled: true
+    match:
+      artist_in: ["Linkin Park"]
+    target_playlist: "Dead Dreams' Disco"
+  - name: "Queen -> Her Highness"
+    enabled: true
+    match:
+      artist_in: ["Queen"]
+    target_playlist: "Her Highness"
+  - name: "Twenty One Pilots -> Riffs in the air"
+    enabled: true
+    match:
+      artist_in: ["Twenty One Pilots"]
+    target_playlist: "Riffs in the air"
+  - name: "Klasey Jones -> The Klasey Universe"
+    enabled: true
+    match:
+      artist_in: ["Klasey Jones"]
+    target_playlist: "The Klasey Universe"
+  - name: "The Midnight -> Midnight Mixer"
+    enabled: true
+    match:
+      artist_in: ["The Midnight"]
+    target_playlist: "Midnight Mixer"
   - name: "Japanese -> nani mo wakaranai (draft)"
     enabled: false
     match:

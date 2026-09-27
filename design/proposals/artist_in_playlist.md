@@ -33,11 +33,17 @@ mechanism, not just a language source.
 3. **The user plans to reset Liked Songs to empty** to start real operation on a clean inbox — this is what
    the fresh-inbox design (decisions 12-17) was already built for, not a new complication.
 
-## Schema
+## Schema (simplified 2026-09-27 after the margin re-measurement)
+
+The margin knob from the original design turned out to be redundant: once a per-artist *dominance* requirement
+is added (this artist's tracked-playlist tracks are overwhelmingly in one place), a runner-up can't realistically
+be close enough for margin to matter (confirmed empirically — margin 2.0 and 3.0 gave byte-identical results on
+the single-playlist-artist subset in `design/reports/measurement-round-2.md`). One knob instead of two:
 
 ```yaml
 artist_in_playlist:
-  min_tracks: 3                       # artist needs at least this many existing tracks somewhere, or the signal is too weak
+  min_tracks: 3        # artist needs at least this many existing tracks somewhere, or the signal is too weak
+  min_dominance: 0.9    # ...and that top playlist must hold at least this share of the artist's tracked-playlist tracks
   exclude_playlists: ["Vault_drx"]    # never a candidate "home", however many tracks by the artist it holds
 
 rules:
@@ -53,9 +59,10 @@ rules:
 - `target_playlist: auto` is a new sentinel value, valid only when the rule's match includes
   `artist_in_playlist`. Any other rule keeps using a literal playlist name exactly as today.
 - **Resolution:** among the user's owned/collaborative playlists, minus `exclude_playlists`, count the song's
-  artist's existing tracks per playlist. If the top count is `>= min_tracks` and strictly greater than the
-  second-highest count, that playlist is the target. Otherwise (below the floor, or an exact tie) the rule does
-  not match — the song falls through to later rules or is left unmatched, never routed by a guess.
+  artist's existing tracks per playlist. If the top playlist has `>= min_tracks` tracks by the artist AND those
+  tracks are `>= min_dominance` of the artist's total tracked-playlist tracks, that playlist is the target.
+  Otherwise the rule does not match — the song falls through to later rules or is left unmatched, never routed
+  by a guess.
 
 ## Semantics and edge cases
 
@@ -72,15 +79,27 @@ rules:
   `artist_in_playlist` candidate; they share the same underlying artist→playlist table but serve different
   match keys.
 
-## What must be proven before this goes live (same bar as every other signal)
+## Status: proven, approved to build (2026-09-27)
 
-1. **Backtest precision/recall**, leave-one-out by artist, exactly like the language signal-precision table —
-   measured, not assumed.
-2. **`min_tracks` sensitivity sweep** (e.g. 2, 3, 5) on the real library, so the default isn't a guess.
-3. **Explicit interaction check** against the live Hindi/Malayalam rules: for artists both signals would claim,
-   does `artist_in_playlist` agree or conflict? The dashboard's existing shadowed-rule detection should surface
-   any rule this one makes unreachable — confirm it actually does before enabling both.
-4. **Confirm `Vault_drx` exclusion works** on the real library: assert no plan ever names it as an `auto` target.
+Measured (`design/reports/measurement-round-2.md`, Task 1): restricted to artists whose tracked-playlist tracks
+are `>=90%` in one playlist, precision is **94.1%–98.4%** depending on `min_tracks` (2/3/5), comfortably above
+the project's 90% bar, at meaningful recall (63.3% down to 39.2% of that subset). **Recommended default:
+`min_tracks: 3`, `min_dominance: 0.9`** (95.8% precision, 47.7% recall of the qualifying subset) — a reasonable
+middle point; `min_tracks: 2` (94.1%/63.3%) is the looser alternative if more recall is wanted.
+
+Confirmed live against the real library (2026-09-27): all 6 playlists the audit flagged as artist-dominant
+resolve to real, named artists (Anavae, Linkin Park, Queen, Twenty One Pilots, Klasey Jones, The Midnight) — see
+`config.yaml`, which now has explicit `artist_in` rules for exactly these 6, added directly rather than waiting
+on the dynamic mechanism, since they cost nothing and don't need to wait.
+
+**Remaining before/alongside build:**
+1. Interaction check against the live Hindi/Malayalam/new artist rules: for artists any two signals would both
+   claim, do they agree? The dashboard's shadowed-rule detection should surface any rule this makes unreachable
+   — confirm it actually does once built.
+2. Confirm `Vault_drx` exclusion works on the real library: assert no plan ever names it as an `auto` target.
+3. Reproduce the measured precision numbers above with the actual shipped code (not just the standalone
+   measurement script) as a backtest-integration test, before enabling any rule that uses `target_playlist: auto`
+   for real.
 
 ## Why this over the other two ranked items (Q6, Q3)
 
