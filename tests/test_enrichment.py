@@ -497,6 +497,56 @@ def test_english_default_never_overrides_playlist_or_script(tmp_path):
 def test_english_default_needs_latin_letters_only(tmp_path):
     e = _english_enricher(tmp_path, "US")
     assert e.resolve(track(name="123", album="456")).language is None
+
+
+# ---- artist_country exposure (design/proposals/more-conditions.md: artist_country_in) -- same MusicBrainz
+# `country` field already fetched above for english_default, no new lookup, no english_default requirement.
+
+
+def test_artist_country_exposed_from_cached_entry(tmp_path):
+    c = EnrichmentCache(tmp_path / "c.json")
+    c.put_artist("sp1", {"genres": [], "country": "IN"})
+    r = Enricher(c, None, LanguageMap()).resolve(track())
+    assert r.artist_country == "IN"
+
+
+def test_artist_country_is_uppercased(tmp_path):
+    c = EnrichmentCache(tmp_path / "c.json")
+    c.put_artist("sp1", {"genres": [], "country": "in"})
+    assert Enricher(c, None, LanguageMap()).resolve(track()).artist_country == "IN"
+
+
+def test_artist_country_none_when_musicbrainz_has_no_country(tmp_path):
+    c = EnrichmentCache(tmp_path / "c.json")
+    c.put_artist("sp1", {"genres": [], "country": None})
+    assert Enricher(c, None, LanguageMap()).resolve(track()).artist_country is None
+
+
+def test_artist_country_none_when_no_artist_entry_at_all(tmp_path):
+    """No MusicBrainz call was made (self.mb is None and nothing cached) -- no artist_country either."""
+    e = Enricher(EnrichmentCache(tmp_path / "c.json"), None, LanguageMap())
+    assert e.resolve(track()).artist_country is None
+
+
+def test_artist_country_populated_regardless_of_english_default_setting(tmp_path):
+    """artist_country_in is an exact field lookup, not gated behind the english_default weak-signal switch."""
+    c = EnrichmentCache(tmp_path / "c.json")
+    c.put_artist("sp1", {"genres": [], "country": "IN"})
+    off = Enricher(c, None, LanguageMap(), english_default=False)
+    assert off.resolve(track()).artist_country == "IN"
+
+
+def test_artist_country_no_new_api_calls(tmp_path):
+    """Same MusicBrainz artist lookup already made for genres/english_default -- resolving artist_country
+    triggers zero additional requests."""
+    mb, _clock = make_mb(lambda u, p: Resp(200, ISRC_HIT))
+    c = EnrichmentCache(tmp_path / "c.json")
+    e = Enricher(c, mb, LanguageMap())
+    e.resolve(track())
+    calls_after_first = len(mb._session.calls)
+    assert calls_after_first > 0
+    e.resolve(track(tid="t2"))  # same artist (cached) -> resolves artist_country from cache, no new call
+    assert len(mb._session.calls) == calls_after_first
     assert e.resolve(track(name="Song 夜に駆ける")).language == "japanese"  # script wins, not the default
 
 

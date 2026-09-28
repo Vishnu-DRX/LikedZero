@@ -30,7 +30,7 @@ def test_fixtures_regenerate_identically(tmp_path):
 
 PLAN_KEYS = {"version", "generated_at", "run_id", "mode", "what_if", "inbox_kind", "config_hash", "liked_total", "default_days_threshold",
              "english_default", "inbox_since", "counts", "rules", "playlists", "songs"}
-RULE_KEYS = {"name", "enabled", "target_playlist", "target_position", "threshold_days", "conditions", "uses_language",
+RULE_KEYS = {"name", "enabled", "target_playlist", "target_position", "threshold_days", "conditions", "unless", "uses_language",
              "weak_signals_possible", "would_match", "wins", "target_status", "status"}
 SONG_KEYS = {"title", "artists", "uri", "added_at", "age_days", "decision", "reason", "rule", "target_playlist", "target_status",
              "eligible_on", "target_position", "language", "genres", "artist_routing", "explain"}

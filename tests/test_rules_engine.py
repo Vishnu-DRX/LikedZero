@@ -687,3 +687,243 @@ def test_any_placed_last_lets_specific_rules_win():
     tr = ex(make_track(), [specific, sink])
     assert results(tr) == ["matched", "not_reached_but_would_match"]
     assert tr["decided_by"] == "specific"
+
+
+# ---------------------------------------------------------------- artist_country_in (design/proposals/more-conditions.md)
+
+def with_country(country) -> Enrichment:
+    return Enrichment(artist_country=country)
+
+
+def test_artist_country_in_matches_when_country_present():
+    assert run(make_track(), [rule({"artist_country_in": ["IN", "US"]})], enrichment=with_country("IN")) is not None
+
+
+def test_artist_country_in_case_insensitive_on_both_sides():
+    # config.py normalises match values to uppercase already; check_key itself is also defensive/case-insensitive.
+    assert run(make_track(), [rule({"artist_country_in": ["in"]})], enrichment=with_country("IN")) is not None
+
+
+def test_artist_country_in_no_match_when_country_absent():
+    assert run(make_track(), [rule({"artist_country_in": ["IN"]})], enrichment=with_country(None)) is None
+    assert run(make_track(), [rule({"artist_country_in": ["IN"]})], enrichment=None) is None
+
+
+def test_artist_country_in_no_match_when_not_in_list():
+    assert run(make_track(), [rule({"artist_country_in": ["US", "GB"]})], enrichment=with_country("IN")) is None
+
+
+def test_artist_country_in_check_key_actual_and_hit():
+    from src.rules_engine import check_key
+
+    ok, actual, hit = check_key(make_track(), with_country("IN"), "artist_country_in", ["IN", "US"])
+    assert ok is True and actual == "IN" and hit == "IN"
+    ok2, actual2, hit2 = check_key(make_track(), with_country("FR"), "artist_country_in", ["IN", "US"])
+    assert ok2 is False and actual2 == "FR" and hit2 is None
+
+
+def test_artist_country_in_combines_with_other_conditions():
+    match = {"artist_country_in": ["IN"], "explicit": False}
+    assert run(make_track(explicit=False), [rule(match)], enrichment=with_country("IN")) is not None
+    assert run(make_track(explicit=True), [rule(match)], enrichment=with_country("IN")) is None
+
+
+def test_artist_country_in_explain_trace():
+    tr = ex(make_track(), [rule({"artist_country_in": ["IN"]})], enrichment=with_country("IN"))
+    assert results(tr) == ["matched"]
+    cond = tr["trace"][0]["conditions"][0]
+    assert cond["actual"] == "IN" and cond["passed"] is True
+
+
+# ---------------------------------------------------------------- unless exceptions (design/proposals/more-conditions.md)
+
+def test_unless_blocks_an_otherwise_matching_rule():
+    r = rule({"language_in": ["hindi"]}, "hindi-to-dil", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    t = make_track(artists=(Artist("a1", "Arijit Singh"),))
+    e = Enrichment(language="hindi")
+    assert run(t, [r], enrichment=e) is None
+
+
+def test_unless_does_not_block_when_its_own_condition_fails():
+    r = rule({"language_in": ["hindi"]}, "hindi-to-dil", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    t = make_track(artists=(Artist("a1", "Someone Else"),))
+    e = Enrichment(language="hindi")
+    m = run(t, [r], enrichment=e)
+    assert m is not None and m.rule.name == "hindi-to-dil"
+
+
+def test_unless_blocked_rule_falls_through_to_next_rule():
+    """A rule blocked by its own exception is treated like any other non-match: evaluation continues (this is
+    NOT the age-gate's hard stop -- decision 2 is about a too-young *winning* rule, not a blocked one)."""
+    broad = rule({"language_in": ["hindi"]}, "broad", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    specific = rule({"artist_in": ["Arijit Singh"]}, "specific", "Arijit Playlist")
+    t = make_track(artists=(Artist("a1", "Arijit Singh"),))
+    e = Enrichment(language="hindi")
+    m = run(t, [broad, specific], enrichment=e)
+    assert m is not None and m.rule.name == "specific"
+
+
+def test_unless_blocked_rule_with_nothing_after_it_results_in_no_match():
+    broad = rule({"language_in": ["hindi"]}, "broad", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    t = make_track(artists=(Artist("a1", "Arijit Singh"),))
+    e = Enrichment(language="hindi")
+    assert run(t, [broad], enrichment=e) is None
+
+
+def test_unless_all_conditions_must_pass_to_block_and_combined():
+    """unless keys are AND-combined among themselves, same as match."""
+    r = rule({"language_in": ["hindi"]}, "r", "Dil", unless={"artist_in": ["Arijit Singh"], "explicit": True})
+    e = Enrichment(language="hindi")
+    blocked = make_track(artists=(Artist("a1", "Arijit Singh"),), explicit=True)
+    not_blocked = make_track(artists=(Artist("a1", "Arijit Singh"),), explicit=False)
+    assert run(blocked, [r], enrichment=e) is None
+    assert run(not_blocked, [r], enrichment=e) is not None
+
+
+def test_unless_empty_never_blocks():
+    r = rule({"language_in": ["hindi"]}, "r", "Dil")  # unless defaults to {}
+    assert run(make_track(), [r], enrichment=Enrichment(language="hindi")) is not None
+
+
+def test_unless_interacts_with_any_true():
+    """A catch-all with an exception: matches everything except what the exception names."""
+    sink = rule({"any": True}, "sink", "Sink", unless={"artist_in": ["Skip Me"]})
+    normal = make_track(artists=(Artist("a1", "Someone"),))
+    skip = make_track(artists=(Artist("a1", "Skip Me"),))
+    assert run(normal, [sink]) is not None
+    assert run(skip, [sink]) is None
+
+
+def test_unless_interacts_with_artist_in_playlist_auto_target():
+    """unless is orthogonal to auto-target resolution: it can block an artist_in_playlist rule using an
+    unrelated signal (e.g. genre), without touching how the target itself would have been resolved."""
+    r = rule({"artist_in_playlist": True}, "auto-route", "auto", unless={"genre_contains": ["live"]})
+    live = Enrichment(artist_home_playlist="Fuel", artist_home_track_count=9, artist_home_total=10, genres=("live",))
+    studio = Enrichment(artist_home_playlist="Fuel", artist_home_track_count=9, artist_home_total=10, genres=("rock",))
+    assert run(make_track(), [r], enrichment=live) is None
+    m = run(make_track(), [r], enrichment=studio)
+    assert m is not None and m.rule.target_playlist == "auto"
+
+
+def test_unless_explain_trace_shows_blocked_by_exception_with_reason():
+    r = rule({"language_in": ["hindi"]}, "hindi-to-dil", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    t = make_track(artists=(Artist("a1", "Arijit Singh"),))
+    tr = ex(t, [r], enrichment=Enrichment(language="hindi"))
+    assert results(tr) == ["blocked_by_exception"]
+    entry = tr["trace"][0]
+    assert entry["blocked_reason"] == "blocked by exception: artist_in matched Arijit Singh"
+    assert entry["unless_conditions"] == [
+        {"key": "artist_in", "wanted": ["Arijit Singh"], "actual": ["Arijit Singh"], "passed": True, "hit": "Arijit Singh"}
+    ]
+    assert tr["decided_by"] is None
+
+
+def test_unless_explain_trace_not_computed_when_match_itself_fails():
+    """unless_conditions is only meaningful (and only computed) once the rule's own match already passed."""
+    r = rule({"artist_in": ["Nobody"]}, "r", "P", unless={"explicit": True})
+    tr = ex(make_track(), [r])
+    assert results(tr) == ["failed"]
+    assert "unless_conditions" not in tr["trace"][0]
+
+
+def test_unless_blocked_rule_lets_a_later_rule_decide_and_is_visible_in_trace():
+    broad = rule({"language_in": ["hindi"]}, "broad", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    specific = rule({"artist_in": ["Arijit Singh"]}, "specific", "Arijit Playlist")
+    t = make_track(artists=(Artist("a1", "Arijit Singh"),))
+    tr = ex(t, [broad, specific], enrichment=Enrichment(language="hindi"))
+    assert results(tr) == ["blocked_by_exception", "matched"]
+    assert tr["decided_by"] == "specific"
+
+
+def test_unless_agrees_with_first_match():
+    r = rule({"language_in": ["hindi"]}, "r", "Dil", unless={"artist_in": ["Arijit Singh"]})
+    t = make_track(artists=(Artist("a1", "Arijit Singh"),))
+    e = Enrichment(language="hindi")
+    from src.rules_engine import first_match
+    assert first_match(t, e, [r], NOW) is None
+    tr = ex(t, [r], enrichment=e)
+    assert tr["decided_by"] is None
+
+
+# ---------------------------------------------------------------- any_of OR-groups (design/proposals/more-conditions.md)
+
+def test_any_of_matches_when_any_branch_passes():
+    r = rule({"any_of": [{"artist_in": ["Nobody"]}, {"artist_in": ["Bonobo"]}]})
+    assert run(make_track(), [r]) is not None
+
+
+def test_any_of_no_match_when_every_branch_fails():
+    r = rule({"any_of": [{"artist_in": ["Nobody"]}, {"genre_contains": ["polka"]}]})
+    assert run(make_track(), [r]) is None
+
+
+def test_any_of_branch_conditions_are_and_combined():
+    r = rule({"any_of": [{"artist_in": ["Bonobo"], "explicit": True}]})
+    assert run(make_track(explicit=False), [r]) is None
+    assert run(make_track(explicit=True), [r]) is not None
+
+
+def test_any_of_combined_with_rest_of_match_via_and():
+    r = rule({"language_in": ["hindi"], "any_of": [{"artist_in": ["Bonobo"]}]})
+    matches_lang = run(make_track(), [r], enrichment=Enrichment(language="hindi"))
+    no_lang = run(make_track(), [r], enrichment=Enrichment(language="english"))
+    assert matches_lang is not None
+    assert no_lang is None
+
+
+def test_any_of_check_key_reports_every_branch_and_winning_index():
+    from src.rules_engine import check_key
+
+    ok, actual, hit = check_key(
+        make_track(), None, "any_of",
+        [{"artist_in": ["Nobody"]}, {"artist_in": ["Bonobo"]}, {"artist_in": ["AlsoBonoboIsh"]}],
+    )
+    assert ok is True and hit == 1  # first passing branch wins, even if a later branch would also pass
+    assert actual == [
+        {"branch": 0, "passed": False, "matched": {}},
+        {"branch": 1, "passed": True, "matched": {"artist_in": "Bonobo"}},
+        {"branch": 2, "passed": False, "matched": {}},
+    ]
+
+
+def test_any_of_check_key_false_when_all_branches_fail():
+    from src.rules_engine import check_key
+
+    ok, actual, hit = check_key(make_track(), None, "any_of", [{"artist_in": ["Nobody"]}])
+    assert ok is False and hit is None
+    assert actual == [{"branch": 0, "passed": False, "matched": {}}]
+
+
+def test_any_of_explain_trace_shows_which_branch_matched():
+    r = rule({"any_of": [{"artist_in": ["Nobody"]}, {"artist_in": ["Bonobo"]}]})
+    tr = ex(make_track(), [r])
+    assert results(tr) == ["matched"]
+    cond = tr["trace"][0]["conditions"][0]
+    assert cond["key"] == "any_of" and cond["passed"] is True
+    branches = cond["actual"]
+    assert branches[0]["passed"] is False
+    assert branches[1]["passed"] is True and branches[1]["matched"] == {"artist_in": "Bonobo"}
+
+
+def test_any_of_shadowed_rule_detection_shows_all_branches_regardless_of_reach():
+    earlier = rule({"artist_in": ["Bonobo"]}, "earlier", "Chill")
+    later = rule({"any_of": [{"artist_in": ["Bonobo"]}, {"explicit": False}]}, "later", "P")
+    tr = ex(make_track(), [earlier, later])
+    assert results(tr) == ["matched", "not_reached_but_would_match"]
+
+
+def test_any_of_agrees_with_first_match():
+    from src.rules_engine import first_match
+    r = rule({"any_of": [{"artist_in": ["Bonobo"]}]})
+    m1 = run(make_track(), [r])
+    m2 = first_match(make_track(), None, [r], NOW)
+    assert m1 is not None and m2 is not None and m1.rule.name == m2.rule.name
+
+
+def test_any_of_inside_unless_blocks_on_any_branch():
+    r = rule({"language_in": ["hindi"]}, "r", "Dil", unless={"any_of": [{"artist_in": ["Arijit Singh"]}, {"artist_in": ["Shreya Ghoshal"]}]})
+    e = Enrichment(language="hindi")
+    blocked = make_track(artists=(Artist("a1", "Shreya Ghoshal"),))
+    not_blocked = make_track(artists=(Artist("a1", "Someone Else"),))
+    assert run(blocked, [r], enrichment=e) is None
+    assert run(not_blocked, [r], enrichment=e) is not None
