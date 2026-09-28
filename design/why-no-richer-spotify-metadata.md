@@ -1,4 +1,4 @@
-# Why SpotiSort can't get genre, popularity or audio features from Spotify
+# Why LikedZero can't get genre, popularity or audio features from Spotify
 
 Settled 2026-09-27, so this doesn't get relitigated. Verified two ways: live-tested against our own registered
 app (every one of `/artists` batch, `/audio-features`, `/albums` batch returned 403 just now; `popularity` is
@@ -8,7 +8,7 @@ via public sources below.
 ## The mechanism: Extended Quota Mode
 
 Spotify apps run in one of two modes:
-- **Development Mode** (the default, what SpotiSort's app is, and what any fork's app will be): capped at 5
+- **Development Mode** (the default, what LikedZero's app is, and what any fork's app will be): capped at 5
   authorized users, and — since the Nov 2024 and Feb 2026 changes — cut off from `popularity`, artist
   `genres`, batch artist/album lookups, and the `audio-features`/`audio-analysis` endpoints entirely.
 - **Extended Quota Mode**: unlimited users, higher rate limits, and — critically — **exempt from those
@@ -38,7 +38,7 @@ this is really about privacy or AI — major competitors (Apple Music, YouTube M
 aren't meaningfully affected — and reads it more as Spotify simply no longer giving away, for free, data that's
 valuable to itself; small independent developers are the ones who actually lose access.
 
-## What this means for SpotiSort
+## What this means for LikedZero
 
 The design doesn't change: genre and language come from MusicBrainz plus the user's own playlist data (see
 `IMPLEMENTATION_PLAN.md`'s Revision 2 errata and `design/proposals/artist_in_playlist.md`), because there is no

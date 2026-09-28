@@ -27,7 +27,7 @@ on:
         default: "50"
 
 concurrency:
-  group: spotisort-sync
+  group: likedzero-sync
   cancel-in-progress: false
 
 permissions:
@@ -129,8 +129,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          git config user.name "spotisort-bot"
-          git config user.email "spotisort-bot@users.noreply.github.com"
+          git config user.name "likedzero-bot"
+          git config user.email "likedzero-bot@users.noreply.github.com"
           shopt -s nullglob
           files=(logs/runs.json logs/latest-plan.json logs/20*.json)
           existing=()

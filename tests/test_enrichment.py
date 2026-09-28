@@ -154,7 +154,7 @@ def test_isrc_request_shape_and_user_agent():
     url, params, headers = mb._session.calls[0]
     assert url.endswith("/isrc/TCADP1828007") and params["fmt"] == "json" and params["inc"] == "artists+tags"
     assert headers["User-Agent"] == USER_AGENT
-    assert "SpotiSort/" in USER_AGENT and "github.com/Vishnu-DRX/SpotiSort" in USER_AGENT
+    assert "LikedZero/" in USER_AGENT and "github.com/Vishnu-DRX/LikedZero" in USER_AGENT
 
 
 def test_isrc_404_returns_none():

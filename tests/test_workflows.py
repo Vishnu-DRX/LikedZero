@@ -98,7 +98,7 @@ def test_sync_caches_enrichment_and_does_not_commit_it(sync):
 def test_sync_permissions_and_bot_identity(sync):
     assert sync["permissions"] == {"contents": "write"}
     commit = next(s["run"] for s in sync["jobs"]["sync"]["steps"] if s.get("name") == "Commit run logs")
-    assert "spotisort-bot" in commit
+    assert "likedzero-bot" in commit
 
 
 def test_tests_workflow_is_read_only():

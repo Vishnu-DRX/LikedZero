@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SpotiSort's favicon set + Open Graph card, stdlib only (no Pillow / cairo).
+"""Generate LikedZero's favicon set + Open Graph card, stdlib only (no Pillow / cairo).
 
 Draws a small original mark (NOT the Spotify logo/wordmark): a rounded square in the brand green
 (#1DB954) with a white upward "sort" chevron stack, matching docs/assets/shell.js's inline SVG mark.
@@ -116,6 +116,7 @@ FONT3X5 = {
     "P": ["111", "101", "111", "100", "100"], "R": ["111", "101", "110", "101", "101"],
     "S": ["111", "100", "111", "001", "111"], "T": ["111", "010", "010", "010", "010"],
     "U": ["101", "101", "101", "101", "111"], "Y": ["101", "101", "111", "010", "010"],
+    "Z": ["111", "001", "010", "100", "111"],
     " ": ["000", "000", "000", "000", "000"],
 }
 
@@ -137,7 +138,7 @@ def draw_text(px, canvas_w, canvas_h, text: str, x0: int, y0: int, scale: int, c
 
 def gen_favicon_svg() -> str:
     return (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="SpotiSort">'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="LikedZero">'
         '<rect x="1" y="1" width="30" height="30" rx="9" fill="#1DB954"/>'
         '<path d="M9 20l7-7 7 7" stroke="#000000" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
         '<path d="M9 13l7-7 7 7" stroke="#000000" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>'
@@ -163,7 +164,7 @@ def main() -> None:
     for y in range(mark_size):
         for x in range(mark_size):
             canvas[(my + y) * w + (mx + x)] = mark[y * mark_size + x]
-    draw_text(canvas, w, h, "SPOTISORT", 350, 230, 10, WHITE)
+    draw_text(canvas, w, h, "LIKEDZERO", 350, 230, 10, WHITE)
     draw_text(canvas, w, h, "SORT YOUR LIKED SONGS AUTOMATICALLY", 350, 340, 4, (179, 179, 179))
     write_png(DOCS / "assets" / "og.png", w, h, canvas)
 

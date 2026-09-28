@@ -1,12 +1,12 @@
 <#
 Run once by you, locally. Reads the repo-root .env, takes ONLY
 SPOTIFY_CLIENT_ID and SPOTIFY_REFRESH_TOKEN, and stores them as GitHub Actions
-secrets on Vishnu-DRX/SpotiSort via the gh CLI. Values are piped through stdin
+secrets on Vishnu-DRX/LikedZero via the gh CLI. Values are piped through stdin
 and are never passed as arguments, printed, or logged. SPOTIFY_CLIENT_SECRET is
 not needed (PKCE) and is never read or set. Requires: gh installed and `gh auth login`.
 #>
 $ErrorActionPreference = 'Stop'
-$Repo = 'Vishnu-DRX/SpotiSort'
+$Repo = 'Vishnu-DRX/LikedZero'
 $Names = @('SPOTIFY_CLIENT_ID', 'SPOTIFY_REFRESH_TOKEN')
 $EnvPath = Join-Path $PSScriptRoot '..\.env'
 

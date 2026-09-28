@@ -15,10 +15,10 @@ import requests
 
 from .. import __version__
 
-log = logging.getLogger("spotisort")
+log = logging.getLogger("likedzero")
 
 BASE = "https://musicbrainz.org/ws/2"
-USER_AGENT = f"SpotiSort/{__version__} (https://github.com/Vishnu-DRX/SpotiSort)"
+USER_AGENT = f"LikedZero/{__version__} (https://github.com/Vishnu-DRX/LikedZero)"
 MIN_INTERVAL = 1.0
 MAX_RETRIES = 4
 SEARCH_MIN_SCORE = 95

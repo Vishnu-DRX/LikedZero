@@ -1,4 +1,4 @@
-# SpotiSort live config.
+# LikedZero live config.
 # "Hindi -> Dil" and "Malayalam -> NewAgeMadrasMail" are live, both at the default 14-day threshold
 # (decision 37: the test-only days_threshold: 0 override is gone now that --restore/top were proven live).
 # Japanese, English, the artist_in_playlist auto-router and the real catch-all stay disabled until reviewed.
