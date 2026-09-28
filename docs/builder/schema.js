@@ -32,7 +32,7 @@
     { key: 'rules[].unless', type: 'non-empty map', def: '-', note: 'Exceptions: same match-key vocabulary as match, AND-combined. If match passes AND unless also fully passes, the rule is blocked (treated as no match — evaluation continues to the next rule). Cannot contain artist_in_playlist.' },
     { key: 'rules[].target_playlist', type: 'non-empty string, or "auto"', def: 'required', note: 'Name of an existing playlist you own or collaborate on. "auto" is only valid with match.artist_in_playlist and is resolved per song.' },
     { key: 'rules[].days_threshold', type: 'integer >= 0', def: 'default_days_threshold', note: 'Per-rule override of the global threshold.' },
-    { key: 'rules[].create_missing_playlists', type: 'boolean', def: 'false', note: 'If true, SpotiSort creates the target playlist when it does not exist.' },
+    { key: 'rules[].create_missing_playlists', type: 'boolean', def: 'false', note: 'If true, LikedZero creates the target playlist when it does not exist.' },
     { key: 'rules[].target_position', type: '"top" | "bottom"', def: 'bottom', note: 'top inserts new songs at index 0; existing order is kept.' }
   ];
 

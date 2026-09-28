@@ -25,8 +25,8 @@
   function renderConnect(rn) {
     var url = window.GithubPAT.tokenUrl({
       owner: rn.owner,
-      name: 'SpotiSort run-now (' + rn.repo + ')',
-      description: 'Lets the SpotiSort dashboard dispatch the Sync workflow on ' + rn.owner + '/' + rn.repo + '. Delete this token any time from github.com/settings/tokens?type=beta.',
+      name: 'LikedZero run-now (' + rn.repo + ')',
+      description: 'Lets the LikedZero dashboard dispatch the Sync workflow on ' + rn.owner + '/' + rn.repo + '. Delete this token any time from github.com/settings/tokens?type=beta.',
       scopes: SCOPES,
     });
     body.innerHTML =

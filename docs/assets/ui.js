@@ -1,9 +1,9 @@
-/* SpotiSort UI behaviours (Master decision 23/24). Vanilla, no dependencies. API: docs/assets/COMPONENTS.md.
+/* LikedZero UI behaviours (Master decision 23/24). Vanilla, no dependencies. API: docs/assets/COMPONENTS.md.
    Exposes window.SpotiUI. Most behaviour is event-delegated, so dynamically inserted markup just works;
    call SpotiUI.init(root) after inserting markup that needs setup (tooltips, tabs, tag inputs, copy buttons, sortable tables). */
 (function () {
   'use strict';
-  var THEME_KEY = 'spotisort-theme';
+  var THEME_KEY = 'likedzero-theme';
   var doc = document, root = doc.documentElement;
   var uid = 0;
   // Apply a persisted theme choice as early as possible (before the rest of this file even parses further),

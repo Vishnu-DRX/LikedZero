@@ -104,12 +104,12 @@
   // ------------------------------------------------------------------ plain-language "what does this mean?" per view
   var VIEW_EXPLAIN = {
     overview: 'A health check for the whole sorter: is it running, is anything waiting, and did the last run go cleanly.',
-    inbox: 'Every song currently in Liked Songs, and what SpotiSort has decided (or will decide) to do with each one, and why.',
+    inbox: 'Every song currently in Liked Songs, and what LikedZero has decided (or will decide) to do with each one, and why.',
     rules: 'Your rules, in the order they run. The first rule a song matches wins; later rules never see it. A rule can be "shadowed" (an earlier rule always takes its songs first) or "dead" (nothing matches it).',
-    playlists: 'Every playlist a rule sends songs to, whether SpotiSort can actually write to it, and how many songs are queued for it.',
+    playlists: 'Every playlist a rule sends songs to, whether LikedZero can actually write to it, and how many songs are queued for it.',
     runs: 'The history of every time the sorter has run, dry or real, with a detailed breakdown of each one.',
     safety: 'Whether any song has ever been at risk, and the exact command to bring one back if something needs undoing.',
-    signals: 'How SpotiSort works out a song’s language, and how much each method (playlist, script, hint, country) can be trusted before it is allowed to drive a decision.',
+    signals: 'How LikedZero works out a song’s language, and how much each method (playlist, script, hint, country) can be trusted before it is allowed to drive a decision.',
     backtest: 'A dry run of your rules against playlists you already sorted by hand, to see how often they would have gotten it right.'
   };
   function helpBtn(text) {
@@ -132,7 +132,7 @@
     }
     var p = plan(ctx);
     if (p && p.inbox_kind === 'legacy_library') {
-      out += banner('info', '●', '<p><strong>This is the old archive, not a live inbox.</strong> These are the songs already in your Liked Songs. SpotiSort is meant to run on a fresh, nearly empty Liked Songs list, so treat this as a preview of how your rules behave, not a to-do list.</p>', 'role="status" data-banner="legacy"');
+      out += banner('info', '●', '<p><strong>This is the old archive, not a live inbox.</strong> These are the songs already in your Liked Songs. LikedZero is meant to run on a fresh, nearly empty Liked Songs list, so treat this as a preview of how your rules behave, not a to-do list.</p>', 'role="status" data-banner="legacy"');
     }
     if (p && p.what_if) {
       out += banner('warn', '▲', '<p><strong>What-if preview.</strong> Disabled rules were treated as enabled. This is not what a normal run would do.</p>', 'role="status" data-banner="what-if"');
@@ -378,7 +378,7 @@
         safety = lastApply.verdict === 'ok' ? badge('ok', 'Reconcile OK') : (lastApply.verdict === 'mismatch' ? badge('bad', 'Mismatch') : verdictBadge(lastApply.verdict));
       } else safety = badge('info', 'No apply run yet');
       var safetySub = lastApply ? 'Last apply run ' + esc(D.fmtDate(lastApply.time)) + (mismatches ? ' &middot; ' + esc(plural(mismatches, 'mismatch', 'mismatches')) + ' in history' : '') : 'Everything so far is a dry run; nothing was removed from Liked Songs.';
-      var safetyTip = 'After every real run, SpotiSort checks that the number of Liked Songs before minus what it removed equals what is left after. "Reconcile OK" means that checked out; a mismatch means a song may need restoring.';
+      var safetyTip = 'After every real run, LikedZero checks that the number of Liked Songs before minus what it removed equals what is left after. "Reconcile OK" means that checked out; a mismatch means a song may need restoring.';
       var safetyCard = card('Safety verdict', safety, safetySub + ' <a href="#/safety">Open Safety</a>', ' data-card="safety"', safetyTip);
 
       if (ctx.mode === 'simple') {
@@ -581,7 +581,7 @@
         var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
-        a.href = url; a.download = 'spotisort-inbox.csv';
+        a.href = url; a.download = 'likedzero-inbox.csv';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
       }
@@ -681,7 +681,7 @@
           '<td data-label="Rules">' + (x.rules || []).map(esc).join(', ') + '</td></tr>';
       });
       html += '</tbody></table></div>';
-      html += '<ul class="small muted"><li><strong>Found</strong>: an owned or collaborative playlist with exactly this name.</li><li><strong>Missing</strong>: no playlist has this name (SpotiSort never creates playlists unless a rule allows it).</li><li><strong>Not writable</strong>: you follow it but do not own it.</li><li><strong>Ambiguous</strong>: more than one playlist has this name.</li></ul>';
+      html += '<ul class="small muted"><li><strong>Found</strong>: an owned or collaborative playlist with exactly this name.</li><li><strong>Missing</strong>: no playlist has this name (LikedZero never creates playlists unless a rule allows it).</li><li><strong>Not writable</strong>: you follow it but do not own it.</li><li><strong>Ambiguous</strong>: more than one playlist has this name.</li></ul>';
       return html;
     }
   };

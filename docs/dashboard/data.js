@@ -33,8 +33,8 @@
   var FIXTURE_NOW = '2026-09-21T07:00:00Z'; // fixtures are frozen in time; the demo must not look stale
   var STALE_MS = 2 * 24 * 3600 * 1000;
   var KEY = {
-    source: 'spotisort.dashboard.source', repo: 'spotisort.dashboard.repo', theme: 'spotisort.theme',
-    mode: 'spotisort.dashboard.mode', modeCalloutSeen: 'spotisort.dashboard.modeCalloutSeen',
+    source: 'likedzero.dashboard.source', repo: 'likedzero.dashboard.repo', theme: 'likedzero.theme',
+    mode: 'likedzero.dashboard.mode', modeCalloutSeen: 'likedzero.dashboard.modeCalloutSeen',
   };
   var RAW_RE = /^https:\/\/raw\.githubusercontent\.com\/[\w.-]+\/[\w.-]+\/[\w.\/-]+\/$/;
 
@@ -64,7 +64,7 @@
   // decision 46/P2: a fork's default branch is not always "main". This resolves eventually-correctly, the
   // same pattern shell.js's star count already uses: an immediate "main" fallback (never blocks this load),
   // cached in sessionStorage once the real branch is known so the *next* load already has it right.
-  var BRANCH_KEY_PREFIX = 'spotisort.defaultBranch.';
+  var BRANCH_KEY_PREFIX = 'likedzero.defaultBranch.';
   function cachedDefaultBranch(owner, repo) {
     try { return sessionStorage.getItem(BRANCH_KEY_PREFIX + owner + '/' + repo) || null; } catch (e) { return null; }
   }
