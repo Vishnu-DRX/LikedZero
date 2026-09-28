@@ -230,10 +230,10 @@ th[aria-sort="descending"] .th-sort::after { content: "\2193"; color: var(--colo
 .stepper li { counter-increment: step; display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); font-weight: var(--weight-medium); }
 .stepper li::before { content: counter(step); display: inline-grid; place-content: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--color-muted); font-size: var(--text-sm); font-weight: var(--weight-bold); }
 .stepper a, .stepper button { color: inherit; text-decoration: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; min-height: 28px; }
-.stepper li.is-done { color: var(--color-text); }
-.stepper li.is-done::before { content: "\2713"; background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
-.stepper li[aria-current="step"] { color: var(--color-text); }
-.stepper li[aria-current="step"]::before { border-color: var(--color-accent); color: var(--color-accent-text); }
+.stepper li:has(.is-done) { color: var(--color-text); }
+.stepper li:has(.is-done)::before { content: "\2713"; background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+.stepper li:has([aria-current="step"]) { color: var(--color-text); }
+.stepper li:has([aria-current="step"])::before { border-color: var(--color-accent); color: var(--color-accent-text); }
 
 /* ------------------------------------------------------------ code / YAML view */
 .code { position: relative; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin: 0 0 var(--space-3); }

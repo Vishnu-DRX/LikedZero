@@ -1568,11 +1568,8 @@
     document.querySelectorAll('[data-next]').forEach(function (btn) { btn.addEventListener('click', function () { goStep(Math.min(4, currentStep + 1)); }); });
     document.querySelectorAll('[data-back]').forEach(function (btn) { btn.addEventListener('click', function () { goStep(Math.max(1, currentStep - 1)); }); });
     document.querySelectorAll('#stepper li').forEach(function (li) {
-      li.setAttribute('tabindex', '0');
-      li.setAttribute('role', 'button');
-      var go = function () { goStep(Number(li.getAttribute('data-step'))); };
-      li.addEventListener('click', go);
-      li.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+      var btn = li.querySelector('button');
+      btn.addEventListener('click', function () { goStep(Number(li.getAttribute('data-step'))); });
     });
 
     $('advanced-toggle').addEventListener('change', function (e) { setAdvanced(e.target.checked); });

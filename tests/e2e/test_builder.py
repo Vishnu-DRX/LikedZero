@@ -930,10 +930,9 @@ def test_axe_zero_serious_or_critical_with_unless_and_any_of_panels(make_page, s
     introduce 0 new serious/critical axe violations, in the state they're actually rendered in.
 
     Scanned the same way test_axe_zero_serious_or_critical_with_stepper_and_modal_and_drawer scans (via Save
-    + the Versions drawer): scanning the raw wizard step instead reliably surfaces a PRE-EXISTING, unrelated
-    violation (`<li role="button">` inside the `#stepper` <ol> loses list-item semantics, an axe "list" rule
-    hit) that reproduces on a plain rule with no any_of/unless involved at all and is not something this phase
-    touches -- flagged separately rather than silently masked or fixed out of scope."""
+    + the Versions drawer), which is why this doesn't also cover the #stepper `<li role="button">` "list" rule
+    violation that used to reproduce on the raw wizard step -- see
+    test_axe_zero_serious_or_critical_on_wizard_step_without_modal for that one (now fixed)."""
     page, _ = make_page()
     page.goto(site + "builder/")
     page.wait_for_function("window.__spotiBuilder")
@@ -962,6 +961,24 @@ def test_axe_zero_serious_or_critical_with_unless_and_any_of_panels(make_page, s
     page.get_by_role("button", name="Versions").click()
     expect(page.locator("#versions-drawer")).to_be_visible()
     page.wait_for_timeout(250)
+    axe = Axe()
+    results = axe.run(page)
+    serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
+    assert not serious, json.dumps([{"id": v["id"], "impact": v["impact"], "help": v["help"]} for v in serious], indent=2)
+
+
+@pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
+def test_axe_zero_serious_or_critical_on_wizard_step_without_modal(make_page, site):
+    """Regression test: putting role="button" directly on an <li> that is a direct child of an <ol> strips
+    its implicit listitem role, which axe's "list" rule (serious) flags. The other axe tests in this file
+    scan only after opening the Versions drawer, which sets aria-hidden on the background content and hides
+    #stepper from axe's tree -- so they never caught this. Scan a plain wizard step, with no modal/drawer
+    open, so a regression here can't hide behind that blind spot again."""
+    page, _ = make_page()
+    page.goto(site + "builder/")
+    page.wait_for_function("window.__spotiBuilder")
+    start_blank(page)
+    add_chips(add_rule(page, "A", "P"), "genre_contains", "x")
     axe = Axe()
     results = axe.run(page)
     serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
