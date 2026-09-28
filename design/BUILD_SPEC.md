@@ -1,4 +1,12 @@
-# SpotiSort — Build Spec (phase by phase)
+# LikedZero — Build Spec (phase by phase)
+
+> **2026-09-29: the project is renamed from "SpotiSort" to "LikedZero"** (name collision with an unrelated
+> existing project, plus "Spoti-" prefixes generally risk Spotify's trademark-enforcement pattern — see
+> Master decisions 13 below). The GitHub repo is renamed (`github.com/Vishnu-DRX/LikedZero`), Pages now serves
+> at `vishnu-drx.github.io/LikedZero/`. **Do not confuse this with the Spotify playlists literally named
+> "SpotiSort Test" and "SpotiSort Sink"** — those are real playlist names already created in the user's account
+> and are unaffected by the project rename; every reference to them in this doc, `config.yaml`, and the code
+> stays exactly as-is.
 
 Read `CLAUDE.md` and `IMPLEMENTATION_PLAN.md` (incl. its **Revision 2 errata**) first. API ground truth is
 `spotify-api-explore/FINDINGS.md` (kept outside the repo, contains account data — never commit it).
@@ -152,7 +160,7 @@ product, not a dev tool. Order: **U1 design system + site shell → U2 Configure
     secrets → Actions permission → first dry run → read the dashboard → go live, with "you should see…" checkpoints.
     404 page. Favicon set, `<meta>` description, Open Graph/Twitter card image, canonical URL, `lang`, semantic landmarks,
     skip-to-content link, print stylesheet not needed.
-26. **GitHub & socials:** header/footer/hero link to the **canonical upstream repo `https://github.com/Vishnu-DRX/SpotiSort`**
+26. **GitHub & socials:** header/footer/hero link to the **canonical upstream repo `https://github.com/Vishnu-DRX/LikedZero`**
     ("Star / Fork on GitHub" with live star count fetched at runtime, failing silently). In Repo mode the site also derives the
     visitor's own fork from `location` (`<owner>.github.io/<repo>` → `github.com/<owner>/<repo>`) and shows an "Your fork"
     link. Author credit ("Built by <name>") + social icons are read from ONE file, `docs/site.config.json`. **For now ONLY
@@ -444,6 +452,61 @@ feature, deliberately deferred — write it up as its own `design/proposals/` do
     and `run-now.js`'s polling pattern rather than building new dispatch/poll logic from scratch.
 60. Update the README/Setup guide to mention this as the recommended first step after secrets are set, before
     hand-writing any rules. Full quality gate suite (decision 30) re-run — new UI surface on Configure.
+
+## Master decisions 13 (2026-09-29) — rename to LikedZero
+Reasons (both real, both checked, not just one): (1) a direct name collision — `alessiocelentano/spotisort`
+already exists as an unrelated project. (2) A "Spoti-" prefix (the user's own first suggestion, "Spoti-inbox")
+carries the same problem `SpotiSort` did, not a different one — Spotify's own developer naming guidelines
+explicitly bar a name "similar to Spotify in sound or spelling," and they have real enforcement precedent (won
+a 2022 trademark case against an app called "Potify" on exactly that basis). **"LikedZero" was chosen instead**:
+plays on "Inbox Zero," which is the metaphor this whole project has used since its first design doc ("Liked
+Songs = inbox"), has no relationship to "Spotify" in sound or spelling, and no collision was found.
+
+**Already done by the master session (do not redo):** GitHub repo renamed
+(`gh repo rename LikedZero --repo Vishnu-DRX/SpotiSort -y`) — confirmed live at
+`https://github.com/Vishnu-DRX/LikedZero` and `https://vishnu-drx.github.io/LikedZero/` (200 OK, Pages
+auto-updated). Local git remote `origin` updated to match. This doc's own title, intro banner, and the
+canonical-repo URL in decision 26 are already fixed.
+
+61. **Critical distinction, get this right:** the Spotify playlists literally named **"SpotiSort Test"** and
+    **"SpotiSort Sink"** are real playlists the user already created in their account — they are NOT the
+    project's name and must NEVER be touched, renamed, or have their string value changed anywhere (`config.yaml`,
+    tests, fixtures, dashboard data, docs). Every other occurrence of "SpotiSort"/"spotisort" refers to the
+    *project* and should become "LikedZero"/"likedzero" (match case/casing convention of the surrounding text).
+    Grep first, categorize every hit into "project name" vs "playlist name" before changing anything.
+62. **Scope of the rename pass:**
+    - Code: `src/enrichment/musicbrainz.py`'s `USER_AGENT` constant (currently embeds both the old name and the
+      old GitHub URL — fix both), any other docstrings/comments naming the project, `.github/workflows/*.yml`
+      comments/step names.
+    - Config: `config.yaml`'s and `config.example.yaml`'s header comment line ("# SpotiSort live config.") —
+      NOT any `target_playlist` value.
+    - Top-level docs: `README.md`, `CLAUDE.md`, `IMPLEMENTATION_PLAN.md` (its title/intro, not its dated
+      "Revision 2 errata" history), remaining forward-facing mentions in `BUILD_SPEC.md` (historical/completed-
+      phase narrative text describing what already ran, e.g. Phase 1's `gh api repos/Vishnu-DRX/SpotiSort/...`
+      example commands, may stay as historical record — your judgment, note what you left and why).
+    - `design/reports/*.md` and `design/reviews/*.md`: **leave untouched**, historical record (same exclusion
+      this project has always used).
+    - The site (`docs/`): every page's `<title>`/meta description/OG+Twitter card tags/canonical URL, the PWA
+      manifest (`name`, `short_name`, `description`), the service worker (cache-key/version — bump it, since
+      cached assets are changing), `docs/site.config.json` if it names the project anywhere (it mainly holds
+      author credit — check), README-embedded badges/links, the Setup guide's copy-paste commands and example
+      URLs, favicon/OG image alt text.
+    - **CRITICAL, verify live, not just by inspection:** the Pages URL path changed from `/SpotiSort/` to
+      `/LikedZero/`. Any **absolute** path (not relative) hardcoded anywhere — service worker `scope`, manifest
+      `start_url`/`scope`, an `<a href="/SpotiSort/...">`, a JS-constructed URL — will silently 404 on the live
+      site if not updated. Grep specifically for `/SpotiSort/` and `Vishnu-DRX/SpotiSort` as literal path/URL
+      fragments, separately from the general name-audit above, and confirm every hit is fixed.
+    - Reuse/extend the existing fork-genericness test (decision 41) rather than writing a new one — it already
+      greps for the literal strings `Vishnu-DRX`/`SpotiSort`; update what it checks for to the new identity
+      strings, keeping its actual purpose (derive at runtime, don't hardcode) intact.
+63. **Not in scope, deliberately:** the local folder path (`T:\Development Space\SpotiSort`) is NOT being
+    renamed — it's shared with another active session and renaming it risks breaking that session's working
+    directory mid-task. Leave it. Also not required: renaming the Spotify Developer Dashboard app's own display
+    name (cosmetic, the user's own account, only they can do it, not part of this repo).
+64. Full quality gate suite (decision 30) re-run — this touches nearly every page and asset. After pushing,
+    live-verify the actual deployed site (curl or fetch Home/Configure/Dashboard on the new
+    `vishnu-drx.github.io/LikedZero/` URL, confirm 200 and no broken absolute-path asset references) — this
+    is a case where "tests pass locally" is not sufficient proof, the real deployed path changed.
 
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
