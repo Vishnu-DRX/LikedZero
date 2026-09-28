@@ -522,7 +522,7 @@ def test_source_switch_repo_fixtures_files(dash, site):
     sel.select_option("files")
     expect(page.locator("#files-field")).to_be_visible()
     assert "Open local files" in page.locator("#source-current").inner_text()
-    assert "source=files" in page.url and page.evaluate("localStorage.getItem('spotisort.dashboard.source')") == "files"
+    assert "source=files" in page.url and page.evaluate("localStorage.getItem('likedzero.dashboard.source')") == "files"
     requests.clear()  # only care about requests made from here on, once "files" is the active source
     page.locator("#files-input").set_input_files([str(FIX / "latest-plan.json"), str(FIX / "runs.json")])
     page.wait_for_selector('#view-root[data-state="ready"] [data-card="liked"]')
@@ -539,7 +539,7 @@ def test_source_switch_repo_fixtures_files(dash, site):
     page.get_by_role("button", name="Save URL").click()
     page.wait_for_selector('#view-root[data-state="ready"] [data-card="liked"]')
     assert any(u == "https://raw.githubusercontent.com/octo/spot/main/logs/latest-plan.json" for u in requests)
-    assert page.evaluate("localStorage.getItem('spotisort.dashboard.repo')") == "https://raw.githubusercontent.com/octo/spot/main/logs/"
+    assert page.evaluate("localStorage.getItem('likedzero.dashboard.repo')") == "https://raw.githubusercontent.com/octo/spot/main/logs/"
     assert page.locator("#repo-url").input_value() == "https://raw.githubusercontent.com/octo/spot/main/logs/"
     # -> back to fixtures
     sel.select_option("fixtures")
@@ -760,7 +760,7 @@ def test_mode_toggle_switches_and_persists(dash):
     page.wait_for_selector('[data-card="next-run"]')
     nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
     assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Safety", "Signals", "Backtest"]
-    assert page.evaluate("localStorage.getItem('spotisort.dashboard.mode')") == "detailed"
+    assert page.evaluate("localStorage.getItem('likedzero.dashboard.mode')") == "detailed"
     # reload WITHOUT an explicit mode= param (an explicit param, as `dash` sets, always wins -- same rule
     # as the existing `source` param) to prove the stored preference is what sticks for a normal visit.
     page.goto(page.url.split("?")[0] + "?source=fixtures#/overview")
