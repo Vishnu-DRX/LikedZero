@@ -44,7 +44,7 @@ and can be installed as an app; nothing leaves your browser. It can also commit 
 fork via **Save to GitHub** (a fine-grained token you create and control, kept in the browser tab only), or you
 can download/copy it and commit it yourself. Supported match keys:
 
-`artist_in`, `genre_contains`, `language_in`, `release_year_before`, `release_year_after`, `explicit`, `track_name_contains`, `album_name_contains`, `artist_in_playlist`
+`artist_in`, `genre_contains`, `language_in`, `release_year_before`, `release_year_after`, `explicit`, `track_name_contains`, `album_name_contains`, `artist_in_playlist`, `any`, `artist_country_in`, `any_of`
 
 - Conditions within a rule are ANDed.
 - The first matching rule wins; a too-young match blocks rather than falling through to a broader later rule.
@@ -55,6 +55,19 @@ can download/copy it and commit it yourself. Supported match keys:
   for this key); tune `artist_in_playlist.min_tracks`/`min_dominance` (defaults 3 / 0.9) and
   `exclude_playlists` (`Vault_drx` is always excluded, whether or not it's listed) at the top level of
   `config.yaml`. See `design/proposals/artist_in_playlist.md`.
+- `any: true` matches unconditionally — the real catch-all. Put a rule using it last; everything above it is
+  tried first, and it only catches what nothing else did.
+- `artist_country_in: [IN, US, ...]` checks the primary artist's MusicBrainz/ISRC country (2-letter ISO codes;
+  the same field already fetched for `enrichment.english_default`, no extra API calls). Like `country_default`,
+  it's an exact field lookup but still a weak signal — informational, not something to rely on alone.
+- `unless:` is an optional per-rule block, same match-key vocabulary as `match`, AND-combined among itself. If
+  a rule's `match` passes AND its `unless` also fully passes, the rule is blocked — treated exactly like a
+  non-match, so evaluation continues to the next rule (this is not the age-gate's hard stop). Cannot contain
+  `artist_in_playlist` (its `auto` target only resolves from a rule's top-level `match`).
+- `any_of: [...]` inside `match` is "OR within one rule": a list of match-condition groups (same vocabulary,
+  each internally ANDed); the whole key passes if any one group passes, then ANDs with the rest of `match` as
+  usual. A group cannot contain `artist_in_playlist` or nest another `any_of`. Also usable inside `unless`.
+  See `design/proposals/more-conditions.md` for the full design writeup of these last three keys.
 - `inbox_since` (a date) is optional for manual runs, but songs liked before it are never evaluated regardless
   of how a run is started — see "Going unattended" below.
 

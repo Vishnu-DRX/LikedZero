@@ -29,6 +29,7 @@
      "malayalam"
     ]
    },
+   "unless": {},
    "uses_language": true,
    "weak_signals_possible": [
     "language_in:hint",
@@ -50,6 +51,7 @@
      "hindi"
     ]
    },
+   "unless": {},
    "uses_language": true,
    "weak_signals_possible": [
     "language_in:hint",
@@ -71,6 +73,7 @@
      "bengali"
     ]
    },
+   "unless": {},
    "uses_language": true,
    "weak_signals_possible": [
     "language_in:hint",
@@ -93,6 +96,7 @@
      "telugu"
     ]
    },
+   "unless": {},
    "uses_language": true,
    "weak_signals_possible": [
     "language_in:hint",
@@ -114,6 +118,7 @@
      "spanish"
     ]
    },
+   "unless": {},
    "uses_language": true,
    "weak_signals_possible": [
     "language_in:hint",
@@ -136,6 +141,7 @@
      "Fake Band Beta"
     ]
    },
+   "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 5,
@@ -155,6 +161,7 @@
     ],
     "track_name_contains": "live"
    },
+   "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 1,
@@ -173,6 +180,7 @@
      "lo-fi"
     ]
    },
+   "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 5,
@@ -192,6 +200,7 @@
     ],
     "release_year_before": 1990
    },
+   "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 2,
@@ -210,6 +219,7 @@
      "polka"
     ]
    },
+   "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 0,
@@ -228,6 +238,7 @@
      "country"
     ]
    },
+   "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 0,
@@ -249,6 +260,7 @@
      "pop"
     ]
    },
+   "unless": {},
    "uses_language": true,
    "weak_signals_possible": [
     "language_in:hint",
