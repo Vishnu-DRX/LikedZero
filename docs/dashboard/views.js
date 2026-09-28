@@ -17,6 +17,24 @@
     return String(v);
   }
   function pct(v, digits) { return v == null ? 'n/a' : (v * 100).toFixed(digits == null ? 1 : digits) + '%'; }
+  // design/proposals/more-conditions.md: one condition line, key + what was wanted/found. `any_of`'s `wanted`
+  // is a list of match-condition groups and its `actual` is the per-branch pass/fail list produced by
+  // rules_engine.check_key -- rendered so it's clear which branch (if any) actually matched, not just that
+  // the whole any_of key passed or failed.
+  function conditionLine(c) {
+    if (c.key === 'any_of') {
+      var branches = c.actual || [];
+      var groups = c.wanted || [];
+      var parts = groups.map(function (group, i) {
+        var b = branches[i] || {};
+        var groupText = Object.keys(group).map(function (k) { return esc(k) + '=' + esc(fmtVal(group[k])); }).join(' &amp; ');
+        var mark = b.passed ? '<span class="ct-ok">✓</span>' : '<span class="ct-no">✕</span>';
+        return '<li>' + mark + ' branch ' + (i + 1) + ': ' + groupText + '</li>';
+      });
+      return '<code>any_of</code> — at least one branch must match:<ol class="any-of-trace">' + parts.join('') + '</ol>';
+    }
+    return '<code>' + esc(c.key) + '</code> wants ' + esc(fmtVal(c.wanted)) + '; song has ' + esc(fmtVal(c.actual));
+  }
   function num(v) { return v == null ? '—' : String(v); }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
 
@@ -128,6 +146,18 @@
 
   function tableWrap(html, cards) { return '<div class="table-wrap' + (cards ? ' cards' : '') + '">' + html + '</div>'; }
 
+  // design/proposals/more-conditions.md: one line for the Rules-view Conditions/Exceptions cells. any_of's
+  // value is a list of match-condition groups (dicts), rendered as "(A) OR (B)" rather than the generic
+  // fmtVal() (which would just join objects into unreadable "[object Object]" text).
+  function matchDictLine(key, value) {
+    if (key === 'any_of' && Array.isArray(value)) {
+      return '<code>any_of</code> (' + value.map(function (group) {
+        return Object.keys(group).map(function (k) { return esc(k) + '=' + esc(fmtVal(group[k])); }).join(' &amp; ');
+      }).join(') <span class="small muted">OR</span> (') + ')';
+    }
+    return '<code>' + esc(key) + '</code> ' + esc(fmtVal(value));
+  }
+
   function pctCell(v, cls) {
     if (v == null) return '<span class="muted">n/a</span>';
     var w = Math.max(0, Math.min(100, v * 100));
@@ -141,6 +171,9 @@
     failed: ['neutral', 'Did not match'],
     not_reached: ['neutral', 'Not reached: an earlier rule already decided'],
     not_reached_but_would_match: ['warn', 'Would match, but never reached (an earlier rule wins)'],
+    // design/proposals/more-conditions.md: the rule's own conditions passed, but its `unless` exception also
+    // fully matched, so it is blocked -- treated exactly like a non-match, evaluation continues to the next rule.
+    blocked_by_exception: ['warn', 'Blocked by an exception: it matched, but an "unless" condition also matched'],
     skipped_disabled: ['neutral', 'Skipped: rule is disabled'],
     skipped_empty: ['neutral', 'Skipped: rule has no conditions']
   };
@@ -184,10 +217,28 @@
     if (isCatchAll && (song.decision === 'will_move' || song.decision === 'too_young')) {
       base += ' Nothing more specific matched first, so it falls to this catch-all.';
     }
+    // design/proposals/more-conditions.md: when the deciding rule matched via an any_of OR-group, say which
+    // branch actually won -- otherwise "Matched X" reads as a single specific condition when it was really one
+    // of several alternatives.
+    var anyOfCond = decidedEntry && (decidedEntry.conditions || []).filter(function (c) { return c.key === 'any_of'; })[0];
+    if (anyOfCond && anyOfCond.passed) {
+      var branches = anyOfCond.actual || [];
+      var winner = branches.filter(function (b) { return b.passed; })[0];
+      if (winner) base += ' It matched via one of several allowed options (branch ' + (winner.branch + 1) + ' of ' + branches.length + ').';
+    }
     var shadow = trace.filter(function (e) { return e.result === 'not_reached_but_would_match'; }).map(function (e) { return e.rule; });
     var tooYoungEarlier = trace.filter(function (e) { return e.result === 'matched_too_young' && e.rule !== song.rule; }).map(function (e) { return e.rule; });
+    // design/proposals/more-conditions.md: rules that would otherwise have matched first, but were blocked by
+    // their own `unless` exception -- distinct from "shadowed" (which never even got their own conditions to
+    // fully pass) and from "too young" (an age-gate reason, not an exception).
+    var blockedEarlier = trace.filter(function (e) { return e.result === 'blocked_by_exception'; });
     if (shadow.length) base += ' It would also match ' + shadow.map(esc).join(', ') + ', but ' + (shadow.length > 1 ? 'those rules run' : 'that rule runs') + ' later and never get' + (shadow.length > 1 ? '' : 's') + ' the chance.';
     if (tooYoungEarlier.length) base += ' It was too new for ' + tooYoungEarlier.map(esc).join(', ') + '.';
+    if (blockedEarlier.length) {
+      base += ' ' + (blockedEarlier.length > 1 ? 'Rules ' : 'Rule ') + blockedEarlier.map(function (e) { return '“' + esc(e.rule) + '”'; }).join(', ') +
+        ' would otherwise have matched first, but ' + (blockedEarlier.length > 1 ? 'their exceptions blocked them' : 'its exception blocked it') +
+        ' (' + blockedEarlier.map(function (e) { return esc(e.blocked_reason || ''); }).join('; ') + ').';
+    }
     return base;
   }
 
@@ -215,9 +266,21 @@
       if (e.conditions && e.conditions.length) {
         out += '<ul>';
         e.conditions.forEach(function (c) {
-          out += '<li data-passed="' + (c.passed ? 'true' : 'false') + '"><span class="' + (c.passed ? 'ct-ok' : 'ct-no') + '">' + (c.passed ? '✓ passed' : '✕ failed') + '</span><span><code>' + esc(c.key) + '</code> wants ' + esc(fmtVal(c.wanted)) + '; song has ' + esc(fmtVal(c.actual)) + '</span></li>';
+          out += '<li data-passed="' + (c.passed ? 'true' : 'false') + '"><span class="' + (c.passed ? 'ct-ok' : 'ct-no') + '">' + (c.passed ? '✓ passed' : '✕ failed') + '</span><span>' + conditionLine(c) + '</span></li>';
         });
         out += '</ul>';
+      }
+      // design/proposals/more-conditions.md: only present when this rule's own match passed AND it has an
+      // `unless` block -- shows exactly which exception condition(s) blocked it, not just that it "failed".
+      if (e.unless_conditions && e.unless_conditions.length) {
+        out += '<p class="small" data-testid="unless-heading"><strong>Exception (unless)' + (e.result === 'blocked_by_exception' ? ' — blocked this rule' : '') + ':</strong></p><ul data-testid="unless-conditions">';
+        e.unless_conditions.forEach(function (c) {
+          out += '<li data-passed="' + (c.passed ? 'true' : 'false') + '"><span class="' + (c.passed ? 'ct-ok' : 'ct-no') + '">' + (c.passed ? '✓ matched' : '✕ did not match') + '</span><span>' + conditionLine(c) + '</span></li>';
+        });
+        out += '</ul>';
+      }
+      if (e.blocked_reason) {
+        out += '<p class="small" data-testid="blocked-reason">' + esc(e.blocked_reason) + '.</p>';
       }
       out += '</li>';
     });
@@ -583,7 +646,9 @@
         html += '<tr class="' + cls + '" data-rule="' + esc(r.name) + '" data-status="' + esc(r.status) + '"><td class="num" data-label="Priority">' + (i + 1) + '</td>' +
           '<td class="cell-main"><strong>' + esc(r.name) + '</strong>' + note + weak + '</td>' +
           '<td data-label="Status">' + ruleStatusBadge(r.status) + '</td>' +
-          '<td data-label="Conditions">' + Object.keys(r.conditions || {}).map(function (k) { return '<div><code>' + esc(k) + '</code> ' + esc(fmtVal(r.conditions[k])) + '</div>'; }).join('') + '<div class="small muted">waits ' + esc(r.threshold_days) + ' days</div></td>' +
+          '<td data-label="Conditions">' + Object.keys(r.conditions || {}).map(function (k) { return '<div>' + matchDictLine(k, r.conditions[k]) + '</div>'; }).join('') +
+          (r.unless && Object.keys(r.unless).length ? '<div class="small" data-testid="unless-summary">unless ' + Object.keys(r.unless).map(function (k) { return matchDictLine(k, r.unless[k]); }).join(' &amp; ') + '</div>' : '') +
+          '<div class="small muted">waits ' + esc(r.threshold_days) + ' days</div></td>' +
           '<td data-label="Target">' + esc(r.target_playlist) + '<div class="small muted">' + esc(posText(r.target_position)) + '</div>' + targetBadge(r.target_status) + '</td>' +
           '<td class="num" data-label="Would match">' + esc(r.would_match) + '</td>' +
           '<td class="num" data-label="Wins now"><a href="#/inbox?rule=' + encodeURIComponent(r.name) + '">' + esc(r.wins) + '</a></td>' +
