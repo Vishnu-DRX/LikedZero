@@ -46,7 +46,7 @@ def _within(child: Path, parent: Path) -> bool:
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    server_version = "SpotiSortDashboard"
+    server_version = "LikedZeroDashboard"
     protocol_version = "HTTP/1.1"
     docs_dir: Path = DOCS_DIR
     logs_dir: Path = Path("logs")
@@ -158,7 +158,7 @@ def make_server(logs_dir: str | Path = "logs", port: int = DEFAULT_PORT, docs_di
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="python -m src.dashboard", description="Serve the SpotiSort dashboard on localhost with your logs/ data.")
+    ap = argparse.ArgumentParser(prog="python -m src.dashboard", description="Serve the LikedZero dashboard on localhost with your logs/ data.")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"port on 127.0.0.1 (default {DEFAULT_PORT})")
     ap.add_argument("--logs", default="logs", help="folder holding the run artifacts (default: logs)")
     ap.add_argument("--no-browser", action="store_true", help="do not open a browser window")
@@ -169,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Could not listen on {HOST}:{args.port}: {exc}", file=sys.stderr)
         return 1
     url = f"http://{HOST}:{server.server_address[1]}/dashboard/?source=local"
-    print(f"SpotiSort dashboard: {url}")
+    print(f"LikedZero dashboard: {url}")
     print(f"Serving {Path(args.logs).resolve()} read-only at /data/ (Ctrl+C to stop)")
     if not args.no_browser:
         try:

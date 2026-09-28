@@ -140,7 +140,7 @@ product, not a dev tool. Order: **U1 design system + site shell → U2 Configure
     theme toggle that respects `prefers-color-scheme`. Type scale, 4/8 px spacing scale, radii, shadows and motion tokens
     (respect `prefers-reduced-motion`). Contrast WCAG AA everywhere (green text on dark must pass; use white-on-green
     for filled buttons only if it passes, else black-on-green as Spotify does). **Do NOT use the Spotify logo or wordmark;**
-    footer states "SpotiSort is an independent open-source project, not affiliated with or endorsed by Spotify."
+    footer states "LikedZero is an independent open-source project, not affiliated with or endorsed by Spotify."
 23. **Component library (vanilla CSS/JS, no build step):** buttons (primary pill, secondary, ghost, danger, icon, loading,
     disabled), inputs/selects/checkboxes/switches/segmented controls/tag inputs, cards, tabs, modal/drawer, toasts,
     tooltip, popover, badge/chip, table, empty state, skeleton, banner, stepper, code/YAML view. **All native controls

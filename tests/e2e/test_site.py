@@ -68,11 +68,11 @@ def test_shell_and_home_byte_budget():
 @pytest.mark.parametrize(
     "hostname,pathname,expect_url",
     [
-        ("vishnu-drx.github.io", "/SpotiSort/", None),
-        ("someone-else.github.io", "/SpotiSort/", "https://github.com/someone-else/SpotiSort"),
-        ("someone-else.github.io", "/SpotiSort/setup/", "https://github.com/someone-else/SpotiSort"),
+        ("vishnu-drx.github.io", "/LikedZero/", None),
+        ("someone-else.github.io", "/LikedZero/", "https://github.com/someone-else/LikedZero"),
+        ("someone-else.github.io", "/LikedZero/setup/", "https://github.com/someone-else/LikedZero"),
         ("localhost", "/", None),
-        ("example.com", "/SpotiSort/", None),
+        ("example.com", "/LikedZero/", None),
     ],
 )
 def test_fork_link_derivation_real(site_page, site, hostname, pathname, expect_url):

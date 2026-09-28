@@ -1,4 +1,4 @@
-/* SpotiSort design tokens (Master decision 22). The single source of truth for colour, type, space, radius,
+/* LikedZero design tokens (Master decision 22). The single source of truth for colour, type, space, radius,
    shadow and motion. Dark is the default; light follows prefers-color-scheme; [data-theme="dark|light"] on <html>
    overrides both. Pages consume these variables only, never raw colours.
    Note on contrast: --color-muted (#7A7A7A) is 4.4:1 on the dark background, so it is for icons, dividers and

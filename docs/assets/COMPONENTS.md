@@ -1,4 +1,4 @@
-# SpotiSort component library — API reference
+# LikedZero component library — API reference
 
 Vanilla CSS/JS, no build step. Three files, load in this order on every page:
 
@@ -295,7 +295,7 @@ flags an unnamed `role="meter"` as a serious violation.
 | `SpotiUI.copy(text) → Promise` | Clipboard write with fallback. |
 | `SpotiUI.showTip(el)` / `SpotiUI.hideTip()` / `SpotiUI.openPopover(el)` / `SpotiUI.closePopover()` | Manual tooltip/popover control. |
 
-Theme persistence key: `localStorage['spotisort-theme']` (`'dark'` / `'light'` / absent = follow OS). All
+Theme persistence key: `localStorage['likedzero-theme']` (`'dark'` / `'light'` / absent = follow OS). All
 storage access is wrapped in `try/catch` with a silent no-op fallback — the library never throws if storage
 is blocked (private browsing, quota, disabled cookies).
 
@@ -316,8 +316,8 @@ Key points for pages that embed it:
 - `data-active` on the `<script>` tag (`home` \| `configure` \| `dashboard` \| `setup` \| `none`) sets
   `aria-current="page"` on the matching nav link.
 - All nav/asset links are computed from the script's own resolved URL, so the same file works at
-  `https://vishnu-drx.github.io/SpotiSort/`, at any fork's `https://<user>.github.io/SpotiSort/`, and from a
-  local `python -m http.server` root — never hardcode `/SpotiSort/` anywhere in page markup.
+  `https://vishnu-drx.github.io/LikedZero/`, at any fork's `https://<user>.github.io/LikedZero/`, and from a
+  local `python -m http.server` root — never hardcode `/LikedZero/` anywhere in page markup.
 - Footer content (author name + socials) is read once from `docs/site.config.json` at the site root; only
   keys present in that file are rendered (no empty icons/placeholders for missing socials).
 - `window.SpotiShell.deriveFork(locationLike?)` is exposed for unit testing the "Your fork" derivation without

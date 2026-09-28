@@ -1,6 +1,6 @@
 {
-  "name": "SpotiSort",
-  "short_name": "SpotiSort",
+  "name": "LikedZero",
+  "short_name": "LikedZero",
   "description": "Sort your Spotify Liked Songs into playlists you already have, on a schedule, for free.",
   "id": "./",
   "start_url": "./index.html",

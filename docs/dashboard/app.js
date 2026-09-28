@@ -94,7 +94,7 @@
     if (mode === 'simple' && SIMPLE_HIDDEN_VIEWS.indexOf(route.name) >= 0) { go('#/overview'); return Promise.resolve(); }
     var view = V[route.name];
     buildTabs(route.name);
-    document.title = view.label + ' · SpotiSort dashboard';
+    document.title = view.label + ' · LikedZero dashboard';
     if (!data) return Promise.resolve();
     var ctx = { files: data.files, base: data.base, source: data.source, state: state, query: route.query, arg: route.arg, go: go, mode: mode };
     var body;
@@ -231,7 +231,7 @@
     ['Shadowed rule', 'A rule that songs would match, but an earlier rule in the list always takes them first, so this one never wins.'],
     ['Dead rule', 'A rule that no song in the current inbox matches at all.'],
     ['Signal tier', 'How a song’s language was worked out: your own playlists, the title’s script, a weaker hint, or a country default — in that order of trust.'],
-    ['Confidence', 'How sure SpotiSort is about a signal such as language, shown as a percentage.'],
+    ['Confidence', 'How sure LikedZero is about a signal such as language, shown as a percentage.'],
     ['Precision', 'Of the songs a signal or rule sent somewhere, the share that were actually right.'],
     ['Recall', 'Of all the songs that truly belong somewhere, the share that were actually found and routed there.'],
     ['Reconcile', 'The safety check after a real run: before minus removed should equal after. A mismatch means something needs attention.'],

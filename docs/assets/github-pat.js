@@ -14,7 +14,7 @@
   function scopeKey(scopes) {
     return (scopes || []).map(function (s) { return s.name + ':' + s.level; }).sort().join(',');
   }
-  function keyFor(owner, repo, scopes) { return 'spotisort.pat.' + owner + '/' + repo + '|' + scopeKey(scopes); }
+  function keyFor(owner, repo, scopes) { return 'likedzero.pat.' + owner + '/' + repo + '|' + scopeKey(scopes); }
 
   function get(owner, repo, scopes) {
     try { return window.sessionStorage.getItem(keyFor(owner, repo, scopes)) || null; }
@@ -32,7 +32,7 @@
   // decision 46/P2: cached alongside the token (not the scope-specific slot -- the default branch is a
   // property of the repo, not of which feature connected) so a reopened dialog doesn't need to re-verify
   // just to know it, and a Contents PUT / workflow dispatch never has to guess "main".
-  function branchKey(owner, repo) { return 'spotisort.pat.branch.' + owner + '/' + repo; }
+  function branchKey(owner, repo) { return 'likedzero.pat.branch.' + owner + '/' + repo; }
   function getDefaultBranch(owner, repo) {
     try { return window.sessionStorage.getItem(branchKey(owner, repo)) || null; } catch (e) { return null; }
   }

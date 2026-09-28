@@ -17,7 +17,7 @@ except ImportError:  # playwright is an optional dev dependency
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "docs"
-BASE_PATH = "/SpotiSort/"  # mimic the GitHub Pages project-site base path
+BASE_PATH = "/LikedZero/"  # mimic the GitHub Pages project-site base path
 
 
 class _Handler(http.server.SimpleHTTPRequestHandler):

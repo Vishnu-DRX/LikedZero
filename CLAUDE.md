@@ -1,4 +1,4 @@
-# SpotiSort
+# LikedZero
 
 Rules-based sorter for Spotify Liked Songs (the "inbox"). Songs older than N days are matched
 against user rules and moved into an **existing** playlist. Open source, fork-and-run: no backend,

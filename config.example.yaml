@@ -1,6 +1,6 @@
 default_days_threshold: 14
 
-# Optional: tell SpotiSort which of your playlists are language playlists (playlist name -> language).
+# Optional: tell LikedZero which of your playlists are language playlists (playlist name -> language).
 # Songs by the same artists are then recognised as that language. Names, ISO codes or native names work.
 language_playlists: {}
 #  "Chill Hindi": hindi

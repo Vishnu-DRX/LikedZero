@@ -37,7 +37,7 @@ import requests
 
 from .models import Artist, Playlist, Track
 
-log = logging.getLogger("spotisort")
+log = logging.getLogger("likedzero")
 
 API_BASE = "https://api.spotify.com/v1"
 AUTH_URL = "https://accounts.spotify.com/authorize"
@@ -611,7 +611,7 @@ def _capture_code(state: str, timeout: float, on_ready: Callable[[], None]) -> s
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
-            self.wfile.write(b"SpotiSort: login received. You can close this tab.")
+            self.wfile.write(b"LikedZero: login received. You can close this tab.")
 
         def log_message(self, *args: Any) -> None:  # silence request logging
             pass

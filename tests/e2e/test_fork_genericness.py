@@ -53,7 +53,7 @@ def test_upstream_credit_link_is_unchanged_on_a_fork(make_page, site):
     page.wait_for_selector(".site-footer-links")  # footer only exists after site.config.json resolves
     # the nav "GitHub" link and the footer's "Upstream repository" link both still point at the real
     # canonical repo, never at this fork
-    hrefs = page.locator('a[href*="github.com/Vishnu-DRX/SpotiSort"]').all()
+    hrefs = page.locator('a[href*="github.com/Vishnu-DRX/LikedZero"]').all()
     assert len(hrefs) >= 1
     fork_link = page.locator("#site-fork-link")
     expect(fork_link).to_have_attribute("href", f"https://github.com/{OWNER}/{REPO}")

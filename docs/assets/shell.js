@@ -1,6 +1,6 @@
-/* SpotiSort site shell (Master decision 25/26). Renders the sticky header and footer into ONE placeholder
+/* LikedZero site shell (Master decision 25/26). Renders the sticky header and footer into ONE placeholder
    element and appends the footer to <body>. No build step, no bundler: works from the Pages root
-   (/SpotiSort/), from a fork's own path (/<repo>/), and from a local `python -m http.server` root.
+   (/LikedZero/), from a fork's own path (/<repo>/), and from a local `python -m http.server` root.
 
    ---------------------------------------------------------------------------------------------------
    USAGE (every page that wants the shell):
@@ -11,11 +11,11 @@
      2. One placeholder element, where the header should appear (normally the very first thing in <body>):
           <div id="site-shell">
             <noscript>
-              <p><a href="RELATIVE/index.html">SpotiSort</a> ·
+              <p><a href="RELATIVE/index.html">LikedZero</a> ·
                  <a href="RELATIVE/builder/">Configure</a> ·
                  <a href="RELATIVE/dashboard/">Dashboard</a> ·
                  <a href="RELATIVE/setup/">Setup guide</a> ·
-                 <a href="https://github.com/Vishnu-DRX/SpotiSort">GitHub</a></p>
+                 <a href="https://github.com/Vishnu-DRX/LikedZero">GitHub</a></p>
             </noscript>
           </div>
         The <noscript> fallback is REQUIRED (decision 25: "must also work with a <noscript> fallback of
@@ -42,7 +42,7 @@
   var ROOT = SCRIPT_URL.replace(/assets\/shell\.js(?:\?.*)?$/, '');
   var ACTIVE = thisScript.getAttribute('data-active') || 'none';
   var UPSTREAM_OWNER = 'Vishnu-DRX';
-  var UPSTREAM_REPO = 'SpotiSort';
+  var UPSTREAM_REPO = 'LikedZero';
   var UPSTREAM_URL = 'https://github.com/' + UPSTREAM_OWNER + '/' + UPSTREAM_REPO;
 
   function el(tag, attrs, html) {
@@ -80,7 +80,7 @@
     header.innerHTML =
       '<a class="skip-link" href="#main">Skip to content</a>' +
       '<div class="site-header-bar container">' +
-      '<a class="brand" href="' + ROOT + 'index.html">' + svgLogo(28) + '<span class="brand-name">SpotiSort</span></a>' +
+      '<a class="brand" href="' + ROOT + 'index.html">' + svgLogo(28) + '<span class="brand-name">LikedZero</span></a>' +
       '<nav class="site-nav" id="site-nav" aria-label="Primary">' + nav + '</nav>' +
       '<div class="site-header-actions">' +
       '<button type="button" class="btn btn-icon" data-theme-toggle aria-label="Switch theme">' +
@@ -126,7 +126,7 @@
 
     footer.innerHTML =
       '<div class="container site-footer-inner">' +
-      '<p class="site-footer-disclaimer">SpotiSort is an independent open-source project, not affiliated with or endorsed by Spotify.</p>' +
+      '<p class="site-footer-disclaimer">LikedZero is an independent open-source project, not affiliated with or endorsed by Spotify.</p>' +
       '<div class="site-footer-row">' +
       '<div class="site-footer-links">' +
       '<a href="' + UPSTREAM_URL + '" rel="noopener">Upstream repository</a>' +
@@ -147,7 +147,7 @@
   function loadStars() {
     var slot = doc.getElementById('site-star');
     if (!slot) return;
-    var cacheKey = 'spotisort-stars-' + UPSTREAM_OWNER + '-' + UPSTREAM_REPO;
+    var cacheKey = 'likedzero-stars-' + UPSTREAM_OWNER + '-' + UPSTREAM_REPO;
     try {
       var cached = sessionStorage.getItem(cacheKey);
       if (cached) { slot.textContent = '★ ' + cached; return; }

@@ -1,4 +1,4 @@
-# SpotiSort
+# LikedZero
 
 A rules-based, fork-and-run tool that treats Spotify **Liked Songs as an inbox**. After a configurable number of
 days, liked tracks are matched against your rules and **moved into playlists you already have**. It never
@@ -20,7 +20,7 @@ below). Scheduling is deliberately not enabled yet — see "Going unattended" be
 
 ## Setup
 
-The [Setup guide](https://vishnu-drx.github.io/SpotiSort/setup/) on the Pages site walks through this with
+The [Setup guide](https://vishnu-drx.github.io/LikedZero/setup/) on the Pages site walks through this with
 copy buttons and "you should see" checks. In short:
 
 1. Fork this repo.
@@ -38,7 +38,7 @@ copy buttons and "you should see" checks. In short:
 ## Config
 
 Build `config.yaml` with the form-based **Configure** page at `docs/builder/` (on GitHub Pages:
-`https://<your-user>.github.io/SpotiSort/builder/`), or copy `config.example.yaml` by hand. Configure
+`https://<your-user>.github.io/LikedZero/builder/`), or copy `config.example.yaml` by hand. Configure
 validates with the same rules as the sorter, previews the YAML live, imports an existing file, works offline
 and can be installed as an app; nothing leaves your browser. It can also commit `config.yaml` straight to your
 fork via **Save to GitHub** (a fine-grained token you create and control, kept in the browser tab only), or you
