@@ -67,11 +67,28 @@
     any: {
       label: 'Catch-all (matches every song)', kind: 'flag',
       hint: 'Matches unconditionally. Put this rule LAST — everything above it is tried first, and this only catches what nothing else did.'
+    },
+    artist_country_in: {
+      label: 'Artist’s MusicBrainz country is one of', kind: 'list',
+      hint: '2-letter ISO country codes (e.g. IN, US, JP). An exact field lookup, but still a weak signal like country defaults — informational, not a strong signal.'
+    },
+    any_of: {
+      label: 'Match any of these groups (OR)', kind: 'anyof',
+      hint: 'At least one branch must fully match; conditions within one branch are ANDed. Cannot contain "Artist has a confident home playlist" or nest another "any of".'
     }
   };
+  // design/proposals/more-conditions.md: keys allowed inside an any_of branch or an unless block -- same
+  // exclusion in both places (artist_in_playlist's auto target only resolves from the rule's top-level match).
+  var NESTED_ALLOWED_KEYS = Object.keys(COND).filter(function (k) { return k !== 'artist_in_playlist'; });
+  var ANY_OF_BRANCH_ALLOWED_KEYS = NESTED_ALLOWED_KEYS.filter(function (k) { return k !== 'any_of'; });
 
   function englishLabel(cond) {
     var d = COND[cond.key];
+    if (cond.key === 'any_of') {
+      return 'match any of: (' + cond.value.map(function (branch) {
+        return branch.length ? branch.map(englishLabel).join(' and ') : 'nothing yet';
+      }).join(') or (') + ')';
+    }
     if (d.kind === 'list') return d.label.toLowerCase() + ' ' + cond.value.join(', ');
     if (cond.key === 'explicit') return cond.value === 'true' ? 'are explicit' : 'are not explicit';
     if (cond.key === 'release_year_before') return 'released before ' + cond.value;
@@ -82,6 +99,19 @@
     return d.label;
   }
 
+  function describeUnless(rule) {
+    if (!rule.unless.length) return '';
+    return ' unless ' + rule.unless.map(englishLabel).join(' and ');
+  }
+
+  function defaultCondValue(def) {
+    if (def.kind === 'list') return [];
+    if (def.kind === 'bool') return 'true';
+    if (def.kind === 'flag') return true;
+    if (def.kind === 'anyof') return [[]];
+    return '';
+  }
+
   function describeRule(rule, defaultDays) {
     if (!rule.match.length) return (rule.name.trim() || 'Untitled rule') + ': no conditions yet.';
     var days = rule.days.trim() !== '' ? rule.days.trim() : defaultDays;
@@ -89,7 +119,7 @@
     var lead = 'Songs older than ' + days + ' day' + (String(days) === '1' ? '' : 's') + ' that ' + parts.join(' and ');
     var target = rule.target.trim() || 'an unnamed playlist';
     var status = rule.enabled ? '' : ' (disabled)';
-    return lead + ' go to ' + target + status + '.';
+    return lead + describeUnless(rule) + ' go to ' + target + status + '.';
   }
 
   // ---------------------------------------------------------------- state
@@ -102,7 +132,7 @@
     };
   }
   function newRule() {
-    return { id: nextId++, pristine: true, name: '', enabled: true, target: '', days: '', create: false, position: 'bottom', collapsed: false, match: [] };
+    return { id: nextId++, pristine: true, name: '', enabled: true, target: '', days: '', create: false, position: 'bottom', collapsed: false, match: [], unless: [] };
   }
   function newLp() { return { id: nextId++, name: '', lang: '' }; }
 
@@ -195,6 +225,51 @@
     return t !== '' && isFinite(Number(t)) ? Number(t) : text;
   }
   function langOut(v) { var n = Lang.normalize(v); return n === null ? v : n; }
+  function countryOut(v) { return String(v).toUpperCase(); }
+
+  // ---- generic condition <-> {key,value} list conversions, shared by rule.match, rule.unless and any_of
+  // branches (design/proposals/more-conditions.md). A condition is {key, value}; `value`'s shape depends on
+  // COND[key].kind: list/list, year -> int, bool -> boolean, flag -> true, anyof -> list<list<condition>>.
+  function condValueOut(key, value) {
+    var def = COND[key];
+    if (def.kind === 'list') return value.map(key === 'language_in' ? langOut : (key === 'artist_country_in' ? countryOut : String));
+    if (def.kind === 'year') return toInt(value);
+    if (def.kind === 'bool') return value === 'true';
+    if (def.kind === 'flag') return true;
+    if (def.kind === 'anyof') return value.map(matchListToDict);
+    return value;
+  }
+  function matchListToDict(list) {
+    var out = {};
+    list.forEach(function (c) { out[c.key] = condValueOut(c.key, c.value); });
+    return out;
+  }
+  function condValueIn(key, raw) {
+    var def = COND[key];
+    if (!def) return undefined;
+    if (def.kind === 'list') {
+      return Array.isArray(raw) ? raw.map(function (x) {
+        var s = String(x);
+        if (key === 'language_in') return langOut(s);
+        if (key === 'artist_country_in') return countryOut(s);
+        return s;
+      }) : [];
+    }
+    if (def.kind === 'bool') return raw === false ? 'false' : 'true';
+    if (def.kind === 'flag') return true;
+    if (def.kind === 'anyof') return Array.isArray(raw) ? raw.map(dictToMatchList) : [[]];
+    return raw === undefined || raw === null ? '' : String(raw);
+  }
+  function dictToMatchList(m) {
+    var list = [];
+    if (m && typeof m === 'object' && !Array.isArray(m)) {
+      Object.keys(m).forEach(function (k) {
+        if (!COND[k]) return;
+        list.push({ key: k, value: condValueIn(k, m[k]) });
+      });
+    }
+    return list;
+  }
 
   function toData() {
     var extra = [];
@@ -223,16 +298,8 @@
       data.artist_in_playlist = aip;
     }
     data.rules = state.rules.map(function (r) {
-      var match = {};
-      r.match.forEach(function (c) {
-        var def = COND[c.key];
-        if (def.kind === 'list') match[c.key] = c.value.map(c.key === 'language_in' ? langOut : String);
-        else if (def.kind === 'year') match[c.key] = toInt(c.value);
-        else if (def.kind === 'bool') match[c.key] = c.value === 'true';
-        else if (def.kind === 'flag') match[c.key] = true;
-        else match[c.key] = c.value;
-      });
-      var out = { name: r.name, enabled: r.enabled, match: match, target_playlist: r.target };
+      var out = { name: r.name, enabled: r.enabled, match: matchListToDict(r.match), target_playlist: r.target };
+      if (r.unless && r.unless.length) out.unless = matchListToDict(r.unless);
       if (r.days.trim() !== '') out.days_threshold = toInt(r.days);
       out.create_missing_playlists = r.create;
       out.target_position = r.position;
@@ -257,6 +324,7 @@
       var f = e.field;
       if (!f) return null;
       if (f === 'match') return r.match.length ? null : 'r' + r.id + '-add-cond';
+      if (f === 'unless') return r.unless.length ? null : 'r' + r.id + '-add-unless-cond';
       return fid(r, f);
     }
     return {
@@ -439,7 +507,10 @@
   }
 
   // ---------------------------------------------------------------- rendering: rules
-  function chipList(rule, cond) {
+  // `listName` is 'match' or 'unless' -- the two rule-level condition lists that share this exact widget
+  // (design/proposals/more-conditions.md: unless uses the same vocabulary/UI as match).
+  function chipList(rule, cond, listName) {
+    listName = listName || 'match';
     var ul = h('ul', { class: 'chips', 'aria-label': COND[cond.key].label + ' (entries)' });
     cond.value.forEach(function (val, i) {
       var bad = cond.key === 'language_in' && Lang.normalize(val) === null;
@@ -448,20 +519,21 @@
         h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove ' + val, onclick: function () {
           cond.value.splice(i, 1);
           rule.pristine = false;
-          var fresh = chipList(rule, cond);
+          var fresh = chipList(rule, cond, listName);
           ul.replaceWith(fresh);
           update();
           pushHistory();
-          $(fid(rule, 'match.' + cond.key)).focus();
+          $(fid(rule, listName + '.' + cond.key)).focus();
         }, text: '×' })
       ));
     });
     return ul;
   }
 
-  function condRow(rule, cond) {
+  function condRow(rule, cond, listName) {
+    listName = listName || 'match';
     var def = COND[cond.key];
-    var id = fid(rule, 'match.' + cond.key);
+    var id = fid(rule, listName + '.' + cond.key);
     var errId = 'err-' + id;
     var hintId = id + '-hint';
     var label = h('label', { class: 'label', for: id }, def.label + ' ', h('code', { text: cond.key }));
@@ -469,16 +541,16 @@
     if (def.kind === 'list') {
       var input = h('input', { id: id, class: 'input', type: 'text', autocomplete: 'off', 'aria-describedby': hintId + ' ' + errId });
       if (cond.key === 'language_in') input.setAttribute('list', 'lang-options');
-      var ul = chipList(rule, cond);
+      var ul = chipList(rule, cond, listName);
       var commit = function () {
         var text = input.value.trim();
         if (!text) return;
-        var val = cond.key === 'language_in' ? langOut(text) : text;
+        var val = cond.key === 'language_in' ? langOut(text) : cond.key === 'artist_country_in' ? countryOut(text) : text;
         var dup = cond.value.some(function (x) { return x.toLowerCase() === val.toLowerCase(); });
         if (!dup) cond.value.push(val);
         input.value = '';
         rule.pristine = false;
-        var fresh = chipList(rule, cond);
+        var fresh = chipList(rule, cond, listName);
         ul.replaceWith(fresh);
         ul = fresh;
         update();
@@ -496,6 +568,9 @@
       sel.value = cond.value;
       sel.addEventListener('change', function () { cond.value = sel.value; rule.pristine = false; update(); pushHistory(); });
       body = sel;
+    } else if (def.kind === 'anyof') {
+      if (!cond.value || !cond.value.length) cond.value = [[]];
+      body = anyOfEditor(cond, id, function () { rule.pristine = false; update(); pushHistory(); });
     } else {
       var inp = h('input', { id: id, class: 'input', type: 'text', autocomplete: 'off', 'aria-describedby': hintId + ' ' + errId });
       if (def.kind === 'year') inp.setAttribute('inputmode', 'numeric');
@@ -507,16 +582,139 @@
     return h('div', { class: 'cond' },
       h('div', { class: 'cond-head' }, label,
         h('button', { type: 'button', class: 'btn btn-ghost btn-sm', 'aria-label': 'Remove condition ' + def.label, onclick: function () {
-          rule.match = rule.match.filter(function (c) { return c !== cond; });
+          rule[listName] = rule[listName].filter(function (c) { return c !== cond; });
           rule.pristine = false;
           renderRules();
           update();
           pushHistory();
-          $(fid(rule, 'add-cond')).focus();
+          var focusId = listName === 'unless' ? fid(rule, 'add-unless-cond') : fid(rule, 'add-cond');
+          var f = $(focusId);
+          if (f) f.focus();
         }, text: 'Remove' })),
       body,
       h('p', { class: 'hint', id: hintId, text: def.hint }),
       h('p', { class: 'err', id: errId }));
+  }
+
+  // ---- generic nested condition-list editor, used only for any_of branches (a branch is not `rule.match` or
+  // `rule.unless`, it's an arbitrary array living inside one any_of condition's `value`). Deliberately a
+  // simpler, separate implementation from condRow/chipList above (which stay focused on the two rule-level
+  // lists) rather than a further-generalized shared one -- keeps the well-tested match/unless widget untouched.
+  function xChipList(cond, idPrefix, onMutate) {
+    var ul = h('ul', { class: 'chips', 'aria-label': COND[cond.key].label + ' (entries)' });
+    cond.value.forEach(function (val, i) {
+      var bad = cond.key === 'language_in' && Lang.normalize(val) === null;
+      ul.appendChild(h('li', { class: 'chip' + (bad ? ' bad' : '') },
+        h('span', { text: val }),
+        h('button', { type: 'button', class: 'chip-x', 'aria-label': 'Remove ' + val, onclick: function () {
+          cond.value.splice(i, 1);
+          var fresh = xChipList(cond, idPrefix, onMutate);
+          ul.replaceWith(fresh);
+          onMutate();
+        }, text: '×' })
+      ));
+    });
+    return ul;
+  }
+
+  function xCondRow(list, cond, idPrefix, onMutate) {
+    var def = COND[cond.key];
+    var id = idPrefix + '-' + cond.key;
+    var hintId = id + '-hint';
+    var label = h('label', { class: 'label', for: id }, def.label + ' ', h('code', { text: cond.key }));
+    var body;
+    if (def.kind === 'list') {
+      var input = h('input', { id: id, class: 'input', type: 'text', autocomplete: 'off', 'aria-describedby': hintId });
+      if (cond.key === 'language_in') input.setAttribute('list', 'lang-options');
+      var ul = xChipList(cond, idPrefix, onMutate);
+      var commit = function () {
+        var text = input.value.trim();
+        if (!text) return;
+        var val = cond.key === 'language_in' ? langOut(text) : cond.key === 'artist_country_in' ? countryOut(text) : text;
+        var dup = cond.value.some(function (x) { return x.toLowerCase() === val.toLowerCase(); });
+        if (!dup) cond.value.push(val);
+        input.value = '';
+        var fresh = xChipList(cond, idPrefix, onMutate);
+        ul.replaceWith(fresh);
+        ul = fresh;
+        onMutate();
+        input.focus();
+      };
+      input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } });
+      body = h('div', { class: 'chip-entry' }, ul, h('div', { class: 'chip-add' }, input,
+        h('button', { type: 'button', class: 'btn btn-secondary', onclick: commit, 'aria-label': 'Add to ' + def.label, text: 'Add' })));
+    } else if (def.kind === 'bool') {
+      var sel = h('select', { id: id, class: 'select', 'aria-describedby': hintId },
+        h('option', { value: 'true', text: 'true (explicit only)' }), h('option', { value: 'false', text: 'false (clean only)' }));
+      sel.value = cond.value;
+      sel.addEventListener('change', function () { cond.value = sel.value; onMutate(); });
+      body = sel;
+    } else if (def.kind === 'flag') {
+      body = h('p', { class: 'hint', text: 'On — resolved per song at run time.' });
+    } else {
+      var inp = h('input', { id: id, class: 'input', type: 'text', autocomplete: 'off', 'aria-describedby': hintId });
+      if (def.kind === 'year') inp.setAttribute('inputmode', 'numeric');
+      inp.value = cond.value;
+      inp.addEventListener('input', function () { cond.value = inp.value; });
+      inp.addEventListener('change', onMutate);
+      body = inp;
+    }
+    return h('div', { class: 'cond cond-nested' },
+      h('div', { class: 'cond-head' }, label,
+        h('button', { type: 'button', class: 'btn btn-ghost btn-sm', 'aria-label': 'Remove condition ' + def.label, onclick: function () {
+          var idx = list.indexOf(cond);
+          if (idx !== -1) list.splice(idx, 1);
+          onMutate();
+        }, text: 'Remove' })),
+      body,
+      h('p', { class: 'hint', id: hintId, text: def.hint }));
+  }
+
+  // `cond` is the any_of condition itself ({key:'any_of', value: [branch, ...]}); each branch is an array of
+  // {key,value} conditions (AND-combined), and any one branch passing satisfies the whole any_of.
+  function anyOfEditor(cond, idPrefix, outerOnMutate) {
+    var list = h('ol', { class: 'any-of-branches' });
+    function onMutate() { paint(); outerOnMutate(); }
+    function paint() {
+      list.innerHTML = '';
+      cond.value.forEach(function (branch, bi) {
+        var bPrefix = idPrefix + '-b' + bi;
+        var used = branch.map(function (c) { return c.key; });
+        var sel = h('select', { id: bPrefix + '-add', class: 'select' }, h('option', { value: '', text: 'Choose a condition…' }));
+        ANY_OF_BRANCH_ALLOWED_KEYS.forEach(function (k) {
+          if (used.indexOf(k) === -1) sel.appendChild(h('option', { value: k, text: COND[k].label + ' (' + k + ')' }));
+        });
+        var addBtn = h('button', {
+          type: 'button', class: 'btn btn-secondary btn-sm', text: 'Add branch condition', onclick: function () {
+            if (!sel.value) { sel.focus(); return; }
+            var def = COND[sel.value];
+            branch.push({ key: sel.value, value: defaultCondValue(def) });
+            onMutate();
+          }
+        });
+        var branchBody = h('div', { class: 'any-of-branch-conds' },
+          branch.length ? branch.map(function (c) { return xCondRow(branch, c, bPrefix, onMutate); }) : h('p', { class: 'hint' }, 'No conditions yet.'));
+        var removeBranchBtn = cond.value.length > 1
+          ? h('button', {
+              type: 'button', class: 'btn btn-ghost btn-sm', 'aria-label': 'Remove branch ' + (bi + 1), text: 'Remove branch',
+              onclick: function () { cond.value.splice(bi, 1); onMutate(); }
+            })
+          : null;
+        var addRowLabel = h('label', { class: 'label', for: sel.id, text: 'Add a condition to branch ' + (bi + 1) });
+        list.appendChild(h('li', { class: 'any-of-branch card' },
+          h('div', { class: 'any-of-branch-head' }, h('strong', { text: 'Branch ' + (bi + 1) }), removeBranchBtn),
+          branchBody,
+          used.length >= ANY_OF_BRANCH_ALLOWED_KEYS.length ? null : h('div', { class: 'add-cond' }, addRowLabel, sel, addBtn)));
+      });
+    }
+    paint();
+    return h('div', { class: 'any-of-editor' },
+      h('p', { class: 'hint' }, 'At least one branch below must fully match. Conditions within one branch are ANDed.'),
+      list,
+      h('button', {
+        type: 'button', class: 'btn btn-secondary', text: 'Add another branch (OR)',
+        onclick: function () { cond.value.push([]); onMutate(); }
+      }));
   }
 
   function textField(rule, field, label, prop, hint, extraAttrs) {
@@ -606,7 +804,7 @@
     var addCond = function () {
       if (!sel.value) { sel.focus(); return; }
       var def = COND[sel.value];
-      var cond = { key: sel.value, value: def.kind === 'list' ? [] : def.kind === 'bool' ? 'true' : def.kind === 'flag' ? true : '' };
+      var cond = { key: sel.value, value: defaultCondValue(def) };
       rule.match.push(cond);
       if (sel.value === 'artist_in_playlist' && !rule.target.trim()) rule.target = 'auto';
       rule.pristine = false;
@@ -620,6 +818,37 @@
       h('div', { class: 'add-cond' },
         h('label', { class: 'label', for: sel.id, text: 'Add a condition' }), sel,
         h('button', { type: 'button', class: 'btn btn-secondary', onclick: addCond, text: 'Add condition' }));
+
+    // design/proposals/more-conditions.md: exceptions (unless) -- same vocabulary as match, minus
+    // artist_in_playlist (its auto target only resolves from the rule's top-level match, see NESTED_ALLOWED_KEYS).
+    var usedUnless = rule.unless.map(function (c) { return c.key; });
+    var selU = h('select', { id: fid(rule, 'add-unless-cond'), class: 'select' }, h('option', { value: '', text: 'Choose a condition…' }));
+    NESTED_ALLOWED_KEYS.forEach(function (k) {
+      if (usedUnless.indexOf(k) === -1) selU.appendChild(h('option', { value: k, text: COND[k].label + ' (' + k + ')' }));
+    });
+    var addUnlessCond = function () {
+      if (!selU.value) { selU.focus(); return; }
+      var def = COND[selU.value];
+      var cond = { key: selU.value, value: defaultCondValue(def) };
+      rule.unless.push(cond);
+      rule.pristine = false;
+      renderRules();
+      update();
+      pushHistory();
+      var f = $(fid(rule, 'unless.' + cond.key));
+      if (f) f.focus();
+    };
+    var addUnlessRow = usedUnless.length >= NESTED_ALLOWED_KEYS.length ? null :
+      h('div', { class: 'add-cond' },
+        h('label', { class: 'label', for: selU.id, text: 'Add an exception condition' }), selU,
+        h('button', { type: 'button', class: 'btn btn-secondary', onclick: addUnlessCond, text: 'Add exception' }));
+    var unlessFieldset = h('fieldset', { class: 'conds unless-conds', 'data-advanced-only': true },
+      h('legend', { text: 'Exceptions (unless this also matches)' }),
+      h('p', { class: 'hint' }, 'If ALL of these are also true, this rule is skipped even though its conditions above matched — evaluation moves on to the next rule.'),
+      rule.unless.length ? null : h('p', { class: 'hint' }, 'No exceptions — this rule never gets blocked.'),
+      rule.unless.map(function (c) { return condRow(rule, c, 'unless'); }),
+      h('p', { class: 'err', id: 'err-' + fid(rule, 'unless') }),
+      addUnlessRow);
 
     var body = h('div', { class: 'rule-body' },
       textField(rule, 'name', 'Rule name', 'name', 'Unique, case-insensitive.'),
@@ -647,9 +876,10 @@
       h('fieldset', { class: 'conds' },
         h('legend', { text: 'Match conditions (all must match)' }),
         rule.match.length ? null : h('p', { class: 'hint', text: 'No conditions yet. A rule needs at least one.' }),
-        rule.match.map(function (c) { return condRow(rule, c); }),
+        rule.match.map(function (c) { return condRow(rule, c, 'match'); }),
         h('p', { class: 'err', id: 'err-' + fid(rule, 'match') }),
-        addRow));
+        addRow),
+      unlessFieldset);
 
     var handle = h('button', { type: 'button', class: 'btn btn-icon drag-handle', 'aria-label': 'Drag to reorder rule ' + (index + 1) + ', or use the buttons after it', draggable: 'true' }, '☰');
     var collapseBtn = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', 'aria-expanded': String(!rule.collapsed), 'aria-controls': 'rule-' + rule.id + '-body', onclick: function () {
@@ -779,20 +1009,8 @@
       rule.days = rr.days_threshold === undefined || rr.days_threshold === null ? '' : String(rr.days_threshold);
       rule.create = rr.create_missing_playlists === true;
       rule.position = rr.target_position === 'top' ? 'top' : 'bottom';
-      var m = rr.match;
-      if (m && typeof m === 'object' && !Array.isArray(m)) {
-        Object.keys(m).forEach(function (k) {
-          var def = COND[k];
-          if (!def) return;
-          var v = m[k];
-          var value;
-          if (def.kind === 'list') {
-            value = Array.isArray(v) ? v.map(function (x) { var s = String(x); return k === 'language_in' ? langOut(s) : s; }) : [];
-          } else if (def.kind === 'bool') value = v === false ? 'false' : 'true';
-          else value = v === undefined || v === null ? '' : String(v);
-          rule.match.push({ key: k, value: value });
-        });
-      }
+      rule.match = dictToMatchList(rr.match);
+      rule.unless = dictToMatchList(rr.unless);
       next.rules.push(rule);
     });
     next.revealAll = true;

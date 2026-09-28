@@ -7,14 +7,16 @@
   var ENRICHMENT_KEYS = ['musicbrainz', 'english_default'];
   var LOGGING_KEYS = ['include_track_names'];
   var ARTIST_IN_PLAYLIST_KEYS = ['min_tracks', 'min_dominance', 'exclude_playlists'];
-  var RULE_KEYS = ['name', 'enabled', 'match', 'target_playlist', 'days_threshold', 'create_missing_playlists', 'target_position'];
+  var RULE_KEYS = ['name', 'enabled', 'match', 'unless', 'target_playlist', 'days_threshold', 'create_missing_playlists', 'target_position'];
   var AUTO_TARGET = 'auto'; // design/proposals/artist_in_playlist.md: sentinel, valid only with match.artist_in_playlist
-  var LIST_MATCH_KEYS = ['artist_in', 'genre_contains', 'language_in'];
+  var LIST_MATCH_KEYS = ['artist_in', 'genre_contains', 'language_in', 'artist_country_in'];
   var INT_MATCH_KEYS = ['release_year_before', 'release_year_after'];
   var STR_MATCH_KEYS = ['track_name_contains', 'album_name_contains'];
   var BOOL_MATCH_KEYS = ['explicit'];
   var TRUE_ONLY_MATCH_KEYS = ['artist_in_playlist', 'any']; // no defined meaning for false; only true is a valid gate
-  var MATCH_KEYS = LIST_MATCH_KEYS.concat(INT_MATCH_KEYS, STR_MATCH_KEYS, BOOL_MATCH_KEYS, TRUE_ONLY_MATCH_KEYS);
+  var ANY_OF_KEY = 'any_of'; // design/proposals/more-conditions.md: OR-groups, value is a list of match-condition groups
+  var MATCH_KEYS = LIST_MATCH_KEYS.concat(INT_MATCH_KEYS, STR_MATCH_KEYS, BOOL_MATCH_KEYS, TRUE_ONLY_MATCH_KEYS, [ANY_OF_KEY]);
+  var COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
 
   function has(list, key) { return list.indexOf(key) !== -1; }
   function isInt(v) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v; }
@@ -47,39 +49,86 @@
     return q + out + q;
   }
 
-  function validateMatch(match, where, ri, errors) {
+  // Shared by rule `match`, rule `unless` (label='unless') and each `any_of` branch (forbidArtistInPlaylist +
+  // forbidAnyOf true -- design/proposals/more-conditions.md: `artist_in_playlist`'s `auto` target is resolved
+  // from the rule's top-level `match` only, so it cannot hide inside `unless`/`any_of`; nested `any_of` is
+  // disallowed to keep the structure to one level). Mirrors src/config.py's `_validate_match` message-for-message.
+  function validateMatch(match, where, ri, errors, label, forbidArtistInPlaylist, forbidAnyOf) {
+    label = label || 'match';
     function add(field, short) { errors.push({ msg: where + ': ' + short, short: short, rule: ri, field: field }); }
     if (!isMap(match) || Object.keys(match).length === 0) {
-      add('match', "'match' must be a non-empty mapping");
-      return;
+      add(label, "'" + label + "' must be a non-empty mapping");
+      return {};
     }
+    var clean = {};
     Object.keys(match).forEach(function (key) {
       var value = match[key];
-      var field = 'match.' + key;
+      var field = label + '.' + key;
       if (!has(MATCH_KEYS, key)) {
-        add('match', "unknown match key '" + key + "'");
+        add(label, "unknown " + label + " key '" + key + "'");
+      } else if (key === 'artist_in_playlist' && forbidArtistInPlaylist) {
+        add(field, "'artist_in_playlist' is only allowed as a top-level 'match' condition " +
+          "(paired with target_playlist: auto), not inside 'unless' or an 'any_of' group");
+      } else if (key === ANY_OF_KEY) {
+        if (forbidAnyOf) {
+          add(field, "'any_of' cannot be nested inside another 'any_of' group");
+        } else if (!Array.isArray(value) || value.length === 0) {
+          add(field, "'any_of' must be a non-empty list of match-condition groups");
+        } else {
+          var cleanGroups = [];
+          for (var gi = 0; gi < value.length; gi++) {
+            var group = value[gi];
+            var groupWhere = where + '.any_of[' + gi + ']';
+            if (!isMap(group) || Object.keys(group).length === 0) {
+              errors.push({ msg: groupWhere + ": each 'any_of' group must be a non-empty mapping", short: "each 'any_of' group must be a non-empty mapping", rule: ri, field: field });
+              continue;
+            }
+            var before = errors.length;
+            var cleaned = validateMatch(group, groupWhere, ri, errors, label, true, true);
+            if (errors.length === before) cleanGroups.push(cleaned);
+          }
+          if (cleanGroups.length) clean[key] = cleanGroups;
+        }
       } else if (has(LIST_MATCH_KEYS, key)) {
         if (!Array.isArray(value) || value.length === 0 || !value.every(nonemptyStr)) {
           add(field, "'" + key + "' must be a non-empty list of non-empty strings");
         } else if (key === 'language_in') {
+          var langOk = true;
           for (var i = 0; i < value.length; i++) {
             if (root.SpotiLang.normalize(value[i]) === null) {
               add(field, 'unknown language ' + pyRepr(value[i]) + " in 'language_in' (e.g. " +
                 root.SpotiLang.CANONICAL.slice(0, 6).join(', ') + ', or an ISO code)');
+              langOk = false;
               break;
             }
           }
+          if (langOk) clean[key] = value.map(function (v) { return root.SpotiLang.normalize(v); });
+        } else if (key === 'artist_country_in') {
+          var bad = value.filter(function (v) { return !COUNTRY_CODE_RE.test(v.trim()); });
+          if (bad.length) {
+            add(field, "invalid country code " + pyRepr(bad[0]) + " in 'artist_country_in' (use a 2-letter ISO code, e.g. IN, US)");
+          } else {
+            clean[key] = value.map(function (v) { return v.trim().toUpperCase(); });
+          }
+        } else {
+          clean[key] = value.slice();
         }
       } else if (has(INT_MATCH_KEYS, key)) {
         if (!isInt(value) || value < 1 || value > 9999) add(field, "'" + key + "' must be a year (integer 1-9999)");
+        else clean[key] = value;
       } else if (has(STR_MATCH_KEYS, key)) {
         if (!nonemptyStr(value)) add(field, "'" + key + "' must be a non-empty string");
+        else clean[key] = value;
       } else if (has(TRUE_ONLY_MATCH_KEYS, key)) {
         if (value !== true) add(field, "'" + key + "' must be true (there is no defined meaning for false)");
+        else clean[key] = true;
       } else if (typeof value !== 'boolean') {
         add(field, "'" + key + "' must be true or false");
+      } else {
+        clean[key] = value;
       }
     });
+    return clean;
   }
 
   function validateRule(raw, index, errors) {
@@ -114,6 +163,11 @@
     var usesAutoArtist = isMap(raw.match) && raw.match.artist_in_playlist === true;
     if (isAutoTarget && !usesAutoArtist) add('target_playlist', "target_playlist '" + AUTO_TARGET + "' is only valid with match: {artist_in_playlist: true}");
     if (usesAutoArtist && !isAutoTarget) add('target_playlist', "match 'artist_in_playlist' requires target_playlist: " + AUTO_TARGET);
+
+    // design/proposals/more-conditions.md: 'unless' is optional -- absent or explicit null means no exceptions.
+    if ('unless' in raw && raw.unless !== null && raw.unless !== undefined) {
+      validateMatch(raw.unless, where, index, errors, 'unless', true, false);
+    }
     return nonemptyStr(name) ? name : null;
   }
 
