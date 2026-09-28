@@ -53,3 +53,44 @@ rules:
       explicit: false
     target_playlist: "The Vault"
     target_position: top              # default is bottom; top = new songs go to the top, existing order kept
+
+# ---------------------------------------------------------------------------------------------------------
+# design/proposals/more-conditions.md -- illustrative only, commented out. No concrete real-world case for
+# any of these three has been confirmed yet, so none of them are live rules above (unlike the six artist_in
+# rules and the catch-all, which had confirmed real playlists behind them). Uncomment and adapt if useful.
+# ---------------------------------------------------------------------------------------------------------
+
+#  # Tier 1 (free): artist_country_in -- the primary artist's MusicBrainz/ISRC country. Same data already
+#  # fetched for the english_default signal, just exposed as its own condition. 2-letter ISO codes. Same
+#  # weak-signal caveat as country_default: it's an exact field lookup, but still informational, not a
+#  # strong signal -- useful when language itself doesn't resolve but region still might matter to you.
+#  - name: "Indian artists (region hint)"
+#    enabled: false
+#    match:
+#      artist_country_in: [IN]
+#    target_playlist: "Desi Discovery"
+#
+#  # Tier 2: `unless` -- a rule's match can be blocked by a narrower exception using the same match-key
+#  # vocabulary. A blocked rule is treated exactly like a non-match: evaluation simply continues to the next
+#  # rule (this is not the age-gate's hard stop). Example: a broad Hindi rule, except for an artist who has
+#  # their own dedicated playlist elsewhere in this file.
+#  - name: "Hindi to Hindi Vibes, except Arijit Singh"
+#    enabled: false
+#    match:
+#      language_in: [hindi]
+#    unless:
+#      artist_in: ["Arijit Singh"]      # he gets routed by an earlier, more specific artist_in rule instead
+#    target_playlist: "Hindi Vibes"
+#
+#  # Tier 2: `any_of` -- OR-groups within one rule's match, instead of writing two separate rules. At least
+#  # one group must fully match (conditions within a group are ANDed); any_of itself is then AND-combined
+#  # with the rest of the rule's match, same as every other key. A group cannot contain artist_in_playlist
+#  # (its `auto` target only resolves from a rule's top-level match) or nest another any_of.
+#  - name: "Chillhop or ambient, whichever fits"
+#    enabled: false
+#    match:
+#      any_of:
+#        - genre_contains: ["chillhop"]
+#        - genre_contains: ["ambient"]
+#      explicit: false
+#    target_playlist: "Chillhop Favorites"

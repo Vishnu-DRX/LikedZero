@@ -1,8 +1,12 @@
 # Proposal: expand the match-key vocabulary
 
-Status: **menu for the user to pick from — nothing here approved yet.** Current vocabulary (as of `config.py`):
-`artist_in`, `genre_contains`, `language_in`, `release_year_before`/`after`, `explicit`,
-`track_name_contains`/`album_name_contains`, plus the new `artist_in_playlist` (Master decisions 11).
+Status: **`artist_country_in` (Tier 1), `unless` and `any_of` (Tier 2) built (2026-09-28), approved by the
+user.** See `design/reports/phase-more-conditions.md` for the full build report: schema (`config.py`/
+`validate.js`/parity tests), `rules_engine` resolution logic, dashboard explain-trace wording, Configure UI,
+and illustrative (commented, not live) examples in `config.example.yaml`. Tier 3 (`release_type_in`) was not
+requested and remains unbuilt. Current vocabulary (as of `config.py`): `artist_in`, `genre_contains`,
+`language_in`, `release_year_before`/`after`, `explicit`, `track_name_contains`/`album_name_contains`,
+`artist_in_playlist`, `any`, `artist_country_in`, `any_of` (plus the per-rule `unless` block).
 
 Grouped by cost, since some of these are free (data already in hand) and some need new API calls or real
 engineering. Recommend picking from Tier 1 first — same "measure before build" discipline as everything else in

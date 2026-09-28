@@ -59,6 +59,9 @@ class Enrichment:
     artist_home_playlist: str | None = None  # resolved target playlist NAME for artist_in_playlist, if any
     artist_home_track_count: int | None = None  # N: the artist's tracks already in artist_home_playlist
     artist_home_total: int | None = None  # M: the artist's total tracks across every candidate playlist
+    artist_country: str | None = None  # design/proposals/more-conditions.md: raw ISO 3166-1 alpha-2 from
+    # MusicBrainz, e.g. "IN" -- the exact same field already fetched for the english_default signal
+    # (Enricher._english_by_country), just exposed on its own for artist_country_in. No new API calls.
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,8 @@ class Rule:
     days_threshold: int | None = None
     create_missing_playlists: bool = False
     target_position: str = "bottom"  # top | bottom
+    unless: dict[str, Any] = field(default_factory=dict)  # design/proposals/more-conditions.md: exceptions that
+    # block an otherwise-matching rule; same match-key vocabulary as `match`, AND-combined among themselves.
 
 
 @dataclass(frozen=True)

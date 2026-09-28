@@ -64,6 +64,9 @@ def _rule_summary(rule: Rule, default_days: int) -> dict[str, Any]:
         "target_position": rule.target_position,
         "threshold_days": rule.days_threshold if rule.days_threshold is not None else default_days,
         "conditions": rule.match,
+        # design/proposals/more-conditions.md: exceptions shown separately from `conditions` (match) since they
+        # have opposite polarity -- an empty mapping means "no exceptions", same convention as `match`'s dict.
+        "unless": rule.unless,
         "uses_language": "language_in" in rule.match,
         "weak_signals_possible": weak,
     }

@@ -67,6 +67,16 @@ code { font: 0.88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; ba
 
 .chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; }
 .chips:empty { display: none; }
+
+/* any_of OR-groups (design/proposals/more-conditions.md) and unless (reuses .conds/.cond above as-is) */
+.any-of-editor { min-width: 0; }
+.any-of-branches { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.any-of-branch { padding: 10px 12px; }
+.any-of-branch-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.any-of-branch-head strong { font-size: 0.9rem; }
+.any-of-branch-conds { border-left: 2px solid var(--color-border); padding-left: 10px; margin: 0 0 8px; }
+.cond-nested { margin: 0 0 10px; padding-bottom: 8px; }
+.unless-conds { border-style: solid; }
 .chip { display: inline-flex; align-items: center; gap: 2px; background: var(--color-neutral-bg); border: 1px solid var(--color-border); border-radius: 999px; padding: 2px 4px 2px 12px; max-width: 100%; }
 .chip span { overflow-wrap: anywhere; }
 .chip.bad { border-color: var(--color-danger); color: var(--color-danger-text); }

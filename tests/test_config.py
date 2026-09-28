@@ -622,3 +622,154 @@ def test_any_does_not_require_auto_target():
 def test_any_can_combine_with_other_match_keys():
     cfg = _cfg(rules=[{"name": "r", "match": {"any": True, "explicit": True}, "target_playlist": "P"}])
     assert cfg.rules[0].match == {"any": True, "explicit": True}
+
+
+# ---- design/proposals/more-conditions.md: artist_country_in (Tier 1)
+
+def test_artist_country_in_valid_and_normalised_uppercase():
+    cfg = _cfg(rules=[{"name": "r", "match": {"artist_country_in": ["in", "US", "jP"]}, "target_playlist": "P"}])
+    assert cfg.rules[0].match == {"artist_country_in": ["IN", "US", "JP"]}
+
+
+@pytest.mark.parametrize("bad", ["USA", "1", "I1", "I-N"])
+def test_artist_country_in_rejects_bad_codes(bad):
+    with pytest.raises(ConfigError, match="invalid country code"):
+        _cfg(rules=[{"name": "r", "match": {"artist_country_in": [bad]}, "target_playlist": "P"}])
+
+
+def test_artist_country_in_rejects_blank_entries_as_nonempty_string_first():
+    """Whitespace-only entries are caught by the generic 'non-empty string' check before the country-code
+    format check ever runs -- same layering every other LIST_MATCH_KEYS entry already gets."""
+    with pytest.raises(ConfigError, match="'artist_country_in' must be a non-empty list of non-empty strings"):
+        _cfg(rules=[{"name": "r", "match": {"artist_country_in": [" "]}, "target_playlist": "P"}])
+
+
+def test_artist_country_in_must_be_nonempty_list():
+    with pytest.raises(ConfigError, match="'artist_country_in' must be a non-empty list"):
+        _cfg(rules=[{"name": "r", "match": {"artist_country_in": []}, "target_playlist": "P"}])
+
+
+def test_artist_country_in_combines_with_other_keys():
+    cfg = _cfg(rules=[{"name": "r", "match": {"artist_country_in": ["IN"], "explicit": False}, "target_playlist": "P"}])
+    assert cfg.rules[0].match == {"artist_country_in": ["IN"], "explicit": False}
+
+
+# ---- design/proposals/more-conditions.md: `unless` exceptions (Tier 2)
+
+def test_unless_valid_and_normalised():
+    cfg = _cfg(rules=[{
+        "name": "r", "match": {"language_in": ["hindi"]}, "unless": {"artist_in": ["Arijit Singh"]},
+        "target_playlist": "Dil",
+    }])
+    assert cfg.rules[0].unless == {"artist_in": ["Arijit Singh"]}
+
+
+def test_unless_absent_defaults_to_empty():
+    cfg = _cfg(rules=[mk_rule()])
+    assert cfg.rules[0].unless == {}
+
+
+def test_unless_null_is_same_as_absent():
+    cfg = _cfg(rules=[mk_rule(unless=None)])
+    assert cfg.rules[0].unless == {}
+
+
+def test_unless_must_be_nonempty_mapping():
+    with pytest.raises(ConfigError, match="'unless' must be a non-empty mapping"):
+        _cfg(rules=[mk_rule(unless={})])
+    with pytest.raises(ConfigError, match="'unless' must be a non-empty mapping"):
+        _cfg(rules=[mk_rule(unless=[])])
+
+
+def test_unless_rejects_unknown_key():
+    with pytest.raises(ConfigError, match="unknown unless key 'bogus'"):
+        _cfg(rules=[mk_rule(unless={"bogus": 1})])
+
+
+def test_unless_validates_its_own_condition_values():
+    with pytest.raises(ConfigError, match="unknown language"):
+        _cfg(rules=[mk_rule(unless={"language_in": ["klingon"]})])
+
+
+def test_unless_rejects_artist_in_playlist():
+    with pytest.raises(ConfigError, match="'artist_in_playlist' is only allowed as a top-level 'match' condition"):
+        _cfg(rules=[_auto_rule(unless={"artist_in_playlist": True})])
+
+
+def test_unless_allows_any_and_any_of():
+    cfg = _cfg(rules=[mk_rule(unless={"any": True})])
+    assert cfg.rules[0].unless == {"any": True}
+    cfg2 = _cfg(rules=[mk_rule(unless={"any_of": [{"artist_in": ["A"]}, {"genre_contains": ["x"]}]})])
+    assert cfg2.rules[0].unless == {"any_of": [{"artist_in": ["A"]}, {"genre_contains": ["x"]}]}
+
+
+def test_unless_does_not_affect_auto_target_pairing():
+    """`artist_in_playlist` still only has to live in `match`; an unrelated `unless` block does not confuse it."""
+    cfg = _cfg(rules=[_auto_rule(unless={"genre_contains": ["live"]})])
+    assert cfg.rules[0].target_playlist == "auto" and cfg.rules[0].unless == {"genre_contains": ["live"]}
+
+
+# ---- design/proposals/more-conditions.md: any_of OR-groups (Tier 2)
+
+def test_any_of_valid_two_branches():
+    cfg = _cfg(rules=[{
+        "name": "r", "target_playlist": "P",
+        "match": {"any_of": [{"artist_in": ["A"]}, {"genre_contains": ["bollywood"]}]},
+    }])
+    assert cfg.rules[0].match == {"any_of": [{"artist_in": ["A"]}, {"genre_contains": ["bollywood"]}]}
+
+
+def test_any_of_branch_can_have_multiple_and_conditions():
+    cfg = _cfg(rules=[{
+        "name": "r", "target_playlist": "P",
+        "match": {"any_of": [{"artist_in": ["A"], "explicit": True}, {"genre_contains": ["x"]}]},
+    }])
+    assert cfg.rules[0].match["any_of"][0] == {"artist_in": ["A"], "explicit": True}
+
+
+def test_any_of_must_be_nonempty_list():
+    with pytest.raises(ConfigError, match="'any_of' must be a non-empty list of match-condition groups"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": []}}])
+    with pytest.raises(ConfigError, match="'any_of' must be a non-empty list of match-condition groups"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": "nope"}}])
+
+
+def test_any_of_group_must_be_nonempty_mapping():
+    with pytest.raises(ConfigError, match="each 'any_of' group must be a non-empty mapping"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": [{}]}}])
+    with pytest.raises(ConfigError, match="each 'any_of' group must be a non-empty mapping"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": [["nope"]]}}])
+
+
+def test_any_of_group_validates_its_own_condition_values():
+    with pytest.raises(ConfigError, match="unknown language"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": [{"language_in": ["klingon"]}]}}])
+
+
+def test_any_of_group_rejects_unknown_key():
+    with pytest.raises(ConfigError, match="unknown match key 'bogus'"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": [{"bogus": 1}]}}])
+
+
+def test_any_of_cannot_nest_any_of():
+    with pytest.raises(ConfigError, match="'any_of' cannot be nested inside another 'any_of' group"):
+        _cfg(rules=[{"name": "r", "target_playlist": "P", "match": {"any_of": [{"any_of": [{"explicit": True}]}]}}])
+
+
+def test_any_of_group_rejects_artist_in_playlist():
+    with pytest.raises(ConfigError, match="'artist_in_playlist' is only allowed as a top-level 'match' condition"):
+        _cfg(rules=[{"name": "r", "target_playlist": "auto", "match": {"any_of": [{"artist_in_playlist": True}]}}])
+
+
+def test_any_of_combines_with_other_top_level_match_keys():
+    cfg = _cfg(rules=[{
+        "name": "r", "target_playlist": "P",
+        "match": {"language_in": ["hindi"], "any_of": [{"artist_in": ["A"]}, {"artist_in": ["B"]}]},
+    }])
+    assert cfg.rules[0].match["language_in"] == ["hindi"]
+    assert len(cfg.rules[0].match["any_of"]) == 2
+
+
+def test_any_of_inside_unless():
+    cfg = _cfg(rules=[mk_rule(unless={"any_of": [{"artist_in": ["A"]}, {"artist_in": ["B"]}]})])
+    assert cfg.rules[0].unless["any_of"] == [{"artist_in": ["A"]}, {"artist_in": ["B"]}]

@@ -1010,3 +1010,110 @@ def test_explain_shows_catch_all_sentence(dash):
     _, dlg = open_explain(page, "Nameless Loop 04")
     narrative = dlg.locator('[data-testid="explain-narrative"]').inner_text()
     assert "Nothing more specific matched first" in narrative and "SpotiSort Sink" in narrative
+
+
+# ------------------------------------------------------------------ design/proposals/more-conditions.md: unless
+def _patch_with_blocked_and_decided(data, decided_rule, blocked_rule):
+    data = json.loads(json.dumps(data))
+    s = next(s for s in data["songs"] if s["title"] == "Nameless Loop 04")
+    s["decision"] = "will_move"
+    s["rule"] = decided_rule
+    trace = s["explain"]["trace"]
+    trace.insert(0, {
+        "rule": blocked_rule, "enabled": True, "threshold_days": 14,
+        "conditions": [{"key": "language_in", "wanted": ["hindi"], "actual": "hindi", "passed": True}],
+        "unless_conditions": [{"key": "artist_in", "wanted": ["Arijit Singh"], "actual": ["Arijit Singh"], "passed": True, "hit": "Arijit Singh"}],
+        "result": "blocked_by_exception", "blocked_reason": "blocked by exception: artist_in matched Arijit Singh",
+    })
+    trace.insert(1, {
+        "rule": decided_rule, "enabled": True, "threshold_days": 14,
+        "conditions": [{"key": "artist_in", "wanted": ["Arijit Singh"], "actual": ["Arijit Singh"], "passed": True}],
+        "result": "matched",
+    })
+    s["explain"]["decided_by"] = decided_rule
+    return data
+
+
+def test_explain_trace_shows_blocked_by_exception_row(dash):
+    page = dash("inbox", setup=lambda p: patch_json(
+        p, "latest-plan.json", lambda d: _patch_with_blocked_and_decided(d, "Arijit special", "Hindi to Dil")))
+    _, dlg = open_explain(page, "Nameless Loop 04")
+    open_technical_trace(dlg)
+    row = dlg.locator('li[data-rule="Hindi to Dil"]')
+    expect(row).to_be_visible()
+    assert "Blocked by an exception" in row.inner_text()
+    assert dlg.locator('[data-testid="unless-conditions"]').first.inner_text()
+    assert "Arijit Singh" in dlg.locator('[data-testid="blocked-reason"]').first.inner_text()
+
+
+def test_explain_narrative_mentions_blocked_earlier_rule(dash):
+    page = dash("inbox", setup=lambda p: patch_json(
+        p, "latest-plan.json", lambda d: _patch_with_blocked_and_decided(d, "Arijit special", "Hindi to Dil")))
+    _, dlg = open_explain(page, "Nameless Loop 04")
+    narrative = dlg.locator('[data-testid="explain-narrative"]').inner_text()
+    assert "Hindi to Dil" in narrative and "exception blocked it" in narrative
+
+
+def test_rules_view_shows_unless_summary(dash):
+    def patch(data):
+        data = json.loads(json.dumps(data))
+        r = dict(data["rules"][0])
+        r.update({"name": "Hindi to Dil (exceptions)", "unless": {"artist_in": ["Arijit Singh"]}})
+        data["rules"].append(r)
+        return data
+
+    page = dash("rules", setup=lambda p: patch_json(p, "latest-plan.json", patch))
+    row = page.locator('tr[data-rule="Hindi to Dil (exceptions)"]')
+    expect(row).to_be_visible()
+    assert "unless" in row.inner_text() and "Arijit Singh" in row.inner_text()
+
+
+# ------------------------------------------------------------------ design/proposals/more-conditions.md: any_of
+def test_explain_trace_shows_any_of_branches(dash):
+    def patch(data):
+        data = json.loads(json.dumps(data))
+        s = next(s for s in data["songs"] if s["title"] == "Nameless Loop 04")
+        s["decision"] = "will_move"
+        s["rule"] = "Chill artists"
+        trace = s["explain"]["trace"]
+        trace.insert(0, {
+            "rule": "Chill artists", "enabled": True, "threshold_days": 14,
+            "conditions": [{
+                "key": "any_of",
+                "wanted": [{"artist_in": ["Nobody"]}, {"artist_in": ["Bonobo"]}],
+                "actual": [
+                    {"branch": 0, "passed": False, "matched": {}},
+                    {"branch": 1, "passed": True, "matched": {"artist_in": "Bonobo"}},
+                ],
+                "passed": True,
+            }],
+            "result": "matched",
+        })
+        s["explain"]["decided_by"] = "Chill artists"
+        return data
+
+    page = dash("inbox", setup=lambda p: patch_json(p, "latest-plan.json", patch))
+    _, dlg = open_explain(page, "Nameless Loop 04")
+    open_technical_trace(dlg)
+    row = dlg.locator('li[data-rule="Chill artists"]')
+    expect(row).to_be_visible()
+    row_text = row.inner_text()
+    assert "any_of" in row_text and "branch 1" in row_text and "branch 2" in row_text
+
+    narrative = dlg.locator('[data-testid="explain-narrative"]').inner_text()
+    assert "one of several allowed options" in narrative and "branch 2 of 2" in narrative
+
+
+def test_rules_view_shows_any_of_summary(dash):
+    def patch(data):
+        data = json.loads(json.dumps(data))
+        r = dict(data["rules"][0])
+        r.update({"name": "Chill (OR)", "conditions": {"any_of": [{"artist_in": ["Bonobo"]}, {"artist_in": ["Tycho"]}]}})
+        data["rules"].append(r)
+        return data
+
+    page = dash("rules", setup=lambda p: patch_json(p, "latest-plan.json", patch))
+    row = page.locator('tr[data-rule="Chill (OR)"]')
+    expect(row).to_be_visible()
+    row_text = row.inner_text()
+    assert "any_of" in row_text and "OR" in row_text

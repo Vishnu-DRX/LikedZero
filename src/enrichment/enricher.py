@@ -119,6 +119,11 @@ class Enricher:
             genres = tuple(entry["genres"])
             sources.append("musicbrainz")
             genre_source, genre_conf = "musicbrainz", TIER_CONFIDENCE["musicbrainz"]
+        # design/proposals/more-conditions.md (artist_country_in): the same MusicBrainz artist `country` field
+        # already fetched above for genres/english_default, just surfaced on its own -- no new lookup.
+        artist_country = (entry.get("country") or None) if entry else None
+        if isinstance(artist_country, str):
+            artist_country = artist_country.strip().upper() or None
 
         cands = self._candidates(track, entry, exclude_own_playlist_vote)
         language = source = None
@@ -138,4 +143,5 @@ class Enricher:
             language_confidence=TIER_CONFIDENCE.get(source) if source else None,
             genre_source=genre_source,
             genre_confidence=genre_conf,
+            artist_country=artist_country,
         )

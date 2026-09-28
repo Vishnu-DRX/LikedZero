@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -28,18 +29,21 @@ RULE_KEYS = {
     "name",
     "enabled",
     "match",
+    "unless",
     "target_playlist",
     "days_threshold",
     "create_missing_playlists",
     "target_position",
 }
 AUTO_TARGET = "auto"  # design/proposals/artist_in_playlist.md: sentinel, valid only with match.artist_in_playlist
-LIST_MATCH_KEYS = {"artist_in", "genre_contains", "language_in"}
+LIST_MATCH_KEYS = {"artist_in", "genre_contains", "language_in", "artist_country_in"}
 INT_MATCH_KEYS = {"release_year_before", "release_year_after"}
 STR_MATCH_KEYS = {"track_name_contains", "album_name_contains"}
 BOOL_MATCH_KEYS = {"explicit"}
 TRUE_ONLY_MATCH_KEYS = {"artist_in_playlist", "any"}  # no defined meaning for `false`; only `true` is a valid gate
-MATCH_KEYS = LIST_MATCH_KEYS | INT_MATCH_KEYS | STR_MATCH_KEYS | BOOL_MATCH_KEYS | TRUE_ONLY_MATCH_KEYS
+ANY_OF_KEY = "any_of"  # design/proposals/more-conditions.md: OR-groups, value is a list of match-condition groups
+MATCH_KEYS = LIST_MATCH_KEYS | INT_MATCH_KEYS | STR_MATCH_KEYS | BOOL_MATCH_KEYS | TRUE_ONLY_MATCH_KEYS | {ANY_OF_KEY}
+_COUNTRY_CODE_RE = re.compile(r"^[A-Za-z]{2}$")
 
 
 class ConfigError(ValueError):
@@ -58,14 +62,52 @@ def _nonempty_str(value: Any) -> bool:
     return isinstance(value, str) and value.strip() != ""
 
 
-def _validate_match(match: Any, where: str, errors: list[str]) -> dict[str, Any]:
+def _validate_match(
+    match: Any,
+    where: str,
+    errors: list[str],
+    label: str = "match",
+    forbid_artist_in_playlist: bool = False,
+    forbid_any_of: bool = False,
+) -> dict[str, Any]:
+    """Validate one match-condition mapping. Shared by rule ``match``, rule ``unless`` (``label="unless"``)
+    and each ``any_of`` branch (``forbid_artist_in_playlist=True, forbid_any_of=True`` -- see design/proposals/
+    more-conditions.md: `artist_in_playlist`'s `auto` target is resolved from the rule's *top-level* `match`
+    only, so it is not allowed to hide inside `unless` or an `any_of` group; nested `any_of` is disallowed too,
+    to keep the structure to one level."""
     if not isinstance(match, dict) or not match:
-        errors.append(f"{where}: 'match' must be a non-empty mapping")
+        errors.append(f"{where}: '{label}' must be a non-empty mapping")
         return {}
     clean: dict[str, Any] = {}
     for key, value in match.items():
         if key not in MATCH_KEYS:
-            errors.append(f"{where}: unknown match key '{key}'")
+            errors.append(f"{where}: unknown {label} key '{key}'")
+        elif key == "artist_in_playlist" and forbid_artist_in_playlist:
+            errors.append(
+                f"{where}: 'artist_in_playlist' is only allowed as a top-level 'match' condition "
+                "(paired with target_playlist: auto), not inside 'unless' or an 'any_of' group"
+            )
+        elif key == ANY_OF_KEY:
+            if forbid_any_of:
+                errors.append(f"{where}: 'any_of' cannot be nested inside another 'any_of' group")
+            elif not isinstance(value, list) or not value:
+                errors.append(f"{where}: 'any_of' must be a non-empty list of match-condition groups")
+            else:
+                clean_groups: list[dict[str, Any]] = []
+                for gi, group in enumerate(value):
+                    group_where = f"{where}.any_of[{gi}]"
+                    if not isinstance(group, dict) or not group:
+                        errors.append(f"{group_where}: each 'any_of' group must be a non-empty mapping")
+                        continue
+                    before = len(errors)
+                    cleaned = _validate_match(
+                        group, group_where, errors, label=label,
+                        forbid_artist_in_playlist=True, forbid_any_of=True,
+                    )
+                    if len(errors) == before:
+                        clean_groups.append(cleaned)
+                if clean_groups:
+                    clean[key] = clean_groups
         elif key in LIST_MATCH_KEYS:
             if (
                 not isinstance(value, list)
@@ -80,6 +122,12 @@ def _validate_match(match: Any, where: str, errors: list[str]) -> dict[str, Any]
                     errors.append(f"{where}: unknown language {unknown[0]!r} in 'language_in' (e.g. {', '.join(CANONICAL[:6])}, or an ISO code)")
                 else:
                     clean[key] = langs
+            elif key == "artist_country_in":
+                bad = [v for v in value if not _COUNTRY_CODE_RE.match(v.strip())]
+                if bad:
+                    errors.append(f"{where}: invalid country code {bad[0]!r} in 'artist_country_in' (use a 2-letter ISO code, e.g. IN, US)")
+                else:
+                    clean[key] = [v.strip().upper() for v in value]
             else:
                 clean[key] = list(value)
         elif key in INT_MATCH_KEYS:
@@ -140,6 +188,13 @@ def _validate_rule(raw: Any, index: int, errors: list[str]) -> Rule | None:
     if uses_auto_artist and not is_auto_target:
         errors.append(f"{where}: match 'artist_in_playlist' requires target_playlist: {AUTO_TARGET}")
 
+    # design/proposals/more-conditions.md: 'unless' is optional -- absent or explicit null means no exceptions.
+    raw_unless = raw.get("unless")
+    if "unless" in raw and raw_unless is not None:
+        unless = _validate_match(raw_unless, where, errors, label="unless", forbid_artist_in_playlist=True)
+    else:
+        unless = {}
+
     if len(errors) > before:
         return None
     return Rule(
@@ -150,6 +205,7 @@ def _validate_rule(raw: Any, index: int, errors: list[str]) -> Rule | None:
         days_threshold=days,
         create_missing_playlists=create,
         target_position=position,
+        unless=unless,
     )
 
 

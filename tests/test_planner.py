@@ -581,3 +581,68 @@ def test_build_plan_any_catch_all_moves_everything_unclaimed():
     assert by_pl["spotify:track:t1"] == "Chill" and by_pl["spotify:track:t2"] == "Sink"
     sink_move = next(m for m in plan.moves if m["uri"] == "spotify:track:t2")
     assert sink_move["target_position"] == "top"
+
+
+# ------------------------------------------------------------------ unless exceptions (design/proposals/more-conditions.md)
+
+def test_decide_unless_blocks_the_rule_and_falls_through():
+    broad = Rule(name="broad", target_playlist="Dil", match={"language_in": ["hindi"]}, unless={"artist_in": ["Arijit Singh"]})
+    specific = rule({"artist_in": ["Arijit Singh"]}, "specific", "ArijitPlaylist")
+    e = {"t1": Enrichment(language="hindi")}
+    t = track(1, "Arijit Singh", age=30)
+    d = decide(t, e["t1"], cfg(broad, specific), NOW)
+    assert d.kind == "move" and d.rule_name == "specific" and d.target_name == "ArijitPlaylist"
+
+
+def test_decide_unless_blocked_with_no_fallback_is_no_match():
+    broad = Rule(name="broad", target_playlist="Dil", match={"language_in": ["hindi"]}, unless={"artist_in": ["Arijit Singh"]})
+    t = track(1, "Arijit Singh", age=30)
+    d = decide(t, Enrichment(language="hindi"), cfg(broad), NOW)
+    assert d.kind == "no_match"
+
+
+def test_build_plan_unless_routes_around_the_broad_rule():
+    broad = Rule(name="broad", target_playlist="Dil", match={"language_in": ["hindi"]}, unless={"artist_in": ["Arijit Singh"]})
+    specific = rule({"artist_in": ["Arijit Singh"]}, "specific", "ArijitPlaylist")
+    ts = [track(1, "Arijit Singh", age=30), track(2, "Someone Else", age=30)]
+    enrichments = {"t1": Enrichment(language="hindi"), "t2": Enrichment(language="hindi")}
+    plan = build_plan(ts, enrichments, cfg(broad, specific), NOW, [pl("Dil"), pl("ArijitPlaylist")])
+    by_pl = {m["uri"]: m["playlist"] for m in plan.moves}
+    assert by_pl["spotify:track:t1"] == "ArijitPlaylist"
+    assert by_pl["spotify:track:t2"] == "Dil"
+
+
+def test_decide_unless_combined_with_fallback_playlist():
+    """A blocked rule falls all the way through to fallback_playlist when nothing else claims the song."""
+    broad = Rule(name="broad", target_playlist="Dil", match={"language_in": ["hindi"]}, unless={"artist_in": ["Arijit Singh"]})
+    t = track(1, "Arijit Singh", age=30)
+    d = decide(t, Enrichment(language="hindi"), cfg(broad, fallback="Sink"), NOW)
+    assert d.kind == "move" and d.rule_name == FALLBACK_RULE and d.target_name == "Sink"
+
+
+# ------------------------------------------------------------------ any_of OR-groups (design/proposals/more-conditions.md)
+
+def test_decide_any_of_matches_via_either_branch():
+    r = rule({"any_of": [{"artist_in": ["Nobody"]}, {"artist_in": ["Bonobo"]}]}, "r", "P")
+    d = decide(track(age=30), None, cfg(r), NOW)
+    assert d.kind == "move" and d.rule_name == "r"
+
+
+def test_build_plan_any_of_routes_correctly():
+    r = rule({"any_of": [{"artist_in": ["Bonobo"]}, {"artist_in": ["Tycho"]}]}, "chill", "Chill")
+    ts = [track(1, "Bonobo", age=30), track(2, "Tycho", age=30), track(3, "Other", age=30)]
+    plan = build_plan(ts, {}, cfg(r), NOW, [pl("Chill")])
+    moved_uris = {m["uri"] for m in plan.moves}
+    assert moved_uris == {"spotify:track:t1", "spotify:track:t2"}
+    assert plan.skipped_no_match == 1
+
+
+# ------------------------------------------------------------------ artist_country_in (design/proposals/more-conditions.md)
+
+def test_decide_artist_country_in():
+    r = rule({"artist_country_in": ["IN"]}, "r", "P")
+    e = Enrichment(artist_country="IN")
+    d = decide(track(age=30), e, cfg(r), NOW)
+    assert d.kind == "move" and d.rule_name == "r"
+    d2 = decide(track(age=30), Enrichment(artist_country="US"), cfg(r), NOW)
+    assert d2.kind == "no_match"

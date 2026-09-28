@@ -270,6 +270,14 @@ def test_full_build_with_globals_and_all_keys(builder):
     add_cond(r, "track_name_contains").fill("remix")
     add_cond(r, "album_name_contains").fill("deluxe")
     add_cond(r, "any")  # a flag condition, no value to fill; combining with other keys is allowed, just unusual
+    add_chips(r, "artist_country_in", "in", "us")
+    add_cond(r, "any_of")  # renders its own nested branch editor, not a plain input/select
+    any_of_branch_sel = r.locator("select[id$='-match-any_of-b0-add']")
+    any_of_branch_sel.select_option("artist_in")
+    r.get_by_role("button", name="Add branch condition").click()
+    branch_field = r.locator("input[id$='-match-any_of-b0-artist_in']")
+    branch_field.fill("Tycho")
+    branch_field.press("Enter")
     # artist_in_playlist is deliberately not addable here: it requires target_playlist: auto, incompatible
     # with this rule's literal "Kitchen Sink" target, so it's the one key left in the dropdown.
     remaining = r.locator("select[id$='-add-cond'] option:not([value=''])").all_text_contents()
@@ -288,6 +296,7 @@ def test_full_build_with_globals_and_all_keys(builder):
         "artist_in": ["Bonobo"], "genre_contains": ["ambient"], "language_in": ["english"],
         "release_year_before": 2020, "release_year_after": 1990, "explicit": False,
         "track_name_contains": "remix", "album_name_contains": "deluxe", "any": True,
+        "artist_country_in": ["IN", "US"], "any_of": [{"artist_in": ["Tycho"]}],
     }
 
 
@@ -404,6 +413,145 @@ def test_any_shows_catch_all_english_summary(builder):
     goto_review(builder)
     summary = builder.locator("#plain-summary").inner_text().lower()
     assert "anything" in summary and "catch-all" in summary
+
+
+# ------------------------------------------------------------------ artist_country_in (design/proposals/more-conditions.md)
+def test_artist_country_in_builds_and_uppercases(builder):
+    r = add_rule(builder, "Region", "P")
+    add_chips(r, "artist_country_in", "in", "us")
+    assert problem_count(builder) == 0, builder.locator("#error-summary").text_content()
+    cfg = validated(preview(builder))
+    (got,) = cfg.rules
+    assert got.match == {"artist_country_in": ["IN", "US"]}
+
+
+def test_artist_country_in_invalid_code_flagged(builder):
+    r = add_rule(builder, "Region", "P")
+    add_chips(r, "artist_country_in", "USA")
+    goto_review(builder)
+    assert problem_count(builder) >= 1
+    assert "invalid country code" in builder.locator("#error-summary").text_content()
+
+
+# ------------------------------------------------------------------ unless exceptions (design/proposals/more-conditions.md)
+def add_unless_cond(r, key):
+    r.locator("select[id$='-add-unless-cond']").select_option(key)
+    r.get_by_role("button", name="Add exception").click()
+    return r.locator(f"input[id$='-unless-{key}'], select[id$='-unless-{key}']")
+
+
+def test_unless_hidden_in_basic_shown_in_advanced(make_page, site):
+    page, _ = make_page()
+    page.goto(site + "builder/")
+    page.wait_for_function("window.__spotiBuilder")
+    start_blank(page)
+    add_rule(page, "R", "P")
+    expect(page.locator(".unless-conds").first).to_be_hidden()
+    click_switch(page, "advanced-toggle")
+    expect(page.locator(".unless-conds").first).to_be_visible()
+
+
+def test_unless_builds_and_validates(builder):
+    r = add_rule(builder, "Hindi to Dil", "Dil")
+    add_chips(r, "language_in", "hindi")
+    field = add_unless_cond(r, "artist_in")
+    field.fill("Arijit Singh")
+    field.press("Enter")
+    assert problem_count(builder) == 0, builder.locator("#error-summary").text_content()
+    cfg = validated(preview(builder))
+    (got,) = cfg.rules
+    assert got.match == {"language_in": ["hindi"]}
+    assert got.unless == {"artist_in": ["Arijit Singh"]}
+
+
+def test_unless_plain_english_summary(builder):
+    r = add_rule(builder, "Hindi to Dil", "Dil")
+    add_chips(r, "language_in", "hindi")
+    add_unless_cond(r, "artist_in").fill("Arijit Singh")
+    r.locator("input[id$='-unless-artist_in']").press("Enter")
+    goto_review(builder)
+    summary = builder.locator("#plain-summary").inner_text().lower()
+    assert "unless" in summary and "arijit singh" in summary
+
+
+def test_unless_removable_and_empty_means_no_exceptions(builder):
+    r = add_rule(builder, "R", "P")
+    add_chips(r, "genre_contains", "x")  # a normal match condition, separate from the unless one below
+    field = add_unless_cond(r, "artist_in")
+    field.fill("X")
+    field.press("Enter")
+    assert validated(preview(builder)).rules[0].unless == {"artist_in": ["X"]}
+    r.get_by_role("button", name="Remove condition Artist is one of").click()
+    cfg = validated(preview(builder))
+    assert cfg.rules[0].unless == {}
+
+
+def test_unless_artist_in_playlist_not_offered(builder):
+    """design/proposals/more-conditions.md: artist_in_playlist cannot live inside unless -- it must not even
+    appear in the exceptions dropdown, since it would otherwise validate fine in the UI then fail on save."""
+    page = builder
+    goto_step(page, 3, "Rules")
+    click_switch(page, "g-aip-enabled")
+    r = add_rule(page, "R", "auto")
+    add_cond(r, "artist_in_playlist")
+    options = r.locator("select[id$='-add-unless-cond'] option").all_text_contents()
+    assert not any("artist_in_playlist" in o for o in options)
+
+
+# ------------------------------------------------------------------ any_of OR-groups (design/proposals/more-conditions.md)
+def any_of_branch(r, i):
+    return r.locator(".any-of-branch").nth(i)
+
+
+def test_any_of_builds_two_branches_and_validates(builder):
+    r = add_rule(builder, "Chill", "Chill")
+    add_cond(r, "any_of")
+    b0 = any_of_branch(r, 0)
+    b0.locator("select[id$='-match-any_of-b0-add']").select_option("artist_in")
+    b0.get_by_role("button", name="Add branch condition").click()
+    b0.locator("input[id$='-match-any_of-b0-artist_in']").fill("Bonobo")
+    b0.locator("input[id$='-match-any_of-b0-artist_in']").press("Enter")
+
+    r.get_by_role("button", name="Add another branch (OR)").click()
+    b1 = any_of_branch(r, 1)
+    b1.locator("select[id$='-match-any_of-b1-add']").select_option("artist_in")
+    b1.get_by_role("button", name="Add branch condition").click()
+    b1.locator("input[id$='-match-any_of-b1-artist_in']").fill("Tycho")
+    b1.locator("input[id$='-match-any_of-b1-artist_in']").press("Enter")
+
+    assert problem_count(builder) == 0, builder.locator("#error-summary").text_content()
+    cfg = validated(preview(builder))
+    (got,) = cfg.rules
+    assert got.match == {"any_of": [{"artist_in": ["Bonobo"]}, {"artist_in": ["Tycho"]}]}
+
+
+def test_any_of_empty_branch_is_flagged(builder):
+    r = add_rule(builder, "Chill", "Chill")
+    add_cond(r, "any_of")
+    goto_review(builder)
+    assert problem_count(builder) >= 1
+    assert "any_of" in builder.locator("#error-summary").text_content()
+
+
+def test_any_of_does_not_offer_artist_in_playlist_or_nested_any_of(builder):
+    r = add_rule(builder, "Chill", "Chill")
+    add_cond(r, "any_of")
+    options = r.locator("select[id$='-match-any_of-b0-add'] option").all_text_contents()
+    assert not any("artist_in_playlist" in o for o in options)
+    assert not any(o.strip().startswith("Match any of") for o in options)
+
+
+def test_any_of_plain_english_summary(builder):
+    r = add_rule(builder, "Chill", "Chill")
+    add_cond(r, "any_of")
+    sel0 = r.locator("select[id$='-match-any_of-b0-add']")
+    sel0.select_option("artist_in")
+    r.get_by_role("button", name="Add branch condition").click()
+    r.locator("input[id$='-match-any_of-b0-artist_in']").fill("Bonobo")
+    r.locator("input[id$='-match-any_of-b0-artist_in']").press("Enter")
+    goto_review(builder)
+    summary = builder.locator("#plain-summary").inner_text().lower()
+    assert "any of" in summary and "bonobo" in summary
 
 
 # ------------------------------------------------------------------ language aliases
@@ -545,6 +693,32 @@ PARITY = [
     {"rules": [{"name": "sink", "target_playlist": "SpotiSort Sink", "match": {"any": True}}]},
     {"rules": [{"name": "bad5", "target_playlist": "P", "match": {"any": False}}]},
     {"rules": [{"name": "combo", "target_playlist": "P", "match": {"any": True, "explicit": True}}]},
+    # ---- design/proposals/more-conditions.md: artist_country_in
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"artist_country_in": ["in", "US"]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"artist_country_in": []}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"artist_country_in": ["USA"]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"artist_country_in": ["I1"]}}]},
+    # ---- design/proposals/more-conditions.md: unless
+    {"rules": [{"name": "r", "target_playlist": "Dil", "match": {"language_in": ["hindi"]},
+                "unless": {"artist_in": ["Arijit Singh"]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"explicit": True}, "unless": {}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"explicit": True}, "unless": None}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"explicit": True}, "unless": {"bogus": 1}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"explicit": True}, "unless": {"language_in": ["klingon"]}}]},
+    {"rules": [{"name": "r", "target_playlist": "auto", "match": {"artist_in_playlist": True},
+                "unless": {"artist_in_playlist": True}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"explicit": True}, "unless": {"any": True}}]},
+    # ---- design/proposals/more-conditions.md: any_of OR-groups
+    {"rules": [{"name": "r", "target_playlist": "P",
+                "match": {"any_of": [{"artist_in": ["A"]}, {"genre_contains": ["x"]}]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"any_of": []}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"any_of": [{}]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"any_of": [{"bogus": 1}]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P", "match": {"any_of": [{"any_of": [{"explicit": True}]}]}}]},
+    {"rules": [{"name": "r", "target_playlist": "auto",
+                "match": {"any_of": [{"artist_in_playlist": True}]}}]},
+    {"rules": [{"name": "r", "target_playlist": "P",
+                "match": {"language_in": ["hindi"], "any_of": [{"artist_in": ["A"]}, {"artist_in": ["B"]}]}}]},
 ]
 
 
@@ -748,6 +922,50 @@ def test_every_control_has_an_accessible_name(builder):
     )
     assert unnamed == []
     assert builder.locator("html").get_attribute("lang") == "en"
+
+
+@pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
+def test_axe_zero_serious_or_critical_with_unless_and_any_of_panels(make_page, site):
+    """design/proposals/more-conditions.md: the new exceptions fieldset and nested any_of branch editor
+    introduce 0 new serious/critical axe violations, in the state they're actually rendered in.
+
+    Scanned the same way test_axe_zero_serious_or_critical_with_stepper_and_modal_and_drawer scans (via Save
+    + the Versions drawer): scanning the raw wizard step instead reliably surfaces a PRE-EXISTING, unrelated
+    violation (`<li role="button">` inside the `#stepper` <ol> loses list-item semantics, an axe "list" rule
+    hit) that reproduces on a plain rule with no any_of/unless involved at all and is not something this phase
+    touches -- flagged separately rather than silently masked or fixed out of scope."""
+    page, _ = make_page()
+    page.goto(site + "builder/")
+    page.wait_for_function("window.__spotiBuilder")
+    start_blank(page)
+    make_advanced(page)
+    r = add_rule(page, "Region", "P")
+    add_chips(r, "language_in", "hindi")
+    field = add_unless_cond(r, "artist_in")
+    field.fill("Arijit Singh")
+    field.press("Enter")
+    add_cond(r, "any_of")
+    b0 = any_of_branch(r, 0)
+    b0.locator("select[id$='-match-any_of-b0-add']").select_option("genre_contains")
+    b0.get_by_role("button", name="Add branch condition").click()
+    b0.locator("input[id$='-match-any_of-b0-genre_contains']").fill("bollywood")
+    b0.locator("input[id$='-match-any_of-b0-genre_contains']").press("Enter")
+    r.get_by_role("button", name="Add another branch (OR)").click()  # exercise the affordance
+    b1 = any_of_branch(r, 1)
+    b1.locator("select[id$='-match-any_of-b1-add']").select_option("artist_in")
+    b1.get_by_role("button", name="Add branch condition").click()
+    b1.locator("input[id$='-match-any_of-b1-artist_in']").fill("Someone")
+    b1.locator("input[id$='-match-any_of-b1-artist_in']").press("Enter")
+    goto_review(page)
+    page.get_by_role("button", name="Save configuration").click()
+    page.wait_for_timeout(100)
+    page.get_by_role("button", name="Versions").click()
+    expect(page.locator("#versions-drawer")).to_be_visible()
+    page.wait_for_timeout(250)
+    axe = Axe()
+    results = axe.run(page)
+    serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
+    assert not serious, json.dumps([{"id": v["id"], "impact": v["impact"], "help": v["help"]} for v in serious], indent=2)
 
 
 @pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
