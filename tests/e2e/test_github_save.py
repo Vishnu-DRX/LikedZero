@@ -50,7 +50,9 @@ def test_save_to_github_button_offers_deep_link_scoped_to_this_fork(make_page, s
     href = page.locator("#github-save-body a").first.get_attribute("href")
     assert href.startswith("https://github.com/settings/personal-access-tokens/new?")
     assert f"target_name={OWNER}" in href and "contents=write" in href
-    assert "actions=write" not in href  # Phase 7 only needs Contents, unlike run-now
+    # Master decisions 15 (2026-09-29): Configure now requests the same union of scopes run-now does, so the
+    # one token this deep link creates also covers dispatching the Sync workflow.
+    assert "actions=write" in href
     assert "expires_in=7" in href  # P1-6: 7-day default, not 90
 
 
@@ -68,11 +70,11 @@ def test_save_to_github_verify_rejects_a_read_only_token(make_page, site):
     expect(page.locator("#gh-token")).to_be_visible()
 
 
-def test_save_to_github_and_run_now_tokens_do_not_collide(make_page, site):
-    """P1-5: Configure's Contents-only token and run-now's Contents+Actions token must live in different
-    sessionStorage slots even for the same owner/repo, so connecting one never silently steals or invalidates
-    the other. Simulate run-now having already connected in this tab (its scope set), then prove Configure
-    still needs its own connect step."""
+def test_save_to_github_reuses_run_now_token(make_page, site):
+    """Master decisions 15 (2026-09-29): supersedes P1-5's deliberate separation. run-now's Contents+Actions
+    token and Configure's own (now identical) scope request share one sessionStorage slot keyed by owner/repo
+    alone, so connecting via either entry point covers the other. Simulate run-now having already connected in
+    this tab, then prove Configure skips straight to its own commit form instead of asking to reconnect."""
     page, _ = make_page()
     open_fork_builder(page)
     draft_a_rule(page)
@@ -80,8 +82,8 @@ def test_save_to_github_and_run_now_tokens_do_not_collide(make_page, site):
         "window.GithubPAT.set('someoneelse', 'their-fork', [{name:'contents',level:'write'},{name:'actions',level:'write'}], 'github_pat_run_now_token')"
     )
     page.get_by_role("button", name="Save to GitHub").click()
-    expect(page.locator("#gh-token")).to_be_visible()
-    expect(page.locator("#gh-commit-msg")).to_have_count(0)
+    expect(page.locator("#gh-commit-msg")).to_be_visible()
+    expect(page.locator("#gh-token")).to_have_count(0)
 
 
 def test_not_on_pages_shows_a_clear_message_instead_of_guessing(make_page, site):
@@ -101,6 +103,9 @@ def test_connect_verify_commit_first_time_creates_the_file(make_page, site):
     yaml_text = page.locator("#yaml-out code").text_content()
 
     page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}})))
+    # Master decisions 15: verify() now also checks Actions access, since Configure requests the same
+    # Contents+Actions union of scopes run-now does.
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"workflows": []})))
     page.get_by_role("button", name="Save to GitHub").click()
     page.locator("#gh-token").fill("github_pat_fake_token")
     page.get_by_role("button", name="Save & verify").click()
@@ -136,6 +141,9 @@ def test_conflict_shows_diff_and_never_silently_overwrites(make_page, site):
     draft_a_rule(page)
 
     page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}})))
+    # Master decisions 15: verify() now also checks Actions access, since Configure requests the same
+    # Contents+Actions union of scopes run-now does.
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"workflows": []})))
     page.get_by_role("button", name="Save to GitHub").click()
     page.locator("#gh-token").fill("github_pat_fake_token")
     page.get_by_role("button", name="Save & verify").click()
@@ -180,6 +188,9 @@ def test_versions_drawer_shows_github_commits_labelled_separately(make_page, sit
     draft_a_rule(page)
 
     page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}})))
+    # Master decisions 15: verify() now also checks Actions access, since Configure requests the same
+    # Contents+Actions union of scopes run-now does.
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"workflows": []})))
     page.get_by_role("button", name="Save to GitHub").click()
     page.locator("#gh-token").fill("github_pat_fake_token")
     page.get_by_role("button", name="Save & verify").click()

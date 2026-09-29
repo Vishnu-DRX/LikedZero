@@ -702,20 +702,21 @@ def test_run_now_verify_rejects_a_token_without_write_access(dash):
     expect(page.locator("#run-now-token")).to_be_visible()
 
 
-def test_run_now_and_save_to_github_tokens_do_not_collide(dash):
-    """P1-5 (2026-09-27 review): before this fix, Configure's Contents-only token and run-now's
-    Contents+Actions token shared one sessionStorage slot keyed by owner/repo alone -- whichever connected
-    second silently overwrote the other's slot, and the loser's next call 403'd and got its token cleared,
-    logging it out too. Simulate Configure having already connected in this tab, then prove run-now still
-    needs its own connect step rather than reusing (and potentially breaking) Configure's token."""
+def test_run_now_reuses_save_to_github_token(dash):
+    """Master decisions 15 (2026-09-29): supersedes P1-5's deliberate separation (the user hit that friction
+    live, twice). Configure and run-now now both request the union of scopes (Contents + Actions) and share
+    one sessionStorage slot keyed by owner/repo alone. Simulate Configure having already connected in this
+    tab, then prove run-now skips straight to its own dispatch form instead of asking to reconnect."""
     page = dash("overview", source="repo")
     set_repo(page)
-    page.evaluate("window.GithubPAT.set('octo', 'spot', [{name:'contents',level:'write'}], 'github_pat_configure_token')")
+    page.evaluate(
+        "window.GithubPAT.set('octo', 'spot', [{name:'contents',level:'write'},{name:'actions',level:'write'}], 'github_pat_configure_token')"
+    )
     page.locator('[data-testid="run-now-btn"]').click()
-    # run-now must NOT find Configure's token under its own (different) scope key -- it should still show
-    # the connect step, not jump straight to the dispatch form as it would have with the old owner/repo-only key
-    expect(page.locator("#run-now-token")).to_be_visible()
-    expect(page.locator("#run-now-dispatch")).to_have_count(0)
+    # run-now must find Configure's token under the shared owner/repo key and jump straight to the dispatch
+    # form -- no reconnect step.
+    expect(page.locator("#run-now-dispatch")).to_be_visible()
+    expect(page.locator("#run-now-token")).to_have_count(0)
 
 
 # ------------------------------------------------------------------ Simple/Detailed mode (decision 42)

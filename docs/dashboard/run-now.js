@@ -7,8 +7,10 @@
 
   var body = document.getElementById('run-now-body');
   var esc = window.DashViews.esc;
-  // P1-5: run-now's own scope set -- Configure's Save-to-GitHub uses a different set (Contents only), so the
-  // two features never share (or collide over) the same sessionStorage slot even in the same tab.
+  // Master decisions 15 (2026-09-29): this is the union of scopes both run-now and Configure's Save-to-GitHub
+  // need, and Configure requests the exact same set -- so the two features share one sessionStorage slot.
+  // Connecting via either entry point covers the other: whichever connects first, the other skips straight to
+  // its own form instead of asking to reconnect.
   var SCOPES = [{ name: 'contents', level: 'write' }, { name: 'actions', level: 'write' }];
 
   function render() {
@@ -26,7 +28,7 @@
     var url = window.GithubPAT.tokenUrl({
       owner: rn.owner,
       name: 'LikedZero run-now (' + rn.repo + ')',
-      description: 'Lets the LikedZero dashboard dispatch the Sync workflow on ' + rn.owner + '/' + rn.repo + '. Delete this token any time from github.com/settings/tokens?type=beta.',
+      description: 'Lets the LikedZero dashboard dispatch the Sync workflow and Configure commit config.yaml on ' + rn.owner + '/' + rn.repo + ' -- one token covers both. Delete this token any time from github.com/settings/tokens?type=beta.',
       scopes: SCOPES,
     });
     body.innerHTML =
@@ -34,7 +36,7 @@
       '<li><a href="' + esc(url) + '" target="_blank" rel="noopener">Create a token on GitHub</a> — name, description and the two permissions below are pre-filled.</li>' +
       '<li>Under <strong>Repository access</strong>, choose <strong>Only select repositories</strong> and pick <code>' + esc(rn.owner + '/' + rn.repo) + '</code> (GitHub does not let a link pre-select the repository).</li>' +
       '<li>Confirm the permissions still show <strong>Contents: Read and write</strong> and <strong>Actions: Read and write</strong>, then click <strong>Generate token</strong>.</li>' +
-      '<li>Paste the token below. It stays only in this browser tab (<code>sessionStorage</code>) — never written to disk, never sent anywhere but GitHub’s API, gone when you close the tab.</li>' +
+      '<li>Paste the token below. It stays only in this browser tab (<code>sessionStorage</code>) — never written to disk, never sent anywhere but GitHub’s API, gone when you close the tab. This same token also lets Configure’s Save to GitHub work right away, with no need to connect again.</li>' +
       '</ol>' +
       '<div class="field"><label for="run-now-token">Fine-grained personal access token</label>' +
       '<input class="input" id="run-now-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" /></div>' +

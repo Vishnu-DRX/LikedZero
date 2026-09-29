@@ -1,7 +1,7 @@
 // LikedZero service worker: cache-first for the app shell so the builder works offline.
 // Bump CACHE_VERSION whenever any cached file changes. All URLs are relative to this file
 // (works under the /LikedZero/ GitHub Pages base path).
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_NAME = 'likedzero-shell-' + CACHE_VERSION;
 const SHELL = [
   './',

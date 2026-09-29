@@ -6,27 +6,30 @@
 (function () {
   'use strict';
 
-  // P1-5 (2026-09-27 review): keying storage by owner/repo alone meant Configure's Contents-only token and
-  // run-now's Contents+Actions token collided in the same slot -- whichever connected second would silently
-  // "steal" the slot, and the other feature's next call would 403 and (worse) its failure handler would clear
-  // the token it just stole, logging the first feature out too. Keying by the exact scope set as well keeps
-  // the two flows independent even when they share a tab.
-  function scopeKey(scopes) {
-    return (scopes || []).map(function (s) { return s.name + ':' + s.level; }).sort().join(',');
-  }
-  function keyFor(owner, repo, scopes) { return 'likedzero.pat.' + owner + '/' + repo + '|' + scopeKey(scopes); }
+  // Master decisions 15 (2026-09-29): supersedes the P1-5 scope-keyed storage below. P1-5's reasoning (keying
+  // by the exact scope set so Configure's Contents-only token and run-now's Contents+Actions token could
+  // never collide/steal each other's slot) was sound in general, but for this tool's actual threat model --
+  // single user, one repo, a token the user creates themselves with a self-chosen (default 7-day) expiry --
+  // the repeated "connect again for the other feature" friction outweighed the marginal blast-radius benefit.
+  // The user hit it live, twice. Both entry points now request the union of scopes they need (Contents: write
+  // + Actions: write) up front, so storage is keyed by owner/repo alone: whichever feature connects first
+  // fills the one slot, and every other call -- even one that only needs a subset of what's stored -- reuses
+  // it without re-prompting. `scopes` stays a parameter of get/set/clear for call-site compatibility (and in
+  // case a future caller ever needs a genuinely narrower, non-shared token again), it just no longer affects
+  // the storage key.
+  function keyFor(owner, repo) { return 'likedzero.pat.' + owner + '/' + repo; }
 
   function get(owner, repo, scopes) {
-    try { return window.sessionStorage.getItem(keyFor(owner, repo, scopes)) || null; }
+    try { return window.sessionStorage.getItem(keyFor(owner, repo)) || null; }
     catch (e) { return null; }
   }
 
   function set(owner, repo, scopes, token) {
-    try { window.sessionStorage.setItem(keyFor(owner, repo, scopes), token); } catch (e) { /* storage blocked */ }
+    try { window.sessionStorage.setItem(keyFor(owner, repo), token); } catch (e) { /* storage blocked */ }
   }
 
   function clear(owner, repo, scopes) {
-    try { window.sessionStorage.removeItem(keyFor(owner, repo, scopes)); } catch (e) { /* storage blocked */ }
+    try { window.sessionStorage.removeItem(keyFor(owner, repo)); } catch (e) { /* storage blocked */ }
   }
 
   // decision 46/P2: cached alongside the token (not the scope-specific slot -- the default branch is a
