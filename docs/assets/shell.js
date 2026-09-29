@@ -85,7 +85,13 @@
       '<div class="site-header-actions">' +
       '<button type="button" class="btn btn-icon" data-theme-toggle aria-label="Switch theme">' +
       '<svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>' +
-      '<svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>' +
+      /* No static `hidden` attribute here (bug found during the dashboard design-system audit, decision 65):
+         components.css's `[hidden] { display: none !important; }` reset permanently wins over the
+         data-theme-now CSS toggle below (site.css) if this attribute is ever set, since nothing removes it --
+         the sun icon would stay invisible in light theme forever, on every page, not just after a toggle
+         click. site.css's plain `[data-theme-toggle] .icon-sun { display: none; }` rule already hides it by
+         default with no `!important` involved, so the attribute was redundant as well as harmful. */
+      '<svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>' +
       '</button>' +
       '<button type="button" class="btn btn-icon site-menu-btn" id="site-menu-btn" aria-controls="site-nav" aria-expanded="false" aria-label="Open menu">' +
       '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>' +
