@@ -1220,10 +1220,11 @@
 
   // ---------------------------------------------------------------- Save to GitHub (Phase 7, decision 39/41)
   // Reuses the shared PAT component (assets/github-pat.js) built for the dashboard's run-now button --
-  // same deep-link-and-paste flow, same sessionStorage-only token, just Contents: write instead of +Actions.
-  // P1-5: this exact scope set is also this feature's own sessionStorage key, so it can never collide with
-  // run-now's Contents+Actions token even in the same tab.
-  var GH_SCOPES = [{ name: 'contents', level: 'write' }];
+  // same deep-link-and-paste flow, same sessionStorage-only token.
+  // Master decisions 15 (2026-09-29): requests the same union of scopes run-now does (Contents + Actions),
+  // not just what Configure itself needs, so the one token this creates also covers run-now and storage
+  // is shared -- connecting here means the dashboard's Run now button skips straight to its own dialog.
+  var GH_SCOPES = [{ name: 'contents', level: 'write' }, { name: 'actions', level: 'write' }];
 
   function ownerRepoParts() {
     var onPages = /\.github\.io$/i.test(location.hostname);
@@ -1260,17 +1261,17 @@
   function renderGithubConnect(rr) {
     var url = window.GithubPAT.tokenUrl({
       owner: rr.owner, name: 'LikedZero Configure (' + rr.repo + ')',
-      description: 'Lets Configure commit config.yaml to ' + rr.owner + '/' + rr.repo + '. Delete this token any time.',
+      description: 'Lets Configure commit config.yaml and the dashboard dispatch the Sync workflow on ' + rr.owner + '/' + rr.repo + ' -- one token covers both. Delete this token any time.',
       scopes: GH_SCOPES,
     });
     var status = h('p', { class: 'status', role: 'status' });
     var input = h('input', { class: 'input', id: 'gh-token', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: 'github_pat_…' });
     ghSaveBody(
       h('ol', { class: 'steps' },
-        h('li', null, h('a', { href: url, target: '_blank', rel: 'noopener', text: 'Create a token on GitHub' }), ' — name, description and the Contents permission are pre-filled.'),
+        h('li', null, h('a', { href: url, target: '_blank', rel: 'noopener', text: 'Create a token on GitHub' }), ' — name, description and both permissions below are pre-filled.'),
         h('li', { text: 'Under Repository access, choose "Only select repositories" and pick ' + rr.owner + '/' + rr.repo + ' (GitHub does not let a link pre-select the repository).' }),
-        h('li', { text: 'Confirm the permission still shows "Contents: Read and write", then click Generate token.' }),
-        h('li', { text: 'Paste the token below. It stays only in this browser tab (sessionStorage), never written to disk.' })),
+        h('li', { text: 'Confirm the permissions still show "Contents: Read and write" and "Actions: Read and write", then click Generate token.' }),
+        h('li', { text: 'Paste the token below. It stays only in this browser tab (sessionStorage), never written to disk. This same token also lets the dashboard’s Run now button work right away, with no need to connect again.' })),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'gh-token', text: 'Fine-grained personal access token' }), input),
       status,
       h('button', {

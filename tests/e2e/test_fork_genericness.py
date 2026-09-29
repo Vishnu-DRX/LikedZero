@@ -101,9 +101,12 @@ def test_save_to_github_targets_the_viewers_own_fork(make_page, site):
     expect(page.locator("#github-save-dialog")).to_be_visible()
     href = page.locator("#github-save-body a").first.get_attribute("href")
     assert f"target_name={OWNER}" in href
-    assert "actions=write" not in href  # Phase 7 only ever asks for Contents, unlike run-now
+    # Master decisions 15 (2026-09-29): Configure now requests the same union of scopes run-now does
+    # (Contents + Actions), so one token covers both features instead of each asking for its own subset.
+    assert "actions=write" in href
 
     page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"permissions": {"push": True}})))
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"workflows": []})))
     page.locator("#gh-token").fill("github_pat_fake_token")
     page.get_by_role("button", name="Save & verify").click()
     page.wait_for_selector("#gh-commit-msg")

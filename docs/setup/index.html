@@ -122,7 +122,7 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
         <h2>Create your config</h2>
-        <p>Open <a href="../builder/">Configure</a> on your Pages site and build your rules. Either click <strong>Save to GitHub</strong> to commit <code>config.yaml</code> straight to your fork (it walks you through connecting a token, scoped to just this repo), or click <strong>Save configuration</strong> and put the downloaded file in your repo's root yourself.</p>
+        <p>Open <a href="../builder/">Configure</a> on your Pages site and build your rules. Either click <strong>Save to GitHub</strong> to commit <code>config.yaml</code> straight to your fork (it walks you through connecting a token, scoped to just this repo — the same token also covers the Dashboard's Run now button, so you only connect once), or click <strong>Save configuration</strong> and put the downloaded file in your repo's root yourself.</p>
         <div class="banner banner-success" role="note">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
           <div class="banner-body"><strong>You should see:</strong> <code>config.yaml</code> at the top level of your repo, matching what Configure previewed.</div>
@@ -134,7 +134,7 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
         <h2>First dry run</h2>
-        <p>Either use the <strong>Run now</strong> button on your <a href="../dashboard/">Dashboard</a>'s Overview (once you connect a token the same way as Save to GitHub), or go to GitHub: <strong>Actions → Sync → Run workflow</strong>, leave <strong>dry run</strong> ticked, and run it. Then open the Dashboard and read the Overview and Inbox views.</p>
+        <p>Either use the <strong>Run now</strong> button on your <a href="../dashboard/">Dashboard</a>'s Overview (if you already connected a token via Save to GitHub, it's ready immediately — the same token covers both), or go to GitHub: <strong>Actions → Sync → Run workflow</strong>, leave <strong>dry run</strong> ticked, and run it. Then open the Dashboard and read the Overview and Inbox views.</p>
         <div class="banner banner-success" role="note">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
           <div class="banner-body"><strong>You should see:</strong> a green run in the Actions tab, and the dashboard showing what it would have moved — with nothing actually moved yet.</div>
