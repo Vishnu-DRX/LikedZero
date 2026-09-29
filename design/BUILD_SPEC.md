@@ -541,6 +541,28 @@ library (decision 23) the rest of the site uses. Confirmed two concrete symptoms
     direct comparison) that shared components render identically across Home/Configure/Dashboard. Full quality
     gate suite (decision 30) — this touches every page's styling and header rendering path.
 
+## Master decisions 15 (2026-09-29) — one shared PAT for Configure + run-now, supersedes P1-5's separation
+User hit the two-separate-token friction live, twice: connecting in Configure doesn't carry over to run-now
+(and vice versa), because decision 44 (P1-5) deliberately keyed the PAT cache by exact scope set — Configure
+requests `Contents: write` only, run-now requests `Actions: write` only, so they've never shared a slot.
+
+**Superseding that separation for this tool's actual threat model**: P1-5's reasoning (narrower token = smaller
+blast radius if it leaks) is sound in general, but this is a single-user tool where the user creates their own
+fine-grained PAT, scoped to their own one repo, with a self-chosen expiry (7 days default) — the realistic
+"blast radius" difference between a Contents-only token and a Contents+Actions token, both scoped to one
+person's one fork, both already sessionStorage-only and never persisted, is small next to the real, repeated
+UX cost of connecting twice for two features on the same page session.
+
+66. **Request ONE token with the union of scopes** (`Contents: write` + `Actions: write`) from both entry
+    points, cached under one shared key, so connecting once in either Configure or the dashboard covers both.
+    Update the connect-flow copy to say plainly that this one token covers both saving config and triggering
+    runs. Keep everything else from decisions 44/8 unchanged: 7-day default expiry, sessionStorage-only,
+    `verify()` checking actual granted scope rather than just repo readability, never logged. Update
+    `tests/e2e/test_dashboard.py`'s/`test_github_save.py`'s existing "tokens do not collide" tests — that
+    behavior is now intentionally reversed to "one token, shared," not a regression to patch around. Full
+    quality gate suite (decision 30). Live-verify: connect via one entry point, confirm the other's button
+    skips straight to its own dialog without asking to reconnect.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
