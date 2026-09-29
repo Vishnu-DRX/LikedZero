@@ -508,6 +508,23 @@ canonical-repo URL in decision 26 are already fixed.
     `vishnu-drx.github.io/LikedZero/` URL, confirm 200 and no broken absolute-path asset references) — this
     is a case where "tests pass locally" is not sufficient proof, the real deployed path changed.
 
+## Master decisions 14 (2026-09-29) — dashboard header drift, fix at the root
+User report, verified directly (screenshots of Home/Configure/Dashboard headers compared): the dashboard's
+header is visibly inconsistent with the rest of the site — missing the "Setup guide" nav link, a different
+logo mark, extra/different icons, and a different active-page indicator style. Root cause confirmed in source:
+`docs/dashboard/index.html` hand-rolls its own `<nav class="site-links">` header markup instead of using the
+shared header component (`docs/assets/shell.js`) that `docs/index.html`, `docs/builder/index.html`, the Setup
+guide, and `404.html` all already use — a grep for the shared header pattern found zero hits in
+`docs/dashboard/index.html`, confirming it's a genuine duplicate, not a bug in the shared component.
+
+65. **Fix at the root, not by patching today's specific differences**: make the dashboard use `shell.js`'s
+    shared header renderer, same as every other page, so it can never drift out of sync again. Keep the
+    dashboard-specific additions (Detailed-mode toggle, the info tooltip) as dashboard-specific UI layered on
+    top of the shared header, not a separate copy of the whole thing. Confirm live afterward (screenshot or
+    direct comparison) that Home/Configure/Dashboard headers are now identical except for the dashboard's own
+    additions and the current-page highlight. Full quality gate suite (decision 30): this touches every page's
+    header rendering path.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
