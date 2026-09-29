@@ -508,22 +508,38 @@ canonical-repo URL in decision 26 are already fixed.
     `vishnu-drx.github.io/LikedZero/` URL, confirm 200 and no broken absolute-path asset references) — this
     is a case where "tests pass locally" is not sufficient proof, the real deployed path changed.
 
-## Master decisions 14 (2026-09-29) — dashboard header drift, fix at the root
-User report, verified directly (screenshots of Home/Configure/Dashboard headers compared): the dashboard's
-header is visibly inconsistent with the rest of the site — missing the "Setup guide" nav link, a different
-logo mark, extra/different icons, and a different active-page indicator style. Root cause confirmed in source:
-`docs/dashboard/index.html` hand-rolls its own `<nav class="site-links">` header markup instead of using the
-shared header component (`docs/assets/shell.js`) that `docs/index.html`, `docs/builder/index.html`, the Setup
-guide, and `404.html` all already use — a grep for the shared header pattern found zero hits in
-`docs/dashboard/index.html`, confirming it's a genuine duplicate, not a bug in the shared component.
+## Master decisions 14 (2026-09-29) — the dashboard doesn't share the design system at all; fix at the root
+User report (header inconsistency, then separately: the run-now PAT dialog "looks completely different,
+uglier" than Configure's Save-to-GitHub dialog), both verified directly against source, and the scope turned
+out bigger than the header alone once traced properly:
 
-65. **Fix at the root, not by patching today's specific differences**: make the dashboard use `shell.js`'s
-    shared header renderer, same as every other page, so it can never drift out of sync again. Keep the
-    dashboard-specific additions (Detailed-mode toggle, the info tooltip) as dashboard-specific UI layered on
-    top of the shared header, not a separate copy of the whole thing. Confirm live afterward (screenshot or
-    direct comparison) that Home/Configure/Dashboard headers are now identical except for the dashboard's own
-    additions and the current-page highlight. Full quality gate suite (decision 30): this touches every page's
-    header rendering path.
+**Root cause: `docs/dashboard/index.html` never loads the shared design-system stylesheets.** Every other page
+(`docs/index.html`, `docs/builder/index.html`, the Setup guide) loads `tokens.css` + `components.css` (the
+shared button/dialog/drawer/tooltip component library) + `site.css` (shared header/layout) plus its own
+page-specific CSS. The dashboard loads only `tokens.css` (colours) and its own private `dashboard.css` — it has
+been built as a parallel, separately-styled page since early on, not actually inheriting the U1 component
+library (decision 23) the rest of the site uses. Confirmed two concrete symptoms of this one root cause:
+1. **Header**: `docs/dashboard/index.html` hand-rolls its own `<nav class="site-links">` instead of using the
+   shared header renderer (`docs/assets/shell.js`) — missing the "Setup guide" link, different logo mark,
+   extra/different icons, different active-page style.
+2. **The run-now PAT dialog vs. Configure's Save-to-GitHub PAT dialog**: both correctly reuse the same JS logic
+   (`docs/assets/github-pat.js`), but the *markup pattern* differs — Configure's is a centered modal
+   (`class="dialog"`, defined in `components.css`), the dashboard's is a slide-in side drawer (`class="drawer"`,
+   dashboard's own convention) — a genuinely different UI pattern, not just missing colours, on top of not
+   having `components.css`'s styling available at all.
+
+65. **Fix at the root, not by patching each symptom**: make `docs/dashboard/index.html` load `components.css`
+    and `site.css` like every other page, and use `shell.js`'s shared header renderer instead of its own copy.
+    Decide and document one consistent choice for the PAT-connect UI's pattern (modal vs. drawer) and apply it
+    to both entry points — recommend the modal (`class="dialog"`), since that's what `components.css` actually
+    defines and Configure already uses; converting the dashboard's `run-now-dialog` from a drawer to a dialog is
+    likely simpler than the reverse. Audit the rest of the dashboard's UI (buttons, tooltips, badges, the
+    glossary drawer) for the same "styled by `dashboard.css` instead of `components.css`" pattern while you're
+    in there — the header and the PAT dialog were found by the user poking at two specific features; there may
+    be more not yet noticed. Keep dashboard-specific additions (Detailed-mode toggle, info tooltip) as additions
+    on top of shared components, not parallel reimplementations of them. Confirm live afterward (screenshot or
+    direct comparison) that shared components render identically across Home/Configure/Dashboard. Full quality
+    gate suite (decision 30) — this touches every page's styling and header rendering path.
 
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
