@@ -87,13 +87,16 @@ rules:
   # Master decisions 12/decision 51: the real catch-all (Q6), replacing the release_year_after: 1900 hack.
   # `match: {any: true}` unconditionally matches -- chosen over extending `fallback_playlist` to an object
   # because a real rule gets the full explain trace, Rules-view/shadowing treatment and target_position that
-  # `fallback_playlist` structurally can't (see design/reports/phase-catch-all.md for the reasoning). Targets
-  # "SpotiSort Sink" per BUILD_SPEC.md decision 51 (the user's confirmed, purpose-built empty playlist for
-  # this) -- must be the LAST rule so it only ever catches what nothing else, including artist_in_playlist,
-  # already claimed.
-  - name: "Catch-all -> SpotiSort Sink (draft)"
-    enabled: false
+  # `fallback_playlist` structurally can't (see design/reports/phase-catch-all.md for the reasoning). Must be
+  # the LAST rule so it only ever catches what nothing else, including artist_in_playlist, already claimed.
+  # 2026-09-29: retargeted to "The Simulation Archives" per the user, while parameters/precision keep evolving
+  # (was "SpotiSort Sink", still empty and available if the catch-all target changes again later). NOTE:
+  # this makes the "English -> The Simulation Archives" rule above land in the same place either way, and
+  # means language_playlists' "The Simulation Archives": english mapping will accumulate non-English songs
+  # over time -- flagged to the user, not yet addressed.
+  - name: "Catch-all -> The Simulation Archives"
+    enabled: true
     match:
       any: true
-    target_playlist: "SpotiSort Sink"
+    target_playlist: "The Simulation Archives"
     target_position: top
