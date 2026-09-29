@@ -563,6 +563,35 @@ UX cost of connecting twice for two features on the same page session.
     quality gate suite (decision 30). Live-verify: connect via one entry point, confirm the other's button
     skips straight to its own dialog without asking to reconnect.
 
+## Master decisions 16 (2026-09-29) — drop Simple/Detailed mode; remove Backtest and Safety as dashboard tabs
+User instruction: "remove detailed mode in dashboard, just show all tabs regardless and remove backtest and
+safety tabs." This supersedes decision 42 (the Simple/Detailed toggle) and reduces decision 19's eight views to
+six: **Overview, Inbox, Rules, Playlists, Runs, Signals**. Backtest and Safety are removed as views entirely,
+not merged into another tab and not hidden behind a mode — gone.
+
+**Critical distinction, do not get this wrong:** this removes dashboard UI only. It does NOT touch:
+- `src/apply.py`'s journal-before-remove/verify/reconcile/restore mechanism (cross-cutting rule 1) — the
+  actual safety guarantee stays fully intact in the Python code, unchanged. The dashboard's Safety *view* was
+  a visualization of this; removing the view does not remove the mechanism it visualized.
+- `src/backtest.py` — stays as a tool (`python -m src.backtest`), still used for measuring rule precision the
+  way it has been throughout this project. Only its dashboard *view* is removed.
+- `logs/*.json` — the run logs remain complete and correct; reconcile results, journal entries and restore
+  commands are still in there, just no longer surfaced as a dedicated dashboard tab. `--restore` still works
+  exactly as before from the CLI.
+
+67. **Remove the mode toggle entirely**: the Simple/Detailed switch, its persisted localStorage preference, the
+    dismissible first-visit callout pointing at it, and every view's simple-vs-detailed conditional rendering
+    branch. Every view always renders its full content — no reduced/simplified variant.
+68. **Remove the Backtest and Safety tabs**: delete them from the tab/routing list, their view-rendering
+    functions, their fixtures/tests, and any nav/glossary references pointing at them. Grep for both names
+    across `docs/dashboard/` and `tests/e2e/test_dashboard.py` and remove every reference, not just the two
+    entries in the tab list — same "remove at the root, don't leave a dead reference" discipline as decisions
+    9/14.
+69. Full quality gate suite (decision 30) — this is a real reduction in dashboard surface area, so the
+    "8 views" and "Simple mode is the default for a first-time visitor" tests from decisions 19/42 need to be
+    replaced, not just left failing. Live-verify the six remaining tabs render correctly and the removed two
+    are gone from the nav, not just hidden by CSS.
+
 ## Verified write shapes (live-tested 2026-09-21 on `SpotiSort Test`; liked count 773 preserved)
 - Add to playlist: `POST /playlists/{id}/items`, JSON body `{"uris":["spotify:track:..."]}` → **201**
   `{"snapshot_id"}`. Max 100 (101 → 400).
