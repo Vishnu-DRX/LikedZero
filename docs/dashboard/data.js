@@ -32,8 +32,10 @@
   var FILES_MARKER = 'files:'; // sentinel "base" for the files source; never fetched as a URL
   var FIXTURE_NOW = '2026-09-21T07:00:00Z'; // fixtures are frozen in time; the demo must not look stale
   var STALE_MS = 2 * 24 * 3600 * 1000;
+  // decision 65: theme is no longer a per-dashboard key -- it uses the same shared 'likedzero-theme' key
+  // (assets/ui.js's THEME_KEY) as every other page now that the dashboard uses the shared theme toggle.
   var KEY = {
-    source: 'likedzero.dashboard.source', repo: 'likedzero.dashboard.repo', theme: 'likedzero.theme',
+    source: 'likedzero.dashboard.source', repo: 'likedzero.dashboard.repo',
     mode: 'likedzero.dashboard.mode', modeCalloutSeen: 'likedzero.dashboard.modeCalloutSeen',
   };
   var RAW_RE = /^https:\/\/raw\.githubusercontent\.com\/[\w.-]+\/[\w.-]+\/[\w.\/-]+\/$/;

@@ -547,7 +547,9 @@ def test_source_switch_repo_fixtures_files(dash, site):
     expect(page.locator("#repo-url")).to_be_hidden()
     own = site.split("/")[2]
     external = {u.split("/")[2] for u in requests if u.startswith("http")} - {own}
-    assert external <= {"raw.githubusercontent.com"}, external
+    # decision 65: api.github.com is the shared shell's own star-count fetch (decision 26), present on every
+    # page now that the dashboard loads assets/shell.js - not something this source-switch flow itself does.
+    assert external <= {"raw.githubusercontent.com", "api.github.com"}, external
 
 
 def test_repo_source_without_configuration_asks_for_it(dash):
@@ -565,6 +567,10 @@ def test_no_requests_leave_the_site_with_fixtures(dash, site):
     page = dash("overview", setup=setup)
     for v in VIEWS:
         goto_view(page, v)
+    # decision 65: the dashboard now uses the shared site shell (assets/shell.js), which fetches the GitHub
+    # star count at runtime and fails silently if it errors (decision 26) - a known, intentional external
+    # request made by every page now, not a dashboard bug (same filter as test_builder.py/test_site.py).
+    seen = [u for u in seen if not u.startswith("https://api.github.com/")]
     bad = [u for u in seen if not (u.startswith(site) or u.startswith("data:") or u.startswith("blob:"))]
     assert not bad, bad
 
@@ -793,7 +799,7 @@ def test_first_visit_callout_switch_button_opts_into_detailed(make_page, site):
 def test_simple_kpi_cards_have_tooltips(dash):
     page = dash("overview", mode="simple")
     for card_name in ("pending", "moves", "safety"):
-        expect(page.locator(f'[data-card="{card_name}"] .help-btn')).to_be_visible()
+        expect(page.locator(f'[data-card="{card_name}"] .help')).to_be_visible()
 
 
 @pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
@@ -868,10 +874,23 @@ def test_theme_tokens_follow_color_scheme(make_page, site):
         page.goto(f"{site}dashboard/?source=fixtures#/overview")
         page.wait_for_selector('#view-root[data-state="ready"]')
         assert page.evaluate("getComputedStyle(document.body).backgroundColor") == bg
-    page.get_by_role("button", name=re.compile("Colour theme")).click()  # auto -> light
-    assert page.evaluate("document.documentElement.dataset.theme") == "light"
-    page.get_by_role("button", name=re.compile("Colour theme")).click()  # -> dark
+    # decision 65: the dashboard now uses the shared header's own [data-theme-toggle] button (assets/shell.js +
+    # assets/ui.js), the same two-state dark/light toggle every other page uses, instead of this dashboard's
+    # own separate three-state auto/light/dark cycle. `page` is left on color_scheme="light" from the loop
+    # above, so with no explicit data-theme yet, the current theme (system) is "light" - one click toggles to
+    # the opposite, "dark".
+    toggle = page.locator("[data-theme-toggle]")
+    toggle.click()  # light (system) -> dark
+    assert page.evaluate("document.documentElement.dataset.theme") == "dark"
     assert page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(18, 18, 18)"
+    assert toggle.locator(".icon-moon").evaluate("e => getComputedStyle(e).display") != "none"
+    toggle.click()  # -> light
+    assert page.evaluate("document.documentElement.dataset.theme") == "light"
+    assert page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(246, 246, 246)"
+    # the coordinator-reported bug this phase fixed (decision 65): the sun icon used to stay
+    # `display:none` forever once light theme was active (a stray `hidden` attribute in shell.js beat the
+    # CSS toggle), leaving the button showing no icon at all in light mode.
+    assert toggle.locator(".icon-sun").evaluate("e => getComputedStyle(e).display") != "none"
 
 
 def test_dashboard_css_uses_only_design_tokens():

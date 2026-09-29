@@ -39,7 +39,7 @@
       '<div class="field"><label for="run-now-token">Fine-grained personal access token</label>' +
       '<input class="input" id="run-now-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" /></div>' +
       '<p class="small muted" id="run-now-connect-status" role="status"></p>' +
-      '<button type="button" class="btn primary" id="run-now-connect-btn">Save &amp; verify</button>';
+      '<button type="button" class="btn btn-primary" id="run-now-connect-btn">Save &amp; verify</button>';
     document.getElementById('run-now-connect-btn').addEventListener('click', function () {
       var input = document.getElementById('run-now-token');
       var status = document.getElementById('run-now-connect-status');
@@ -58,14 +58,14 @@
   function renderRun(rn, token) {
     body.innerHTML =
       '<p class="small muted">Connected to <code>' + esc(rn.owner + '/' + rn.repo) + '</code>. ' +
-      '<button type="button" class="btn secondary small" id="run-now-disconnect">Forget token</button></p>' +
-      '<div class="field"><label><input type="checkbox" id="run-now-dry" checked /> Dry run (no writes)</label></div>' +
+      '<button type="button" class="btn btn-secondary btn-sm" id="run-now-disconnect">Forget token</button></p>' +
+      '<div class="field"><label class="check-row"><input type="checkbox" class="check" id="run-now-dry" checked /> Dry run (no writes)</label></div>' +
       '<div class="field"><label for="run-now-newest">Only touch the N newest liked songs (required for a live run)</label>' +
       '<input class="input" id="run-now-newest" type="number" min="1" step="1" /></div>' +
       '<div class="field"><label for="run-now-max">Abort if the plan has more moves than</label>' +
       '<input class="input" id="run-now-max" type="number" min="1" step="1" value="50" /></div>' +
       '<p class="small muted" id="run-now-status" role="status"></p>' +
-      '<button type="button" class="btn primary" id="run-now-dispatch">Dispatch the Sync workflow</button>';
+      '<button type="button" class="btn btn-primary" id="run-now-dispatch">Dispatch the Sync workflow</button>';
 
     document.getElementById('run-now-disconnect').addEventListener('click', function () {
       window.GithubPAT.clear(rn.owner, rn.repo, SCOPES);

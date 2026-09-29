@@ -2,32 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script>try{var t=localStorage.getItem('likedzero-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="LikedZero dashboard: see what your sorter will do, what it did, and whether it is safe. Read-only." />
     <meta name="theme-color" content="#121212" />
     <title>LikedZero dashboard</title>
     <link rel="manifest" href="../manifest.webmanifest" />
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
     <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="../icons/icon-192.png" />
     <link rel="stylesheet" href="../assets/tokens.css" />
+    <link rel="stylesheet" href="../assets/components.css" />
+    <link rel="stylesheet" href="../assets/site.css" />
     <link rel="stylesheet" href="dashboard.css" />
   </head>
   <body>
-    <a class="skip" href="#view-root">Skip to content</a>
-    <div class="site-head">
-      <div class="wrap head-row">
-        <a class="brand" href="../"><span class="brand-mark" aria-hidden="true"></span>LikedZero</a>
-        <nav class="site-links" aria-label="Site">
-          <a href="../">Home</a>
-          <a href="../builder/">Configure</a>
-          <a href="./" aria-current="page">Dashboard</a>
-          <a href="https://github.com/Vishnu-DRX/LikedZero">GitHub</a>
-          <button type="button" class="icon-btn" id="glossary-btn" data-open="glossary-drawer" aria-label="Open glossary of terms" title="Glossary">&#9432;</button>
-          <button type="button" class="icon-btn" id="theme-btn" aria-label="Colour theme: auto. Activate to change." title="Colour theme">&#9680;</button>
-        </nav>
-      </div>
+    <div id="site-shell">
+      <noscript>
+        <p><a href="../index.html">LikedZero</a> ·
+           <a href="../builder/">Configure</a> ·
+           <a href="./">Dashboard</a> ·
+           <a href="../setup/">Setup guide</a> ·
+           <a href="https://github.com/Vishnu-DRX/LikedZero">GitHub</a></p>
+      </noscript>
     </div>
 
-    <div class="wrap">
+    <main id="main" class="wrap">
       <div class="page-title">
         <h1>Dashboard</h1>
         <p>Read-only. Nothing here can change your Spotify library.</p>
@@ -39,13 +39,14 @@
           <span class="switch-ui" aria-hidden="true"></span>
           <span class="switch-label" id="mode-toggle-label">Detailed mode</span>
         </label>
+        <button type="button" class="btn btn-secondary btn-sm" id="glossary-btn" data-open="glossary-drawer">Glossary</button>
       </div>
-      <div class="banner banner-info" id="mode-callout" role="status" hidden>
+      <div class="banner" id="mode-callout" role="status" hidden>
         <span class="ico" aria-hidden="true">&#9432;</span>
         <div class="mode-callout-body">
-          <p>Prefer more detail? <button type="button" class="btn secondary small" id="mode-callout-switch">Switch to Detailed</button></p>
+          <p>Prefer more detail? <button type="button" class="btn btn-secondary btn-sm" id="mode-callout-switch">Switch to Detailed</button></p>
         </div>
-        <button type="button" class="icon-btn" id="mode-callout-dismiss" aria-label="Dismiss this tip">&#10005;</button>
+        <button type="button" class="btn btn-icon" id="mode-callout-dismiss" aria-label="Dismiss this tip">&#10005;</button>
       </div>
 
       <p class="source-current" id="source-current" data-testid="source-current" role="status"></p>
@@ -53,7 +54,7 @@
       <form class="source-bar" id="source-bar" aria-label="Data source" onsubmit="return false">
         <div class="field">
           <label for="source-select">Data source</label>
-          <select id="source-select">
+          <select id="source-select" class="select">
             <option value="repo">Repo (your fork on GitHub)</option>
             <option value="fixtures">Demo data</option>
             <option value="files">Open local files</option>
@@ -61,10 +62,10 @@
         </div>
         <div class="field grow" id="repo-field" hidden>
           <label for="repo-url">Raw GitHub folder URL</label>
-          <input id="repo-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="repo-hint" />
+          <input id="repo-url" class="input" type="text" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="repo-hint" />
         </div>
-        <button type="button" class="btn secondary small" id="repo-save" hidden>Save URL</button>
-        <button type="button" class="btn secondary small" id="reload-btn">Reload data</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="repo-save" hidden>Save URL</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="reload-btn">Reload data</button>
         <p class="source-note" id="repo-hint" role="status"></p>
         <div class="field grow" id="files-field" hidden>
           <label id="files-drop-label" for="files-input">
@@ -72,7 +73,7 @@
             This is the only source that ever shows real song titles from a public fork.
           </label>
           <div id="files-drop" class="files-drop" tabindex="0" role="button" aria-labelledby="files-drop-label">
-            <input id="files-input" type="file" accept="application/json,.json" multiple />
+            <input id="files-input" class="input" type="file" accept="application/json,.json" multiple />
           </div>
           <p class="source-note" id="files-status" role="status" data-testid="files-status"></p>
         </div>
@@ -95,7 +96,7 @@
         </ul>
       </nav>
 
-      <main id="view-root" tabindex="-1" aria-busy="true">
+      <div id="view-root" tabindex="-1" aria-busy="true">
         <p class="sr-only" role="status">Loading data…</p>
         <!-- decision 42: Simple is the default, and its real Overview has 4 KPI cards (not 7), so this
              zero-JS first-paint skeleton is sized for the common case to avoid a CLS jump for most visitors. -->
@@ -109,40 +110,35 @@
           </div>
           <span class="skeleton-line"></span><span class="skeleton-line short"></span>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
 
-    <div id="drawer-root"></div>
+    <div id="drawer-root" class="overlay overlay-side" hidden></div>
 
     <div class="overlay" id="run-now-dialog" hidden>
-      <div class="scrim" data-close></div>
-      <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="run-now-title">
-        <div class="drawer-head">
+      <div class="dialog" role="dialog" aria-labelledby="run-now-title">
+        <div class="dialog-head">
           <h2 id="run-now-title">Run now</h2>
-          <button type="button" class="icon-btn" data-close aria-label="Close">&#10005;</button>
+          <button type="button" class="btn btn-icon" data-close aria-label="Close">&#10005;</button>
         </div>
-        <div class="drawer-body" id="run-now-body">
+        <div class="dialog-body" id="run-now-body">
           <p class="small muted">Loading…</p>
         </div>
       </div>
     </div>
 
-    <div class="overlay" id="glossary-drawer" hidden>
-      <div class="scrim" data-close></div>
-      <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="glossary-title">
-        <div class="drawer-head">
+    <div class="overlay overlay-side" id="glossary-drawer" hidden>
+      <aside class="drawer" role="dialog" aria-labelledby="glossary-title">
+        <div class="dialog-head">
           <h2 id="glossary-title">Glossary</h2>
-          <button type="button" class="icon-btn" data-close aria-label="Close glossary">&#10005;</button>
+          <button type="button" class="btn btn-icon" data-close aria-label="Close glossary">&#10005;</button>
         </div>
-        <div class="drawer-body" id="glossary-body"></div>
+        <div class="dialog-body" id="glossary-body"></div>
       </aside>
     </div>
 
-    <footer class="site-foot">
-      <div class="wrap"><p>LikedZero is an independent open-source project, not affiliated with or endorsed by Spotify.</p></div>
-    </footer>
-
     <script src="../assets/ui.js"></script>
+    <script src="../assets/shell.js" data-active="dashboard"></script>
     <script src="../assets/github-pat.js"></script>
     <script src="data.js"></script>
     <script src="views.js"></script>

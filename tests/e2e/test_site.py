@@ -148,9 +148,19 @@ def test_keyboard_skip_link_and_theme_toggle_persist(site_page, site):
     page.keyboard.press("Enter")
     after = page.evaluate("document.documentElement.getAttribute('data-theme')")
     assert after != before
+    # regression check (found during the dashboard design-system audit, decision 65): the icon-sun SVG used to
+    # carry a static `hidden` attribute that components.css's `[hidden] { display: none !important; }` reset
+    # then permanently won over the data-theme-now CSS toggle, so in light theme NEITHER icon ever rendered
+    # (an apparently blank/invisible toggle button) - assert whichever icon matches the now-active theme is
+    # actually visible, not just that the `data-theme` attribute flipped.
+    visible_icon = "icon-sun" if after == "light" else "icon-moon"
+    hidden_icon = "icon-moon" if after == "light" else "icon-sun"
+    assert toggle.locator(f".{visible_icon}").evaluate("e => getComputedStyle(e).display") != "none"
+    assert toggle.locator(f".{hidden_icon}").evaluate("e => getComputedStyle(e).display") == "none"
     page.reload()
     page.wait_for_function("window.SpotiUI")
     assert page.evaluate("document.documentElement.getAttribute('data-theme')") == after
+    assert toggle.locator(f".{visible_icon}").evaluate("e => getComputedStyle(e).display") != "none"
 
 
 def test_mobile_menu_keyboard_and_escape(site_page, site):

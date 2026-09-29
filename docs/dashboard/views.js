@@ -39,8 +39,14 @@
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
 
   var ICON = { ok: '✓', warn: '▲', bad: '✕', info: '●', neutral: '–' };
+  // Maps this file's own internal badge/banner "kind" vocabulary onto the shared component library's actual
+  // modifier classes (assets/components.css: badge-success/-warning/-danger/-info, banner-success/-warning/
+  // -danger; plain .banner/.badge with no modifier already render as neutral/info, their defaults) -- so every
+  // status colour on the dashboard comes from the one shared stylesheet instead of dashboard.css's own copies.
+  var BADGE_CLASS = { ok: 'success', warn: 'warning', bad: 'danger', info: 'info', neutral: '' };
+  function badgeClass(kind) { return 'badge' + (BADGE_CLASS[kind] ? ' badge-' + BADGE_CLASS[kind] : ''); }
   function badge(kind, text, extra) {
-    return '<span class="badge badge-' + kind + '"' + (extra || '') + '><span aria-hidden="true">' + ICON[kind] + '</span> ' + esc(text) + '</span>';
+    return '<span class="' + badgeClass(kind) + '"' + (extra || '') + '><span aria-hidden="true">' + ICON[kind] + '</span> ' + esc(text) + '</span>';
   }
   var DECISIONS = {
     will_move: ['ok', 'Will move'], too_young: ['info', 'Too young'], no_match: ['neutral', 'No match'],
@@ -84,7 +90,7 @@
   function errorState(key, message) {
     return '<section class="errorbox" role="alert" data-error="' + key + '"><h3>Could not load ' + esc(D.LABELS[key].toLowerCase()) + '</h3>' +
       '<p>' + esc(message || 'Unknown error') + '</p>' +
-      '<button type="button" class="btn secondary small" data-action="reload">Try again</button></section>';
+      '<button type="button" class="btn btn-secondary btn-sm" data-action="reload">Try again</button></section>';
   }
   /** Problem cards for every listed file that is missing or broken; '' when all are fine. */
   function problems(ctx, keys) {
@@ -97,8 +103,10 @@
     return out;
   }
 
+  var BANNER_CLASS = { ok: 'success', warn: 'warning', bad: 'danger', info: '' };
   function banner(kind, icon, html, attrs) {
-    return '<div class="banner banner-' + kind + '" ' + (attrs || '') + '><span class="ico" aria-hidden="true">' + icon + '</span><div>' + html + '</div></div>';
+    var cls = 'banner' + (BANNER_CLASS[kind] ? ' banner-' + BANNER_CLASS[kind] : '');
+    return '<div class="' + cls + '" ' + (attrs || '') + '><span class="ico" aria-hidden="true">' + icon + '</span><div>' + html + '</div></div>';
   }
 
   // ------------------------------------------------------------------ plain-language "what does this mean?" per view
@@ -113,7 +121,7 @@
     backtest: 'A dry run of your rules against playlists you already sorted by hand, to see how often they would have gotten it right.'
   };
   function helpBtn(text) {
-    return '<button type="button" class="help-btn" data-tip="' + esc(text) + '" aria-label="What does this mean?">?</button>';
+    return '<button type="button" class="help" data-tip="' + esc(text) + '" aria-label="What does this mean?">?</button>';
   }
 
   function viewHead(ctx, view, key) {
@@ -297,7 +305,7 @@
     }
     if (lang.withheld) {
       var w = lang.withheld;
-      out += '<div class="banner banner-warn" data-testid="withheld"><span class="ico" aria-hidden="true">▲</span><div><p><strong>Withheld from rules:</strong> ' + esc(w.language) + ' from the ' + esc(w.source) + ' signal. ' +
+      out += '<div class="banner banner-warning" data-testid="withheld"><span class="ico" aria-hidden="true">▲</span><div><p><strong>Withheld from rules:</strong> ' + esc(w.language) + ' from the ' + esc(w.source) + ' signal. ' +
         (w.reason === 'unmeasured' ? 'This signal has not been measured for this language yet.' : 'Its measured precision is ' + esc(pct(w.precision)) + ', below the 90% bar.') +
         ' Samples: ' + esc(w.samples) + '. Run <code>python -m src.backtest</code> to measure it.</p></div></div>';
     }
@@ -355,7 +363,7 @@
         html += '<p class="small" data-testid="inbox-since">' + badge('neutral', 'No inbox start date') + ' Every liked song is in scope for manual runs. Set <code>inbox_since</code> in Configure before ever enabling a schedule.</p>';
       }
       if (ctx.source === 'repo') {
-        html += '<p><button type="button" class="btn primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
+        html += '<p><button type="button" class="btn btn-primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
           '<span class="small muted">Dispatches the Sync workflow on GitHub with your own token; nothing runs from this page itself.</span></p>';
       }
 
@@ -415,7 +423,7 @@
         if (p.what_if) next += ' (What-if: disabled rules counted as enabled.)';
         html += '<p class="callout" data-testid="next">' + '<strong>What will happen next:</strong> ' + esc(next) + '</p>';
         html += '<h3 class="small" style="margin:0 0 8px">Inbox by decision</h3><ul class="chips" data-testid="decision-counts">' +
-          DECISION_ORDER.map(function (d) { return '<li>' + '<a class="badge badge-' + DECISIONS[d][0] + '" href="#/inbox?decision=' + d + '" style="text-decoration:none">' + esc(DECISIONS[d][1]) + ': ' + c[d] + '</a></li>'; }).join('') + '</ul>';
+          DECISION_ORDER.map(function (d) { return '<li>' + '<a class="' + badgeClass(DECISIONS[d][0]) + '" href="#/inbox?decision=' + d + '" style="text-decoration:none">' + esc(DECISIONS[d][1]) + ': ' + c[d] + '</a></li>'; }).join('') + '</ul>';
       }
       return html;
     }
@@ -435,7 +443,7 @@
       if (q.has('q')) st.q = q.get('q');
       if (ctx.mode === 'simple') {
         return '<div class="toolbar" role="search">' +
-          '<div class="field grow"><label for="inbox-q">Search title or artist</label><input id="inbox-q" type="search" value="' + esc(st.q) + '" autocomplete="off" /></div></div>' +
+          '<div class="field grow"><label for="inbox-q">Search title or artist</label><input id="inbox-q" class="input" type="search" value="' + esc(st.q) + '" autocomplete="off" /></div></div>' +
           '<div id="inbox-results"></div>';
       }
       var rules = p.rules.map(function (r) { return r.name; });
@@ -444,10 +452,10 @@
       }).join('');
       var ropts = '<option value="">All rules</option>' + rules.map(function (r) { return '<option value="' + esc(r) + '"' + (st.rule === r ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('');
       return '<div class="toolbar" role="search">' +
-        '<div class="field grow"><label for="inbox-q">Search title, artist, rule, playlist</label><input id="inbox-q" type="search" value="' + esc(st.q) + '" autocomplete="off" /></div>' +
-        '<div class="field"><label for="inbox-decision">Decision</label><select id="inbox-decision">' + opts + '</select></div>' +
-        '<div class="field"><label for="inbox-rule">Rule</label><select id="inbox-rule">' + ropts + '</select></div>' +
-        '<button type="button" class="btn secondary small" id="inbox-csv" data-testid="inbox-csv">Export CSV</button></div>' +
+        '<div class="field grow"><label for="inbox-q">Search title, artist, rule, playlist</label><input id="inbox-q" class="input" type="search" value="' + esc(st.q) + '" autocomplete="off" /></div>' +
+        '<div class="field"><label for="inbox-decision">Decision</label><select id="inbox-decision" class="select">' + opts + '</select></div>' +
+        '<div class="field"><label for="inbox-rule">Rule</label><select id="inbox-rule" class="select">' + ropts + '</select></div>' +
+        '<button type="button" class="btn btn-secondary btn-sm" id="inbox-csv" data-testid="inbox-csv">Export CSV</button></div>' +
         '<div id="inbox-results"></div>';
     },
     bind: function (root, ctx) {
@@ -471,17 +479,17 @@
           if (!rows.length) {
             h += '<div class="empty"><h3>No songs match</h3><p>Try clearing the search.</p></div>';
           } else {
-            h += '<div class="table-wrap cards"><table class="stack" data-testid="inbox-table-simple"><thead><tr>' +
+            h += '<div class="table-wrap cards"><table class="table stack" data-testid="inbox-table-simple"><thead><tr>' +
               '<th scope="col">Song</th><th scope="col">Status</th><th scope="col">Why</th></tr></thead><tbody>';
             shown.forEach(function (r) {
               var s = r.s;
               h += '<tr data-decision="' + esc(s.decision) + '"><td class="cell-main">' + titleOrHidden(s.title, hiddenTitles) +
                 '<div class="small muted">' + (hiddenTitles ? '' : esc((s.artists || []).join(', '))) + '</div></td>' +
                 '<td data-label="Status">' + simpleStatusBadge(s.decision) + '</td>' +
-                '<td data-label="Why"><button type="button" class="btn secondary small" data-explain="' + r.i + '" aria-haspopup="dialog">Why?</button></td></tr>';
+                '<td data-label="Why"><button type="button" class="btn btn-secondary btn-sm" data-explain="' + r.i + '" aria-haspopup="dialog">Why?</button></td></tr>';
             });
             h += '</tbody></table></div>';
-            if (rows.length > shown.length) h += '<p><button type="button" class="btn secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
+            if (rows.length > shown.length) h += '<p><button type="button" class="btn btn-secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
           }
           root.querySelector('#inbox-results').innerHTML = h;
         }
@@ -531,7 +539,7 @@
         if (!rows.length) {
           h += '<div class="empty"><h3>No songs match</h3><p>Try clearing the search or filters.</p></div>';
         } else {
-          h += '<div class="table-wrap cards"><table class="stack" data-testid="inbox-table"><thead><tr>';
+          h += '<div class="table-wrap cards"><table class="table stack" data-testid="inbox-table"><thead><tr>';
           COLS.forEach(function (c) {
             var active = st.sort === c[0];
             h += '<th scope="col" class="' + (c[2] || '') + '" aria-sort="' + (active ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '"><button type="button" class="sort-btn" data-sort="' + c[0] + '">' + esc(c[1]) + '<span aria-hidden="true">' + (active ? (st.dir === 'asc' ? '▲' : '▼') : '') + '</span></button></th>';
@@ -549,7 +557,7 @@
               '<td data-label="Language">' + (l.value ? esc(l.value) + ' ' + tierBadge(l.source) : '<span class="muted">unknown</span>') + (l.withheld ? ' ' + badge('warn', 'Withheld') : '') + '</td></tr>';
           });
           h += '</tbody></table></div>';
-          if (rows.length > shown.length) h += '<p><button type="button" class="btn secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
+          if (rows.length > shown.length) h += '<p><button type="button" class="btn btn-secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
         }
         root.querySelector('#inbox-results').innerHTML = h;
         lastRows = rows;
@@ -628,7 +636,7 @@
         });
       });
       html += '<p class="small muted">Rules run top to bottom and the first match wins. <strong>Dead</strong> means no song in the inbox matches; <strong>shadowed</strong> means songs match but an earlier rule always takes them.</p>';
-      html += '<div class="table-wrap cards"><table class="stack" data-testid="rules-table"><thead><tr><th scope="col">#</th><th scope="col">Rule</th><th scope="col">Status</th><th scope="col">Conditions</th><th scope="col">Target</th>' +
+      html += '<div class="table-wrap cards"><table class="table stack" data-testid="rules-table"><thead><tr><th scope="col">#</th><th scope="col">Rule</th><th scope="col">Status</th><th scope="col">Conditions</th><th scope="col">Target</th>' +
         '<th scope="col" class="num">Would match</th><th scope="col" class="num">Wins now</th><th scope="col" class="num">Last run</th><th scope="col" class="num">30 days</th><th scope="col">Last matched</th></tr></thead><tbody>';
       p.rules.forEach(function (r, i) {
         var lastWins = last ? ((last.rule_counts || {})[r.name] || 0) : null;
@@ -670,8 +678,8 @@
       var p = plan(ctx);
       var okCount = p.playlists.filter(function (x) { return x.status === 'resolved'; }).length;
       var html = '<p class="small muted">' + esc(okCount + ' of ' + p.playlists.length) + ' target playlists are ready. Every move takes a song out of Liked Songs and into one of these; "Planned in" is how many the next run would add.</p>';
-      html += '<div class="table-wrap cards"><table class="stack" data-testid="playlists-table"><thead><tr><th scope="col">Playlist</th><th scope="col">Status</th><th scope="col" class="num">Size</th><th scope="col" class="num">Planned in</th>' +
-        '<th scope="col" class="num">Moves out<button type="button" class="help-btn" data-tip="Always 0 for now: playlists are never a source for the sorter. Songs only ever move INTO a playlist, out of Liked Songs — a playlist itself is never sorted from." aria-label="What does moves out mean?">?</button></th>' +
+      html += '<div class="table-wrap cards"><table class="table stack" data-testid="playlists-table"><thead><tr><th scope="col">Playlist</th><th scope="col">Status</th><th scope="col" class="num">Size</th><th scope="col" class="num">Planned in</th>' +
+        '<th scope="col" class="num">Moves out<button type="button" class="help" data-tip="Always 0 for now: playlists are never a source for the sorter. Songs only ever move INTO a playlist, out of Liked Songs — a playlist itself is never sorted from." aria-label="What does moves out mean?">?</button></th>' +
         '<th scope="col">Rules that send here</th></tr></thead><tbody>';
       p.playlists.forEach(function (x) {
         var cls = x.status === 'resolved' ? '' : (x.status === 'ambiguous' ? 'row-warn' : 'row-bad');
@@ -698,7 +706,7 @@
   }
   function movedTable(moved, hidden) {
     if (!moved || !moved.length) return '<p class="muted small">No songs moved or planned to move in this run.</p>';
-    var h = '<div class="table-wrap cards"><table class="stack"><thead><tr><th scope="col">Song</th><th scope="col">Playlist</th><th scope="col">Rule</th><th scope="col">Position</th><th scope="col" class="num">Age / threshold</th><th scope="col">Already there</th></tr></thead><tbody>';
+    var h = '<div class="table-wrap cards"><table class="table stack"><thead><tr><th scope="col">Song</th><th scope="col">Playlist</th><th scope="col">Rule</th><th scope="col">Position</th><th scope="col" class="num">Age / threshold</th><th scope="col">Already there</th></tr></thead><tbody>';
     moved.forEach(function (m) {
       h += '<tr><td class="cell-main"><strong>' + titleOrHidden(m.track, hidden) + '</strong><div class="small muted">' + (hidden ? '' : esc(m.artist)) + '</div></td><td data-label="Playlist">' + esc(m.playlist) + '</td><td data-label="Rule">' + esc(m.rule) + '</td><td data-label="Position">' + esc(m.target_position) + '</td><td class="num" data-label="Age / threshold">' + esc(num(m.age_days)) + ' / ' + esc(num(m.threshold_days)) + '</td><td data-label="Already there">' + (m.already_in_target ? 'yes' : 'no') + '</td></tr>';
     });
@@ -706,7 +714,7 @@
   }
   function journalTable(j, hidden) {
     if (!j || !j.length) return '<p class="muted small">No journal entries (a dry run removes nothing).</p>';
-    var h = '<div class="table-wrap cards"><table class="stack" data-testid="journal"><thead><tr><th scope="col">Song</th><th scope="col">Originally liked</th><th scope="col">Target playlist id</th><th scope="col">URI</th></tr></thead><tbody>';
+    var h = '<div class="table-wrap cards"><table class="table stack" data-testid="journal"><thead><tr><th scope="col">Song</th><th scope="col">Originally liked</th><th scope="col">Target playlist id</th><th scope="col">URI</th></tr></thead><tbody>';
     j.forEach(function (e) {
       h += '<tr><td class="cell-main"><strong>' + titleOrHidden(e.name, hidden) + '</strong><div class="small muted">' + (hidden ? '' : esc((e.artists || []).join(', '))) + '</div></td><td data-label="Originally liked">' + esc(D.fmtDate(e.original_added_at)) + '</td><td data-label="Target playlist id"><code>' + esc(e.target_playlist_id) + '</code></td><td data-label="URI"><code>' + esc(e.uri) + '</code></td></tr>';
     });
@@ -735,7 +743,7 @@
       h += '<h4>Reconcile</h4><p>' + (l.reconcile.ok ? badge('ok', 'Reconcile OK') : badge('bad', 'Mismatch')) + ' expected ' + esc(l.reconcile.expected_after) + ' liked songs after the run, found ' + esc(l.reconcile.actual_after) + '.</p>';
     }
     if (l.restore_command) {
-      h += '<h4>Restore</h4><div class="copy-row"><code>' + esc(l.restore_command) + '</code><button type="button" class="btn secondary small" data-copy="' + esc(l.restore_command) + '">Copy</button></div>';
+      h += '<h4>Restore</h4><div class="copy-row"><code>' + esc(l.restore_command) + '</code><button type="button" class="btn btn-secondary btn-sm" data-copy="' + esc(l.restore_command) + '">Copy</button></div>';
       if (l.titles_hidden) h += '<p class="small muted">The committed log no longer carries the real journal (its uris are redacted, decision 44). Download this run’s <code>journal</code> artifact from the Actions run page first, then run the command above against wherever you saved it.</p>';
     }
     h += '</div>';
@@ -754,7 +762,7 @@
 
   function runDiff(a, b, la, lb) {
     var h = '<p><a href="#/runs">&larr; All runs</a></p><div class="card" data-testid="run-diff"><h3>Compare runs</h3><p class="small muted">Older run on the left, newer run on the right.</p>';
-    h += '<div class="table-wrap"><table><thead><tr><th scope="col">Measure</th><th scope="col">' + esc(D.fmtDate(a.time)) + ' (' + esc(a.mode) + ')</th><th scope="col">' + esc(D.fmtDate(b.time)) + ' (' + esc(b.mode) + ')</th><th scope="col" class="num">Change</th></tr></thead><tbody>';
+    h += '<div class="table-wrap"><table class="table"><thead><tr><th scope="col">Measure</th><th scope="col">' + esc(D.fmtDate(a.time)) + ' (' + esc(a.mode) + ')</th><th scope="col">' + esc(D.fmtDate(b.time)) + ' (' + esc(b.mode) + ')</th><th scope="col" class="num">Change</th></tr></thead><tbody>';
     METRICS.forEach(function (m) {
       var x = a[m[0]], y = b[m[0]], d = '';
       if (typeof x === 'number' && typeof y === 'number') {
@@ -767,7 +775,7 @@
     var names = {};
     Object.keys(a.rule_counts || {}).concat(Object.keys(b.rule_counts || {})).forEach(function (k) { names[k] = 1; });
     var rk = Object.keys(names);
-    h += '<h4>Rule wins</h4>' + (rk.length ? '<div class="table-wrap"><table><thead><tr><th scope="col">Rule</th><th scope="col" class="num">Older</th><th scope="col" class="num">Newer</th><th scope="col" class="num">Change</th></tr></thead><tbody>' +
+    h += '<h4>Rule wins</h4>' + (rk.length ? '<div class="table-wrap"><table class="table"><thead><tr><th scope="col">Rule</th><th scope="col" class="num">Older</th><th scope="col" class="num">Newer</th><th scope="col" class="num">Change</th></tr></thead><tbody>' +
       rk.map(function (k) { var x = (a.rule_counts || {})[k] || 0, y = (b.rule_counts || {})[k] || 0; return '<tr><th scope="row">' + esc(k) + '</th><td class="num">' + x + '</td><td class="num">' + y + '</td><td class="num">' + (y - x > 0 ? '+' : '') + (y - x) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted small">Neither run matched any rule.</p>');
     if (la && lb && la.status === 'ok' && lb.status === 'ok') {
       var setA = {}, setB = {};
@@ -806,11 +814,11 @@
       if (!runs.length) return '<div class="empty"><h3>No runs recorded</h3><p>Run <code>python -m src.sync</code> to record the first one.</p></div>';
       var st = ctx.state.runs = ctx.state.runs || { sel: [] };
       st.sel = st.sel.filter(function (id) { return findRun(runs, id); });
-      var h = '<div class="toolbar"><button type="button" class="btn secondary small" id="compare-btn" disabled>Compare selected runs</button><span class="small muted" id="compare-hint" role="status">Tick two runs to compare them.</span></div>';
-      h += '<div class="table-wrap cards"><table class="stack" data-testid="runs-table"><thead><tr><th scope="col"><span class="sr-only">Compare</span></th><th scope="col">Time</th><th scope="col">Mode</th><th scope="col">Verdict</th><th scope="col" class="num">Planned</th><th scope="col" class="num">Moved</th><th scope="col" class="num">Too young</th><th scope="col" class="num">Blocked</th><th scope="col" class="num">Errors</th><th scope="col" class="num">Warnings</th><th scope="col" class="num">Liked</th><th scope="col" class="num">Duration</th><th scope="col"><span class="sr-only">Details</span></th></tr></thead><tbody>';
+      var h = '<div class="toolbar"><button type="button" class="btn btn-secondary btn-sm" id="compare-btn" disabled>Compare selected runs</button><span class="small muted" id="compare-hint" role="status">Tick two runs to compare them.</span></div>';
+      h += '<div class="table-wrap cards"><table class="table stack" data-testid="runs-table"><thead><tr><th scope="col"><span class="sr-only">Compare</span></th><th scope="col">Time</th><th scope="col">Mode</th><th scope="col">Verdict</th><th scope="col" class="num">Planned</th><th scope="col" class="num">Moved</th><th scope="col" class="num">Too young</th><th scope="col" class="num">Blocked</th><th scope="col" class="num">Errors</th><th scope="col" class="num">Warnings</th><th scope="col" class="num">Liked</th><th scope="col" class="num">Duration</th><th scope="col"><span class="sr-only">Details</span></th></tr></thead><tbody>';
       runs.forEach(function (r) {
         var cls = r.verdict === 'error' || r.verdict === 'mismatch' ? 'row-bad' : (r.warnings ? 'row-warn' : '');
-        h += '<tr class="' + cls + '" data-run="' + esc(r.run_id) + '" data-verdict="' + esc(r.verdict) + '"><td class="check-cell" data-label="Compare"><input type="checkbox" data-pick="' + esc(r.run_id) + '" aria-label="Select run ' + esc(D.fmtDate(r.time)) + ' for comparison"' + (st.sel.indexOf(r.run_id) >= 0 ? ' checked' : '') + ' /></td>' +
+        h += '<tr class="' + cls + '" data-run="' + esc(r.run_id) + '" data-verdict="' + esc(r.verdict) + '"><td class="check-cell" data-label="Compare"><input type="checkbox" class="check" data-pick="' + esc(r.run_id) + '" aria-label="Select run ' + esc(D.fmtDate(r.time)) + ' for comparison"' + (st.sel.indexOf(r.run_id) >= 0 ? ' checked' : '') + ' /></td>' +
           '<td class="cell-main"><strong>' + esc(D.fmtTime(r.time)) + '</strong>' + (r.what_if ? ' ' + badge('warn', 'What-if') : '') + '</td>' +
           '<td data-label="Mode">' + esc(r.mode === 'apply' ? 'Apply' : 'Dry run') + '</td><td data-label="Verdict">' + verdictBadge(r.verdict) + '</td>' +
           '<td class="num" data-label="Planned">' + esc(r.planned_moves) + '</td><td class="num" data-label="Moved">' + esc(r.moved) + '</td><td class="num" data-label="Too young">' + esc(r.too_young) + '</td><td class="num" data-label="Blocked">' + esc(r.blocked) + '</td>' +
@@ -882,7 +890,7 @@
       var h = '';
       if (mism.length) h += banner('bad', '✕', '<p><strong>' + esc(plural(mism.length, 'run')) + ' failed the liked-count check.</strong> After the run, Liked Songs did not hold the number of songs it should. Open the run below and use its restore command if a song is missing.</p>', 'role="alert" data-banner="mismatch"');
       h += '<div class="card"><h3>Liked-song count over time</h3>' + timeline(runs) +
-        '<details><summary>Show as a table</summary><div class="table-wrap"><table><thead><tr><th scope="col">Run</th><th scope="col">Mode</th><th scope="col" class="num">Before</th><th scope="col" class="num">After</th><th scope="col">Verdict</th></tr></thead><tbody>' +
+        '<details><summary>Show as a table</summary><div class="table-wrap"><table class="table"><thead><tr><th scope="col">Run</th><th scope="col">Mode</th><th scope="col" class="num">Before</th><th scope="col" class="num">After</th><th scope="col">Verdict</th></tr></thead><tbody>' +
         runs.map(function (r) { return '<tr><td>' + esc(D.fmtTime(r.time)) + '</td><td>' + esc(r.mode) + '</td><td class="num">' + esc(r.liked_before) + '</td><td class="num">' + esc(r.liked_after) + '</td><td>' + verdictBadge(r.verdict) + '</td></tr>'; }).join('') + '</tbody></table></div></details></div>';
 
       var logsP = Promise.all(applyRuns.map(function (r) { return D.fetchLog(ctx.base, r.log); }));
@@ -896,7 +904,7 @@
           if (!d) { h += '<p class="small">The run log <code>' + esc(r.log) + '</code> could not be loaded' + (l && l.message ? ': ' + esc(l.message) : ' (not found)') + '.</p></section>'; return; }
           if (d.reconcile) h += '<p><strong>Reconcile:</strong> ' + (d.reconcile.ok ? badge('ok', 'OK') : badge('bad', 'Mismatch')) + ' expected ' + esc(d.reconcile.expected_after) + ', found ' + esc(d.reconcile.actual_after) + '.</p>';
           if (d.restore_command) {
-            h += '<p class="small" style="margin-bottom:4px">Restore command</p><div class="copy-row"><code>' + esc(d.restore_command) + '</code><button type="button" class="btn secondary small" data-copy="' + esc(d.restore_command) + '">Copy</button></div>';
+            h += '<p class="small" style="margin-bottom:4px">Restore command</p><div class="copy-row"><code>' + esc(d.restore_command) + '</code><button type="button" class="btn btn-secondary btn-sm" data-copy="' + esc(d.restore_command) + '">Copy</button></div>';
             if (d.titles_hidden) h += '<p class="small muted">Download this run’s <code>journal</code> artifact from the Actions run page first (the committed log’s uris are redacted, decision 44).</p>';
           }
           (d.warnings || []).forEach(function (w) { h += '<p class="small">' + badge('warn', 'Warning') + ' ' + esc(w) + '</p>'; });
@@ -947,7 +955,7 @@
         SIGNALS.forEach(function (s) { Object.keys((prec.by_signal || {})[s] || {}).forEach(function (l) { langs[l] = 1; }); });
         var minP = prec.min_precision, minN = prec.min_samples;
         h += '<h3>Precision per signal and language</h3><p class="small muted">A signal may decide a move only when it is right at least ' + esc(pct(minP, 0)) + ' of the time over at least ' + esc(minN) + ' predictions, measured against your own playlists. <strong>Qualified</strong> signals can drive rules; <strong>not qualified</strong> ones are still shown but withheld from rules.</p>';
-        h += '<div class="table-wrap cards"><table class="stack" data-testid="precision-table"><thead><tr><th scope="col">Language</th>' + SIGNALS.map(function (s) { return '<th scope="col">' + esc(s.replace('_', ' ')) + '</th>'; }).join('') + '</tr></thead><tbody>';
+        h += '<div class="table-wrap cards"><table class="table stack" data-testid="precision-table"><thead><tr><th scope="col">Language</th>' + SIGNALS.map(function (s) { return '<th scope="col">' + esc(s.replace('_', ' ')) + '</th>'; }).join('') + '</tr></thead><tbody>';
         Object.keys(langs).sort().forEach(function (lang) {
           h += '<tr><td class="cell-main"><strong>' + esc(lang) + '</strong></td>';
           SIGNALS.forEach(function (s) {
@@ -987,19 +995,19 @@
         card('Recall', esc(pct(t.recall)), 'Of all songs, the share routed correctly') +
         card('Routed', esc(t.routed), esc(t.correct) + ' correct, ' + esc(t.misrouted) + ' misrouted') +
         card('Unrouted', esc(t.unrouted), 'Matched no rule (of ' + esc(t.tracks) + ' songs)') + '</div>';
-      h += '<div class="card"><h3>Per playlist</h3><div class="table-wrap cards" style="border:0;margin:0"><table class="stack" data-testid="backtest-playlists"><thead><tr><th scope="col">Playlist</th><th scope="col" class="num">Songs</th><th scope="col" class="num">Routed here</th><th scope="col" class="num">Correct</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col" class="num">Unrouted</th></tr></thead><tbody>';
+      h += '<div class="card"><h3>Per playlist</h3><div class="table-wrap cards" style="border:0;margin:0"><table class="table stack" data-testid="backtest-playlists"><thead><tr><th scope="col">Playlist</th><th scope="col" class="num">Songs</th><th scope="col" class="num">Routed here</th><th scope="col" class="num">Correct</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col" class="num">Unrouted</th></tr></thead><tbody>';
       d.playlists.forEach(function (p) {
         h += '<tr data-playlist="' + esc(p.id) + '"><td class="cell-main"><strong>' + esc(p.name || p.id) + '</strong></td><td class="num" data-label="Songs">' + esc(p.tracks) + '</td><td class="num" data-label="Routed here">' + esc(p.predicted) + '</td><td class="num" data-label="Correct">' + esc(p.tp) + '</td><td data-label="Precision">' + pctCell(p.precision) + '</td><td data-label="Recall">' + pctCell(p.recall, 'info') + '</td><td class="num" data-label="Unrouted">' + esc(p.unrouted) + '</td></tr>';
       });
       h += '</tbody></table></div></div>';
       var conf = d.confusions.slice().sort(function (a, b) { return b.count - a.count; });
-      h += '<div class="card"><h3>Confusions</h3><p class="small muted">Songs that belong in one playlist but were routed to another.</p>' + (conf.length ? '<div class="table-wrap cards" style="border:0;margin:0"><table class="stack" data-testid="confusions"><thead><tr><th scope="col">Belongs in</th><th scope="col">Routed to</th><th scope="col" class="num">Songs</th></tr></thead><tbody>' +
+      h += '<div class="card"><h3>Confusions</h3><p class="small muted">Songs that belong in one playlist but were routed to another.</p>' + (conf.length ? '<div class="table-wrap cards" style="border:0;margin:0"><table class="table stack" data-testid="confusions"><thead><tr><th scope="col">Belongs in</th><th scope="col">Routed to</th><th scope="col" class="num">Songs</th></tr></thead><tbody>' +
         conf.map(function (c) { return '<tr><td class="cell-main">' + esc(pname[c.true] || c.true) + '</td><td data-label="Routed to">' + esc(pname[c.predicted] || c.predicted) + '</td><td class="num" data-label="Songs">' + esc(c.count) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p>No misroutes.</p>') + '</div>';
-      h += '<div class="card"><h3>Per rule</h3><div class="table-wrap cards" style="border:0;margin:0"><table class="stack"><thead><tr><th scope="col">Rule</th><th scope="col" class="num">Routed</th><th scope="col" class="num">Correct</th><th scope="col">Precision</th></tr></thead><tbody>' +
+      h += '<div class="card"><h3>Per rule</h3><div class="table-wrap cards" style="border:0;margin:0"><table class="table stack"><thead><tr><th scope="col">Rule</th><th scope="col" class="num">Routed</th><th scope="col" class="num">Correct</th><th scope="col">Precision</th></tr></thead><tbody>' +
         d.rules.map(function (r) { return '<tr><td class="cell-main"><strong>' + esc(r.name || r.name_id) + '</strong></td><td class="num" data-label="Routed">' + esc(r.predicted) + '</td><td class="num" data-label="Correct">' + esc(r.correct) + '</td><td data-label="Precision">' + pctCell(r.precision) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
       h += '<div class="card" data-testid="misroutes"><h3>Top misroutes</h3>';
       if (named && d.top_misroutes && d.top_misroutes.length) {
-        h += '<div class="table-wrap cards" style="border:0;margin:0"><table class="stack"><thead><tr><th scope="col">Song</th><th scope="col">Belongs in</th><th scope="col">Routed to</th><th scope="col">By rule</th></tr></thead><tbody>' +
+        h += '<div class="table-wrap cards" style="border:0;margin:0"><table class="table stack"><thead><tr><th scope="col">Song</th><th scope="col">Belongs in</th><th scope="col">Routed to</th><th scope="col">By rule</th></tr></thead><tbody>' +
           d.top_misroutes.map(function (m) { return '<tr><td class="cell-main"><strong>' + esc(m.title) + '</strong><div class="small muted">' + esc((m.artists || []).join(', ')) + '</div></td><td data-label="Belongs in">' + esc((m.true || []).join(', ')) + '</td><td data-label="Routed to">' + esc(m.predicted) + '</td><td data-label="By rule">' + esc(m.rule) + '</td></tr>'; }).join('') + '</tbody></table></div>';
       } else {
         h += '<p>Song names are only shown in Local mode, when <code>logs/backtest-detail.json</code> exists. That file is never published, so playlists appear as P01, P02 and rules as R01, R02 here. Run <code>python -m src.backtest</code> on your computer, then <code>python -m src.dashboard</code>.</p>';

@@ -11,7 +11,6 @@
   var repoUrl = document.getElementById('repo-url');
   var repoSave = document.getElementById('repo-save');
   var repoHint = document.getElementById('repo-hint');
-  var themeBtn = document.getElementById('theme-btn');
   var sourceCurrent = document.getElementById('source-current');
   var filesField = document.getElementById('files-field');
   var filesDrop = document.getElementById('files-drop');
@@ -26,24 +25,13 @@
   var data = null;          // {source, base, files}
   var state = {};           // per-view UI state that survives re-render
   var token = 0;
-  var drawer = { open: false, trigger: null };
+  var drawer = { open: false };
   window.__dash = { ready: false, renders: 0, source: null };
 
-  // ------------------------------------------------------------------ theme
-  function applyTheme(t) {
-    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-    else document.documentElement.removeAttribute('data-theme');
-    var name = t === 'light' || t === 'dark' ? t : 'auto';
-    themeBtn.setAttribute('aria-label', 'Colour theme: ' + name + '. Activate to change.');
-    themeBtn.title = 'Colour theme: ' + name;
-  }
-  var theme = D.store('get', D.KEY.theme) || 'auto';
-  applyTheme(theme);
-  themeBtn.addEventListener('click', function () {
-    theme = theme === 'auto' ? 'light' : (theme === 'light' ? 'dark' : 'auto');
-    D.store('set', D.KEY.theme, theme);
-    applyTheme(theme);
-  });
+  // Theme is now the shared header's own toggle (decision 65: reuse shell.js's [data-theme-toggle] button
+  // and ui.js's theme system, the same as Home/Configure, instead of this dashboard's own separate
+  // three-state auto/light/dark cycle and its own 'likedzero.dashboard.theme'-style key). ui.js applies the
+  // persisted 'likedzero-theme' value before this script even runs (see the inline snippet in <head>).
 
   // ------------------------------------------------------------------ Simple/Detailed mode (decision 42)
   var SIMPLE_HIDDEN_VIEWS = ['signals', 'backtest', 'runs'];
@@ -245,53 +233,30 @@
   }
 
   // ------------------------------------------------------------------ explain drawer
-  function focusables(el) {
-    return Array.prototype.slice.call(el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(function (n) { return !n.disabled && n.offsetParent !== null; });
-  }
-  function setInert(on) {
-    Array.prototype.forEach.call(document.querySelectorAll('.site-head, .wrap, .site-foot, .skip'), function (n) {
-      if (on) n.setAttribute('inert', ''); else n.removeAttribute('inert');
-    });
-  }
+  // decision 65: reuses the shared overlay system (assets/ui.js's SpotiUI.open/close) instead of this file's
+  // own parallel focus-trap/inert/Escape implementation -- the same machinery every dialog and drawer
+  // elsewhere on the site already runs on. The panel itself stays a slide-in side drawer (decision 65
+  // explicitly keeps this dashboard-only panel's own pattern; only the underlying plumbing is shared now).
+  var UI = window.SpotiUI;
   function openDrawer(index, trigger) {
     var p = data && data.files.plan.status === 'ok' ? data.files.plan.data : null;
     var song = p && p.songs[index];
     if (!song) return;
-    drawer.open = true;
-    drawer.trigger = trigger || null;
     var titlesHidden = !!p.titles_hidden;
     var heading = titlesHidden ? 'Title hidden — open local files to see titles' : song.title;
-    drawerRoot.innerHTML = '<div class="scrim" data-close="1"></div><aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">' +
-      '<div class="drawer-head"><h2 id="drawer-title">' + esc(heading) + '<span class="sub">' + (titlesHidden ? '' : esc((song.artists || []).join(', '))) + '</span></h2>' +
-      '<button type="button" class="icon-btn" data-close="1" aria-label="Close explanation">✕</button></div>' +
-      '<div class="drawer-body" data-testid="explain-body">' + VW.explainHtml(song, p) + '</div></aside>';
-    setInert(true);
-    var close = drawerRoot.querySelector('button[data-close]');
-    if (close) close.focus();
+    drawerRoot.innerHTML = '<aside class="drawer" id="drawer" role="dialog" aria-labelledby="drawer-title">' +
+      '<div class="dialog-head"><h2 id="drawer-title">' + esc(heading) + '<span class="sub">' + (titlesHidden ? '' : esc((song.artists || []).join(', '))) + '</span></h2>' +
+      '<button type="button" class="btn btn-icon" data-close aria-label="Close explanation">✕</button></div>' +
+      '<div class="dialog-body" data-testid="explain-body">' + VW.explainHtml(song, p) + '</div></aside>';
+    UI.open(drawerRoot, { trigger: trigger || null });
   }
-  function closeDrawer() {
-    if (!drawer.open) return;
+  function closeDrawer() { if (drawer.open) UI.close(drawerRoot); }
+  document.addEventListener('ui:open', function (e) { if (e.detail === drawerRoot) drawer.open = true; });
+  document.addEventListener('ui:close', function (e) {
+    if (e.detail !== drawerRoot) return;
     drawer.open = false;
     drawerRoot.innerHTML = '';
-    setInert(false);
-    var t = drawer.trigger;
-    if (t && document.contains(t)) t.focus();
-    else { var h = document.getElementById('view-title'); if (h) h.focus(); }
-    drawer.trigger = null;
-  }
-  document.addEventListener('keydown', function (e) {
-    if (!drawer.open) return;
-    if (e.key === 'Escape') { e.preventDefault(); closeDrawer(); return; }
-    if (e.key === 'Tab') {
-      var dlg = document.getElementById('drawer');
-      var items = dlg ? focusables(dlg) : [];
-      if (!items.length) { e.preventDefault(); return; }
-      var first = items[0], last = items[items.length - 1];
-      if (e.shiftKey && (document.activeElement === first || !dlg.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && (document.activeElement === last || !dlg.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
-    }
   });
-  drawerRoot.addEventListener('click', function (e) { if (e.target.closest('[data-close]')) closeDrawer(); });
 
   // ------------------------------------------------------------------ delegated actions
   root.addEventListener('click', function (e) {
