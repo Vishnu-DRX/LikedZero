@@ -21,7 +21,7 @@ pytestmark = pytest.mark.e2e
 ROOT = Path(__file__).resolve().parents[2]
 FIX = ROOT / "docs" / "dashboard" / "fixtures"
 SHOTS = ROOT / "docs" / "screenshots"
-VIEWS = ["overview", "inbox", "rules", "playlists", "runs", "safety", "signals", "backtest"]
+VIEWS = ["overview", "inbox", "rules", "playlists", "runs", "signals"]
 
 
 def fx(name):
@@ -36,14 +36,11 @@ RUNS = fx("runs.json")["runs"]
 def dash(make_page, site):
     """Open a dashboard view over fixtures (service worker blocked so routes always apply)."""
 
-    def _open(view="overview", qs="", width=1280, height=900, setup=None, source="fixtures", mode="detailed", **ctx):
-        # decision 42: Simple is the default, but every pre-existing test here targets Detailed behaviour
-        # ("everything already built, unchanged"), so this fixture opts into Detailed unless a test asks
-        # for Simple explicitly. New Simple-mode tests pass mode="simple".
+    def _open(view="overview", qs="", width=1280, height=900, setup=None, source="fixtures", **ctx):
         page, context = make_page(width=width, height=height, service_workers="block", **ctx)
         if setup:
             setup(page)
-        page.goto(f"{site}dashboard/?source={source}&mode={mode}{qs}#/{view}")
+        page.goto(f"{site}dashboard/?source={source}{qs}#/{view}")
         page.wait_for_selector(f'#view-root[data-state="ready"][data-view="{view}"]')
         return page
 
@@ -313,32 +310,27 @@ def test_runs_history_detail_and_diff(dash):
     assert "Only in the older run" in diff and "Only in the newer run" in diff
 
 
+def test_run_detail_shows_reconcile_ok_and_restore_for_a_clean_apply_run(dash):
+    """Master decisions 16 removed the dedicated Safety tab (its liked-count timeline is gone with it), but the
+    reconcile/restore/journal detail it showed for every apply run must still be reachable -- now only via each
+    run's own detail page under Runs. test_runs_history_detail_and_diff already covers the MISMATCHING apply
+    run's detail; this covers the other apply run in the fixture, whose reconcile succeeded, so both restore
+    commands and both reconcile outcomes ("OK" and "Mismatch") stay under test."""
+    page = dash("runs")
+    ok_run = next(r for r in RUNS if r["mode"] == "apply" and r["verdict"] == "ok")
+    goto_view(page, f"runs/{ok_run['run_id']}")
+    body = page.locator("#view-root").inner_text()
+    assert "OK" in body and "Mismatch" not in body
+    assert "python -m src.sync --restore logs/2026-09-15.json" in body
+    assert "Journal" in body
+    page.locator("details", has_text="Journal").locator("summary").click()
+    assert page.locator('[data-testid="journal"] tbody tr').count() >= 1
+
+
 def test_runs_unknown_run_is_a_clear_message(dash):
     page = dash("runs")
     goto_view(page, "runs/nope")
     assert "Run not found" in page.locator("#view-root").inner_text()
-
-
-# ------------------------------------------------------------------ safety
-def test_safety_timeline_restore_reconcile(dash):
-    page = dash("safety")
-    svg = page.locator('svg[data-testid="timeline"]')
-    expect(svg).to_be_visible()
-    assert svg.get_attribute("role") == "img" and page.locator("#tl-title").text_content() == "Liked songs over time"
-    assert svg.locator("circle, rect.pt-bad").count() == len(RUNS)
-    expect(page.locator('[data-banner="mismatch"]')).to_be_visible()
-    cards = page.locator('[data-testid="apply-run"]')
-    expect(cards).to_have_count(2)
-    txt = cards.all_inner_texts()
-    joined = "\n".join(txt)
-    assert "python -m src.sync --restore logs/2026-09-15.json" in joined and "python -m src.sync --restore logs/2026-09-17.json" in joined
-    assert "Reconcile: OK" in joined.replace("\n", " ").replace("✓ ", "") or "OK" in joined
-    assert "Mismatch" in joined and "expected 42, found 43" in joined
-    cards.first.locator("summary").click()
-    assert cards.first.locator('[data-testid="journal"] tbody tr').count() >= 1
-    # timeline data table alternative
-    page.locator("summary", has_text="Show as a table").click()
-    expect(page.locator("details[open] table tbody tr").first).to_be_visible()
 
 
 # ------------------------------------------------------------------ signals
@@ -357,31 +349,6 @@ def test_signals_coverage_and_precision_badges(dash):
     assert "not measured" in cell("playlist", "bengali").inner_text()
     assert "Where languages came from" in page.locator("#view-root").inner_text()
     assert "90%" in page.locator("#view-root").inner_text()
-
-
-# ------------------------------------------------------------------ backtest
-def test_backtest_names_in_local_detail_mode(dash):
-    page = dash("backtest")
-    bt = fx("backtest.json")
-    tot = text(page, '[data-testid="backtest-totals"]')
-    assert f"{bt['totals']['precision'] * 100:.1f}%" in tot and f"{bt['totals']['recall'] * 100:.1f}%" in tot
-    rows = page.locator('[data-testid="backtest-playlists"] tbody tr')
-    expect(rows).to_have_count(len(bt["playlists"]))
-    assert "Fake Rock" in page.locator("#view-root").inner_text() and "P03" not in text(page, '[data-testid="backtest-playlists"]')
-    assert "n/a" in page.locator('tr[data-playlist="P05"]').inner_text()  # precision undefined: no divide-by-zero
-    assert page.locator('[data-testid="confusions"] tbody tr').count() == len(bt["confusions"])
-    mis = text(page, '[data-testid="misroutes"]')
-    assert "Fake Anthem Remix" in mis and "Lo-fi study" in mis
-
-
-def test_backtest_without_detail_uses_ids(dash):
-    def setup(page):
-        page.route("**/dashboard/fixtures/backtest-detail.json", lambda r: r.fulfill(status=404, body="nope"))
-
-    page = dash("backtest", setup=setup)
-    body = page.locator("#view-root").inner_text()
-    assert "P01" in body and "R01" in body and "Fake Rock" not in body and "Fake Anthem Remix" not in body
-    assert "only shown in Local mode" in body
 
 
 # ------------------------------------------------------------------ banners
@@ -428,9 +395,7 @@ def test_empty_states_name_the_command(dash):
         "rules": ["python -m src.sync"],
         "playlists": ["python -m src.sync"],
         "runs": ["python -m src.sync"],
-        "safety": ["python -m src.sync"],
         "signals": ["python -m src.enrich --report", "python -m src.backtest"],
-        "backtest": ["python -m src.backtest"],
     }
     for view, cmds in expected.items():
         goto_view(page, view)
@@ -578,7 +543,7 @@ def test_no_requests_leave_the_site_with_fixtures(dash, site):
 def test_storage_blocked_does_not_break_the_page(make_page, site):
     page, _ = make_page(service_workers="block")
     page.add_init_script("Object.defineProperty(window, 'localStorage', {get(){ throw new Error('blocked') }})")
-    page.goto(f"{site}dashboard/?source=fixtures&mode=detailed#/overview")
+    page.goto(f"{site}dashboard/?source=fixtures#/overview")
     page.wait_for_selector('#view-root[data-state="ready"] [data-card="liked"]')
 
 
@@ -719,103 +684,61 @@ def test_run_now_reuses_save_to_github_token(dash):
     expect(page.locator("#run-now-token")).to_have_count(0)
 
 
-# ------------------------------------------------------------------ Simple/Detailed mode (decision 42)
-SIMPLE_HIDDEN_VIEWS = ["signals", "backtest", "runs"]
-
-
-def test_simple_mode_is_the_default_for_a_fresh_viewer(make_page, site):
-    # a genuinely fresh visitor: no mode= param, no prior localStorage -- unlike the `dash` fixture, which
-    # opts every other test into Detailed on purpose (see its docstring).
+# ------------------------------------------------------------------ Master decisions 16: no mode toggle, 6 views
+def test_no_mode_toggle_and_full_overview_for_a_fresh_viewer(make_page, site):
+    # a genuinely fresh visitor: no prior localStorage -- unlike the `dash` fixture, which just opens the page
+    # directly to prove nothing here depends on a stored preference any more.
     page, _ = make_page(service_workers="block")
     page.goto(f"{site}dashboard/?source=fixtures#/overview")
     page.wait_for_selector('#view-root[data-state="ready"] [data-card="last-run"]')
-    expect(page.locator("#mode-toggle")).not_to_be_checked()
-    for present in ("last-run", "pending", "moves", "safety"):
+    # decision 67: the Simple/Detailed switch and its first-visit callout are removed entirely, not just hidden.
+    expect(page.locator("#mode-toggle")).to_have_count(0)
+    expect(page.locator("#mode-callout")).to_have_count(0)
+    expect(page.locator("#mode-callout-dismiss")).to_have_count(0)
+    # every view always renders its full content now: all 7 KPI cards, not a reduced variant.
+    for present in ("last-run", "next-run", "liked", "pending", "moves", "errors", "safety"):
         expect(page.locator(f'[data-card="{present}"]')).to_be_visible()
-    for absent in ("next-run", "liked", "errors"):
-        expect(page.locator(f'[data-card="{absent}"]')).to_have_count(0)
-    expect(page.locator('[data-testid="simple-health-banner"]')).to_be_visible()
-    # no raw tables of numbers, no glossary needed: the banner and cards read as plain sentences
-    body = page.locator("#view-root").inner_text()
-    assert "Everything looks fine" in body or "This needs attention" in body
-    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
-    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Safety"]
-
-
-def test_simple_mode_inbox_has_three_columns_and_explain_works(dash):
-    page = dash("inbox", mode="simple")
-    headers = page.locator('[data-testid="inbox-table-simple"] th').all_inner_texts()
-    assert headers == ["Song", "Status", "Why"]
-    expect(page.locator("#inbox-decision")).to_have_count(0)  # no raw filter dropdowns in Simple
-    expect(page.locator("#inbox-csv")).to_have_count(0)
-    page.locator('[data-testid="inbox-table-simple"] [data-explain]').first.click()
-    page.wait_for_selector('[role="dialog"][aria-modal="true"]')
-    assert page.locator("#drawer-root").inner_text().strip() != ""
-
-
-def test_simple_mode_redirects_away_from_advanced_views(dash):
-    for view in SIMPLE_HIDDEN_VIEWS:
-        page = dash("overview", mode="simple")
-        page.evaluate("v => { location.hash = '#/' + v }", view)
-        page.wait_for_selector('#view-root[data-state="ready"][data-view="overview"]')
-
-
-def test_mode_toggle_switches_and_persists(dash):
-    page = dash("overview", mode="simple")
-    expect(page.locator('[data-card="next-run"]')).to_have_count(0)
-    page.locator("label:has(#mode-toggle) .switch-ui").click()  # see click_switch in test_builder.py
-    page.wait_for_selector('[data-card="next-run"]')
-    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
-    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Safety", "Signals", "Backtest"]
-    assert page.evaluate("localStorage.getItem('likedzero.dashboard.mode')") == "detailed"
-    # reload WITHOUT an explicit mode= param (an explicit param, as `dash` sets, always wins -- same rule
-    # as the existing `source` param) to prove the stored preference is what sticks for a normal visit.
-    page.goto(page.url.split("?")[0] + "?source=fixtures#/overview")
-    page.wait_for_selector('#view-root[data-state="ready"] [data-card="next-run"]')
-    expect(page.locator("#mode-toggle")).to_be_checked()
-
-
-def test_first_visit_callout_shown_once_and_dismissible(make_page, site):
-    page, _ = make_page(service_workers="block")
-    page.goto(f"{site}dashboard/?source=fixtures#/overview")
-    page.wait_for_selector('#view-root[data-state="ready"]')
-    expect(page.locator("#mode-callout")).to_be_visible()
-    page.locator("#mode-callout-dismiss").click()
-    expect(page.locator("#mode-callout")).to_be_hidden()
-    page.reload()
-    page.wait_for_selector('#view-root[data-state="ready"]')
-    expect(page.locator("#mode-callout")).to_be_hidden()  # dismissal is remembered
-
-
-def test_first_visit_callout_switch_button_opts_into_detailed(make_page, site):
-    page, _ = make_page(service_workers="block")
-    page.goto(f"{site}dashboard/?source=fixtures#/overview")
-    page.wait_for_selector('#view-root[data-state="ready"]')
-    page.locator("#mode-callout-switch").click()
-    page.wait_for_selector('[data-card="next-run"]')
-    expect(page.locator("#mode-toggle")).to_be_checked()
-    expect(page.locator("#mode-callout")).to_be_hidden()
-
-
-def test_simple_kpi_cards_have_tooltips(dash):
-    page = dash("overview", mode="simple")
     for card_name in ("pending", "moves", "safety"):
         expect(page.locator(f'[data-card="{card_name}"] .help')).to_be_visible()
+    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
+    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Signals"]
+
+
+def test_inbox_always_shows_the_full_toolbar(dash):
+    """decision 67: there is no reduced 3-column Inbox variant any more -- the full search/decision/rule
+    filters and CSV export are always present, for every visitor."""
+    page = dash("inbox")
+    expect(page.locator("#inbox-decision")).to_be_visible()
+    expect(page.locator("#inbox-rule")).to_be_visible()
+    expect(page.locator("#inbox-csv")).to_be_visible()
+    expect(page.locator('[data-testid="inbox-table-simple"]')).to_have_count(0)
+
+
+def test_backtest_and_safety_tabs_are_gone(dash):
+    """decision 68: Backtest and Safety are removed entirely -- not merged elsewhere, not hidden behind a mode.
+    A stale #/backtest or #/safety hash (e.g. an old bookmark) must not render their old views; the router's
+    fallback for any unknown view name is Overview."""
+    page = dash("overview")
+    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
+    assert "Backtest" not in nav_labels and "Safety" not in nav_labels
+    for stale in ("backtest", "safety"):
+        page.evaluate("v => { location.hash = '#/' + v }", stale)
+        page.wait_for_selector('#view-root[data-state="ready"][data-view="overview"]')
+        expect(page.locator("#view-title")).to_have_text("Overview")
 
 
 @pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
-@pytest.mark.parametrize("mode", ["simple", "detailed"])
 @pytest.mark.parametrize("theme", ["dark", "light"])
-def test_axe_zero_serious_or_critical_on_overview_and_inbox(dash, mode, theme):
+def test_axe_zero_serious_or_critical_on_overview_and_inbox(dash, theme):
     for view in ("overview", "inbox"):
-        page = dash(view, mode=mode)
+        page = dash(view)
         if theme == "light":
             page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
         page.wait_for_timeout(50)
         axe = Axe()
         results = axe.run(page)
         serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
-        assert not serious, json.dumps([{"id": v["id"], "impact": v["impact"], "help": v["help"], "view": view, "mode": mode} for v in serious], indent=2)
+        assert not serious, json.dumps([{"id": v["id"], "impact": v["impact"], "help": v["help"], "view": view} for v in serious], indent=2)
 
 
 def test_hostile_titles_are_escaped(dash):
@@ -842,7 +765,7 @@ def test_csv_export_prevents_formula_injection(dash):
     def setup(page):
         patch_json(page, "latest-plan.json", mutate)
 
-    page = dash("inbox", setup=setup, mode="detailed")
+    page = dash("inbox", setup=setup)
     with page.expect_download() as info:
         page.locator("#inbox-csv").click()
     csv_text = Path(info.value.path()).read_text(encoding="utf-8")
@@ -856,7 +779,7 @@ def test_tabs_keyboard_routing_and_aria(dash):
     page = dash("overview")
     nav = page.get_by_role("navigation", name="Dashboard views")
     labels = nav.get_by_role("link").all_inner_texts()
-    assert labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Safety", "Signals", "Backtest"]
+    assert labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Signals"]
     assert nav.locator('[aria-current="page"]').inner_text() == "Overview"
     nav.get_by_role("link", name="Rules").focus()
     page.keyboard.press("Enter")
@@ -913,16 +836,6 @@ def test_no_horizontal_overflow_and_screenshots(dash, view, width, height):
     page.screenshot(path=str(SHOTS / f"dashboard-{view}-{width}.png"), full_page=True)
 
 
-def test_simple_vs_detailed_screenshots(dash):
-    """Decision 42 proof artefact: committed before/after screenshots of the two modes, over fixtures only."""
-    SHOTS.mkdir(exist_ok=True)
-    for mode in ("simple", "detailed"):
-        for view in ("overview", "inbox"):
-            page = dash(view, mode=mode)
-            page.wait_for_timeout(50)
-            page.screenshot(path=str(SHOTS / f"dashboard-{view}-{mode}-1280.png"), full_page=True)
-
-
 @pytest.mark.parametrize("width", [375, 1280])
 def test_drawer_and_details_fit_the_viewport(dash, width):
     page = dash("inbox", width=width)
@@ -950,7 +863,7 @@ def test_mobile_tables_collapse_to_cards(dash):
 # ------------------------------------------------------------------ offline
 def test_dashboard_works_offline_via_service_worker(make_page, site):
     page, ctx = make_page()  # service workers allowed
-    page.goto(f"{site}dashboard/?source=fixtures&mode=detailed#/overview")
+    page.goto(f"{site}dashboard/?source=fixtures#/overview")
     page.wait_for_selector('#view-root[data-state="ready"]')
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
     page.reload()

@@ -1,10 +1,11 @@
 /* Dashboard-only styles. Loaded AFTER ../assets/tokens.css + ../assets/components.css + ../assets/site.css
    (decision 65): this file holds only what is genuinely specific to the dashboard -- the data-source bar, the
-   view-routing tab strip, the "data freshness" stamp, signal/backtest bar charts, the run-history timeline
-   chart, the explain-trace list, and small dashboard-only additions layered on top of shared components (the
-   Simple/Detailed switch bar, the run-now/glossary drawer widths). Everything the shared stylesheets already
-   provide (buttons, cards, badges, banners, tooltips, popovers, tables, form controls, the overlay/dialog/
-   drawer shell, the site header/footer) is reused as-is, not reimplemented here. */
+   view-routing tab strip, the "data freshness" stamp, signal bar charts, the explain-trace list, and small
+   dashboard-only additions layered on top of shared components (the run-now/glossary drawer widths).
+   Everything the shared stylesheets already provide (buttons, cards, badges, banners, tooltips, popovers,
+   tables, form controls, the overlay/dialog/drawer shell, the site header/footer) is reused as-is, not
+   reimplemented here. Master decisions 16: the Simple/Detailed mode bar is gone -- every view always renders
+   its full content. */
 
 /* ------------------------------------------------------------ page layout */
 .wrap { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-4); }
@@ -30,11 +31,8 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 .files-drop.is-drag { border-color: var(--color-accent); background: var(--color-hover); }
 .files-drop input[type="file"] { pointer-events: none; }
 
-/* Simple/Detailed mode bar (decision 42): the switch itself is the shared .switch component; this just lays
-   out the row and the first-visit callout that points at it. */
+/* Top toolbar row above the source bar (currently just the Glossary button). */
 .mode-bar { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-2) 0 var(--space-4); flex-wrap: wrap; }
-#mode-callout { align-items: center; }
-#mode-callout .mode-callout-body { flex: 1; }
 
 /* min-height reserves the tab bar's real height (matches the touch target) before JS populates <ul id="tabs">,
    so the initial empty bar doesn't grow once data.js/views.js fill it in -- avoids a layout shift on first load.
@@ -119,24 +117,12 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
   .stack tbody tr:hover { background: var(--color-surface); }
 }
 
-/* ------------------------------------------------------------ bars + charts (signals/backtest/safety; no shared equivalent) */
+/* ------------------------------------------------------------ bars (signals; no shared equivalent) */
 .bar { position: relative; height: 10px; border-radius: var(--radius-pill); background: var(--color-hover); overflow: hidden; min-width: 4rem; }
 .bar > span { position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); background: var(--color-accent); border-radius: var(--radius-pill); }
 .bar.info > span { background: var(--color-info); }
 .bar.warn > span { background: var(--color-warning); }
 .bar-row { display: grid; grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; margin: 0 0 var(--space-2); font-size: var(--text-sm); }
-.pct-cell { display: flex; align-items: center; gap: var(--space-2); }
-.pct-cell .bar { flex: 1 1 5rem; }
-.pct-cell .val { flex: none; min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
-.chart { width: 100%; height: auto; display: block; }
-.chart .grid-line { stroke: var(--color-border); stroke-width: 1; }
-.chart .axis-text { fill: var(--color-text-secondary); font-size: 11px; font-family: var(--font-sans); }
-.chart .line { fill: none; stroke: var(--color-accent-text); stroke-width: 2; }
-.chart .pt-ok { fill: var(--color-accent-text); stroke: var(--color-accent-text); }
-.chart .pt-dry { fill: var(--color-surface); stroke: var(--color-text-secondary); stroke-width: 2; }
-.chart .pt-bad { fill: var(--color-danger); stroke: var(--color-danger); }
-.legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); font-size: var(--text-sm); color: var(--color-text-secondary); margin: var(--space-2) 0; }
-.legend svg { vertical-align: middle; margin-right: var(--space-1); }
 
 /* ------------------------------------------------------------ detail blocks (no shared equivalent) */
 dl.kv { display: grid; grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr); gap: var(--space-1) var(--space-4); margin: 0 0 var(--space-3); font-size: var(--text-sm); }

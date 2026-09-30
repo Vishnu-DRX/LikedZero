@@ -5,8 +5,7 @@
       "url": [
         "http://localhost/index.html",
         "http://localhost/builder/",
-        "http://localhost/dashboard/?source=fixtures",
-        "http://localhost/dashboard/?source=fixtures&mode=detailed"
+        "http://localhost/dashboard/?source=fixtures"
       ],
       "settings": {
         "throttlingMethod": "simulate"

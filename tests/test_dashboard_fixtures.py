@@ -99,15 +99,8 @@ def test_counts_only_files_match_contract():
     for langs in sp["by_signal"].values():
         for st in langs.values():
             assert set(st) == {"truth", "predicted", "correct", "precision", "recall"}
-    bt, det = load("backtest.json"), load("backtest-detail.json")
-    assert set(bt) == {"version", "generated_at", "config_hash", "all_rules_enabled", "inbox", "playlists", "confusions", "totals", "rules"}
-    assert set(det) == set(bt) | {"top_misroutes"}
-    assert set(bt["playlists"][0]) == {"id", "tracks", "predicted", "tp", "precision", "recall", "unrouted"}
-    assert set(det["playlists"][0]) == set(bt["playlists"][0]) | {"name"}
-    assert set(bt["rules"][0]) == {"name_id", "predicted", "correct", "precision"}
-    assert set(det["rules"][0]) == set(bt["rules"][0]) | {"name"}
-    assert set(bt["totals"]) == {"tracks", "routed", "correct", "misrouted", "unrouted", "precision", "recall"}
-    assert set(bt["confusions"][0]) == {"true", "predicted", "count"}
-    assert set(det["top_misroutes"][0]) == {"title", "artists", "true", "predicted", "rule"}
-    assert bt["totals"]["misrouted"] == sum(c["count"] for c in bt["confusions"])
-    assert any(p["precision"] is None for p in bt["playlists"])
+    # Master decisions 16 removed the dashboard's Backtest view, so backtest.json/backtest-detail.json are no
+    # longer part of the dashboard fixture set (they remain real `python -m src.backtest` outputs, covered by
+    # tests/test_backtest.py, just not read by the dashboard any more).
+    assert not (FIX / "backtest.json").exists()
+    assert not (FIX / "backtest-detail.json").exists()

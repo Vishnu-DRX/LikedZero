@@ -54,12 +54,6 @@
   };
   var DECISION_ORDER = ['will_move', 'too_young', 'blocked', 'target_problem', 'no_match'];
   function decisionBadge(d) { var m = DECISIONS[d] || ['neutral', d]; return badge(m[0], m[1]); }
-  // decision 42 (Simple mode): the same decisions, in plainer sentences, for readers who never open the glossary.
-  var SIMPLE_STATUS = {
-    will_move: ['ok', 'Will move soon'], too_young: ['info', 'Not old enough yet'], no_match: ['neutral', 'Nothing matches it'],
-    target_problem: ['bad', "Can't reach its playlist"], blocked: ['warn', 'Not sure yet']
-  };
-  function simpleStatusBadge(d) { var m = SIMPLE_STATUS[d] || ['neutral', d]; return badge(m[0], m[1]); }
   var RULE_STATUS = { ok: ['ok', 'Active'], dead: ['bad', 'Dead'], shadowed: ['warn', 'Shadowed'], disabled: ['neutral', 'Disabled'] };
   function ruleStatusBadge(s) { var m = RULE_STATUS[s] || ['neutral', s]; return badge(m[0], m[1]); }
   var VERDICTS = { ok: ['ok', 'OK'], dry_run: ['info', 'Dry run'], mismatch: ['bad', 'Mismatch'], error: ['bad', 'Error'] };
@@ -116,9 +110,7 @@
     rules: 'Your rules, in the order they run. The first rule a song matches wins; later rules never see it. A rule can be "shadowed" (an earlier rule always takes its songs first) or "dead" (nothing matches it).',
     playlists: 'Every playlist a rule sends songs to, whether LikedZero can actually write to it, and how many songs are queued for it.',
     runs: 'The history of every time the sorter has run, dry or real, with a detailed breakdown of each one.',
-    safety: 'Whether any song has ever been at risk, and the exact command to bring one back if something needs undoing.',
-    signals: 'How LikedZero works out a song’s language, and how much each method (playlist, script, hint, country) can be trusted before it is allowed to drive a decision.',
-    backtest: 'A dry run of your rules against playlists you already sorted by hand, to see how often they would have gotten it right.'
+    signals: 'How LikedZero works out a song’s language, and how much each method (playlist, script, hint, country) can be trusted before it is allowed to drive a decision.'
   };
   function helpBtn(text) {
     return '<button type="button" class="help" data-tip="' + esc(text) + '" aria-label="What does this mean?">?</button>';
@@ -164,12 +156,6 @@
       }).join(') <span class="small muted">OR</span> (') + ')';
     }
     return '<code>' + esc(key) + '</code> ' + esc(fmtVal(value));
-  }
-
-  function pctCell(v, cls) {
-    if (v == null) return '<span class="muted">n/a</span>';
-    var w = Math.max(0, Math.min(100, v * 100));
-    return '<div class="pct-cell"><div class="bar ' + (cls || '') + '" role="img" aria-label="' + w.toFixed(1) + ' percent"><span style="--w:' + w.toFixed(1) + '%"></span></div><span class="val">' + w.toFixed(1) + '%</span></div>';
   }
 
   // ------------------------------------------------------------------ explain drawer content
@@ -387,16 +373,7 @@
       } else safety = badge('info', 'No apply run yet');
       var safetySub = lastApply ? 'Last apply run ' + esc(D.fmtDate(lastApply.time)) + (mismatches ? ' &middot; ' + esc(plural(mismatches, 'mismatch', 'mismatches')) + ' in history' : '') : 'Everything so far is a dry run; nothing was removed from Liked Songs.';
       var safetyTip = 'After every real run, LikedZero checks that the number of Liked Songs before minus what it removed equals what is left after. "Reconcile OK" means that checked out; a mismatch means a song may need restoring.';
-      var safetyCard = card('Safety verdict', safety, safetySub + ' <a href="#/safety">Open Safety</a>', ' data-card="safety"', safetyTip);
-
-      if (ctx.mode === 'simple') {
-        html += '<div class="grid">' + lastRunCard + pendingCard + movesCard + safetyCard + '</div>';
-        var simpleOk = last && last.verdict !== 'error' && last.verdict !== 'mismatch' && !mismatches;
-        html += simpleOk
-          ? banner('ok', '✓', '<p><strong>Everything looks fine.</strong> The last run completed cleanly and nothing needs your attention. Switch to Detailed for rule-by-rule and signal-by-signal history.</p>', 'data-testid="simple-health-banner"')
-          : banner('warn', '▲', '<p><strong>This needs attention.</strong> ' + (last ? 'The last run reported a problem — open ' : 'No run has completed yet — check ') + '<a href="#/safety">Safety</a> for details. Switch to Detailed for the full history and signal breakdown.</p>', 'data-testid="simple-health-banner"');
-        return html;
-      }
+      var safetyCard = card('Safety verdict', safety, safetySub + ' <a href="#/runs">See run details</a>', ' data-card="safety"', safetyTip);
 
       html += '<div class="grid">';
       html += lastRunCard;
@@ -441,11 +418,6 @@
       if (q.has('decision')) st.decision = q.get('decision');
       if (q.has('rule')) st.rule = q.get('rule');
       if (q.has('q')) st.q = q.get('q');
-      if (ctx.mode === 'simple') {
-        return '<div class="toolbar" role="search">' +
-          '<div class="field grow"><label for="inbox-q">Search title or artist</label><input id="inbox-q" class="input" type="search" value="' + esc(st.q) + '" autocomplete="off" /></div></div>' +
-          '<div id="inbox-results"></div>';
-      }
       var rules = p.rules.map(function (r) { return r.name; });
       var opts = '<option value="">All decisions</option>' + DECISION_ORDER.map(function (d) {
         return '<option value="' + d + '"' + (st.decision === d ? ' selected' : '') + '>' + esc(DECISIONS[d][1]) + ' (' + p.counts[d] + ')</option>';
@@ -462,44 +434,6 @@
       var p = plan(ctx);
       if (!p) return;
       var st = ctx.state.inbox;
-      if (ctx.mode === 'simple') {
-        function paintSimple() {
-          var term = st.q.trim().toLowerCase();
-          var hiddenTitles = !!p.titles_hidden;
-          var rows = [];
-          p.songs.forEach(function (s, i) {
-            if (term) {
-              var hay = [s.title, (s.artists || []).join(' ')].join(' ').toLowerCase();
-              if (hay.indexOf(term) < 0) return;
-            }
-            rows.push({ s: s, i: i });
-          });
-          var shown = rows.slice(0, st.shown);
-          var h = '<p class="result-count" role="status" data-testid="result-count">Showing ' + shown.length + ' of ' + rows.length + ' songs' + (rows.length !== p.songs.length ? ' (filtered)' : '') + '</p>';
-          if (!rows.length) {
-            h += '<div class="empty"><h3>No songs match</h3><p>Try clearing the search.</p></div>';
-          } else {
-            h += '<div class="table-wrap cards"><table class="table stack" data-testid="inbox-table-simple"><thead><tr>' +
-              '<th scope="col">Song</th><th scope="col">Status</th><th scope="col">Why</th></tr></thead><tbody>';
-            shown.forEach(function (r) {
-              var s = r.s;
-              h += '<tr data-decision="' + esc(s.decision) + '"><td class="cell-main">' + titleOrHidden(s.title, hiddenTitles) +
-                '<div class="small muted">' + (hiddenTitles ? '' : esc((s.artists || []).join(', '))) + '</div></td>' +
-                '<td data-label="Status">' + simpleStatusBadge(s.decision) + '</td>' +
-                '<td data-label="Why"><button type="button" class="btn btn-secondary btn-sm" data-explain="' + r.i + '" aria-haspopup="dialog">Why?</button></td></tr>';
-            });
-            h += '</tbody></table></div>';
-            if (rows.length > shown.length) h += '<p><button type="button" class="btn btn-secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
-          }
-          root.querySelector('#inbox-results').innerHTML = h;
-        }
-        paintSimple();
-        root.querySelector('#inbox-q').addEventListener('input', function (e) { st.q = e.target.value; st.shown = 100; paintSimple(); });
-        root.querySelector('#inbox-results').addEventListener('click', function (e) {
-          if (e.target.closest('[data-more]')) { st.shown += 100; paintSimple(); }
-        });
-        return;
-      }
       var COLS = [
         ['title', 'Song'], ['age', 'Age (days)', 'num'], ['decision', 'Decision'], ['rule', 'Rule'],
         ['target', 'Target playlist'], ['eligible', 'Eligible on'], ['language', 'Language']
@@ -850,72 +784,6 @@
     }
   };
 
-  // ---- Safety
-  function timeline(runs) {
-    var pts = runs.slice().reverse();
-    if (!pts.length) return '';
-    var W = 480, H = 220, L = 44, R = 14, T = 14, B = 34, pw = W - L - R, ph = H - T - B;
-    var vals = pts.map(function (r) { return r.liked_after; }).concat(pts.map(function (r) { return r.liked_before; }));
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
-    if (hi === lo) { hi += 1; lo -= 1; }
-    var pad = Math.max(1, Math.round((hi - lo) * 0.1)); lo = Math.max(0, lo - pad); hi += pad;
-    function x(i) { return L + (pts.length === 1 ? pw / 2 : i * pw / (pts.length - 1)); }
-    function y(v) { return T + ph - (v - lo) / (hi - lo) * ph; }
-    var s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-labelledby="tl-title tl-desc" data-testid="timeline"><title id="tl-title">Liked songs over time</title><desc id="tl-desc">Liked song count after each run, from ' + esc(D.fmtDate(pts[0].time)) + ' to ' + esc(D.fmtDate(pts[pts.length - 1].time)) + '. ' + esc(pts.map(function (r) { return D.fmtDate(r.time) + ': ' + r.liked_after; }).join('; ')) + '.</desc>';
-    for (var g = 0; g <= 4; g++) {
-      var v = lo + (hi - lo) * g / 4, yy = y(v);
-      s += '<line class="grid-line" x1="' + L + '" x2="' + (W - R) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/><text class="axis-text" x="' + (L - 6) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end">' + Math.round(v) + '</text>';
-    }
-    s += '<polyline class="line" points="' + pts.map(function (r, i) { return x(i).toFixed(1) + ',' + y(r.liked_after).toFixed(1); }).join(' ') + '"/>';
-    pts.forEach(function (r, i) {
-      var cx = x(i).toFixed(1), cy = y(r.liked_after).toFixed(1);
-      var label = D.fmtDate(r.time) + ' ' + r.mode + ': ' + r.liked_before + ' to ' + r.liked_after + ' (' + r.verdict + ')';
-      if (r.verdict === 'mismatch' || r.verdict === 'error') s += '<rect class="pt-bad" x="' + (cx - 5) + '" y="' + (cy - 5) + '" width="10" height="10" transform="rotate(45 ' + cx + ' ' + cy + ')"><title>' + esc(label) + '</title></rect>';
-      else if (r.mode === 'apply') s += '<circle class="pt-ok" cx="' + cx + '" cy="' + cy + '" r="5"><title>' + esc(label) + '</title></circle>';
-      else s += '<circle class="pt-dry" cx="' + cx + '" cy="' + cy + '" r="4"><title>' + esc(label) + '</title></circle>';
-      if (pts.length <= 6 || i % 2 === 0 || i === pts.length - 1) s += '<text class="axis-text" x="' + cx + '" y="' + (H - 12) + '" text-anchor="middle">' + esc(D.fmtDate(r.time).slice(5)) + '</text>';
-    });
-    return s + '</svg><div class="legend" aria-hidden="true"><span><svg width="14" height="14"><circle class="pt-ok" cx="7" cy="7" r="5" style="fill:var(--color-accent-text)"/></svg>Apply run</span><span><svg width="14" height="14"><circle cx="7" cy="7" r="4" style="fill:var(--color-surface);stroke:var(--color-text-secondary);stroke-width:2"/></svg>Dry run</span><span><svg width="14" height="14"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" style="fill:var(--color-danger)"/></svg>Mismatch or error</span></div>';
-  }
-
-  V.safety = {
-    label: 'Safety', question: 'Has anything been lost, and can I undo it?', files: ['runs'],
-    render: function (ctx) {
-      var bad = problems(ctx, ['runs']);
-      if (bad) return bad;
-      var runs = runsOf(ctx);
-      if (!runs.length) return '<div class="empty"><h3>No runs recorded</h3><p>Run <code>python -m src.sync</code> to record the first one.</p></div>';
-      var applyRuns = runs.filter(function (r) { return r.mode === 'apply'; });
-      var mism = runs.filter(function (r) { return r.verdict === 'mismatch'; });
-      var h = '';
-      if (mism.length) h += banner('bad', '✕', '<p><strong>' + esc(plural(mism.length, 'run')) + ' failed the liked-count check.</strong> After the run, Liked Songs did not hold the number of songs it should. Open the run below and use its restore command if a song is missing.</p>', 'role="alert" data-banner="mismatch"');
-      h += '<div class="card"><h3>Liked-song count over time</h3>' + timeline(runs) +
-        '<details><summary>Show as a table</summary><div class="table-wrap"><table class="table"><thead><tr><th scope="col">Run</th><th scope="col">Mode</th><th scope="col" class="num">Before</th><th scope="col" class="num">After</th><th scope="col">Verdict</th></tr></thead><tbody>' +
-        runs.map(function (r) { return '<tr><td>' + esc(D.fmtTime(r.time)) + '</td><td>' + esc(r.mode) + '</td><td class="num">' + esc(r.liked_before) + '</td><td class="num">' + esc(r.liked_after) + '</td><td>' + verdictBadge(r.verdict) + '</td></tr>'; }).join('') + '</tbody></table></div></details></div>';
-
-      var logsP = Promise.all(applyRuns.map(function (r) { return D.fetchLog(ctx.base, r.log); }));
-      return logsP.then(function (logs) {
-        h += '<h3>Apply runs</h3>';
-        if (!applyRuns.length) h += '<div class="empty" data-empty="apply"><h3>No apply runs yet</h3><p>Every run so far was a dry run, so nothing has been removed from Liked Songs and there is nothing to restore.</p></div>';
-        applyRuns.forEach(function (r, i) {
-          var l = logs[i], d = l && l.status === 'ok' ? l.data : null;
-          h += '<section class="card" data-testid="apply-run" data-run="' + esc(r.run_id) + '"><h3>' + esc(D.fmtTime(r.time)) + ' ' + verdictBadge(r.verdict) + '</h3>';
-          h += '<p class="small muted">' + esc(r.moved) + ' moved &middot; liked songs ' + esc(r.liked_before) + ' &rarr; ' + esc(r.liked_after) + '</p>';
-          if (!d) { h += '<p class="small">The run log <code>' + esc(r.log) + '</code> could not be loaded' + (l && l.message ? ': ' + esc(l.message) : ' (not found)') + '.</p></section>'; return; }
-          if (d.reconcile) h += '<p><strong>Reconcile:</strong> ' + (d.reconcile.ok ? badge('ok', 'OK') : badge('bad', 'Mismatch')) + ' expected ' + esc(d.reconcile.expected_after) + ', found ' + esc(d.reconcile.actual_after) + '.</p>';
-          if (d.restore_command) {
-            h += '<p class="small" style="margin-bottom:4px">Restore command</p><div class="copy-row"><code>' + esc(d.restore_command) + '</code><button type="button" class="btn btn-secondary btn-sm" data-copy="' + esc(d.restore_command) + '">Copy</button></div>';
-            if (d.titles_hidden) h += '<p class="small muted">Download this run’s <code>journal</code> artifact from the Actions run page first (the committed log’s uris are redacted, decision 44).</p>';
-          }
-          (d.warnings || []).forEach(function (w) { h += '<p class="small">' + badge('warn', 'Warning') + ' ' + esc(w) + '</p>'; });
-          h += '<details><summary>Journal of removals (' + (d.journal || []).length + ')</summary>' + journalTable(d.journal, !!d.titles_hidden) + '</details>';
-          h += '<p class="small"><a href="#/runs/' + encodeURIComponent(r.run_id) + '">Full run detail</a></p></section>';
-        });
-        return h;
-      });
-    }
-  };
-
   // ---- Signals
   var SIGNALS = ['playlist', 'script', 'hint', 'country_default'];
   var SIGNAL_TEXT = {
@@ -973,48 +841,5 @@
     }
   };
 
-  // ---- Backtest
-  V.backtest = {
-    label: 'Backtest', question: 'Would the rules put songs in the right playlists?', files: ['backtest', 'detail'],
-    render: function (ctx) {
-      var det = ok(ctx.files.detail) ? ctx.files.detail : null;
-      var bt = ok(ctx.files.backtest) ? ctx.files.backtest : det;
-      if (!bt) {
-        var f = ctx.files.backtest;
-        return f.status === 'error' ? errorState('backtest', f.message) : emptyState('backtest');
-      }
-      var d = (det || bt).data, named = !!det;
-      var pname = {}, rname = {};
-      d.playlists.forEach(function (p) { pname[p.id] = p.name || p.id; });
-      d.rules.forEach(function (r) { rname[r.name_id] = r.name || r.name_id; });
-      var t = d.totals;
-      var h = '';
-      if (!d.all_rules_enabled) h += banner('info', '●', '<p>This backtest ran with your real enabled/disabled settings, so disabled rules did not take part.</p>');
-      h += '<div class="grid" data-testid="backtest-totals">' +
-        card('Precision', esc(pct(t.precision)), 'Of songs routed, the share sent to the right playlist') +
-        card('Recall', esc(pct(t.recall)), 'Of all songs, the share routed correctly') +
-        card('Routed', esc(t.routed), esc(t.correct) + ' correct, ' + esc(t.misrouted) + ' misrouted') +
-        card('Unrouted', esc(t.unrouted), 'Matched no rule (of ' + esc(t.tracks) + ' songs)') + '</div>';
-      h += '<div class="card"><h3>Per playlist</h3><div class="table-wrap cards" style="border:0;margin:0"><table class="table stack" data-testid="backtest-playlists"><thead><tr><th scope="col">Playlist</th><th scope="col" class="num">Songs</th><th scope="col" class="num">Routed here</th><th scope="col" class="num">Correct</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col" class="num">Unrouted</th></tr></thead><tbody>';
-      d.playlists.forEach(function (p) {
-        h += '<tr data-playlist="' + esc(p.id) + '"><td class="cell-main"><strong>' + esc(p.name || p.id) + '</strong></td><td class="num" data-label="Songs">' + esc(p.tracks) + '</td><td class="num" data-label="Routed here">' + esc(p.predicted) + '</td><td class="num" data-label="Correct">' + esc(p.tp) + '</td><td data-label="Precision">' + pctCell(p.precision) + '</td><td data-label="Recall">' + pctCell(p.recall, 'info') + '</td><td class="num" data-label="Unrouted">' + esc(p.unrouted) + '</td></tr>';
-      });
-      h += '</tbody></table></div></div>';
-      var conf = d.confusions.slice().sort(function (a, b) { return b.count - a.count; });
-      h += '<div class="card"><h3>Confusions</h3><p class="small muted">Songs that belong in one playlist but were routed to another.</p>' + (conf.length ? '<div class="table-wrap cards" style="border:0;margin:0"><table class="table stack" data-testid="confusions"><thead><tr><th scope="col">Belongs in</th><th scope="col">Routed to</th><th scope="col" class="num">Songs</th></tr></thead><tbody>' +
-        conf.map(function (c) { return '<tr><td class="cell-main">' + esc(pname[c.true] || c.true) + '</td><td data-label="Routed to">' + esc(pname[c.predicted] || c.predicted) + '</td><td class="num" data-label="Songs">' + esc(c.count) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p>No misroutes.</p>') + '</div>';
-      h += '<div class="card"><h3>Per rule</h3><div class="table-wrap cards" style="border:0;margin:0"><table class="table stack"><thead><tr><th scope="col">Rule</th><th scope="col" class="num">Routed</th><th scope="col" class="num">Correct</th><th scope="col">Precision</th></tr></thead><tbody>' +
-        d.rules.map(function (r) { return '<tr><td class="cell-main"><strong>' + esc(r.name || r.name_id) + '</strong></td><td class="num" data-label="Routed">' + esc(r.predicted) + '</td><td class="num" data-label="Correct">' + esc(r.correct) + '</td><td data-label="Precision">' + pctCell(r.precision) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
-      h += '<div class="card" data-testid="misroutes"><h3>Top misroutes</h3>';
-      if (named && d.top_misroutes && d.top_misroutes.length) {
-        h += '<div class="table-wrap cards" style="border:0;margin:0"><table class="table stack"><thead><tr><th scope="col">Song</th><th scope="col">Belongs in</th><th scope="col">Routed to</th><th scope="col">By rule</th></tr></thead><tbody>' +
-          d.top_misroutes.map(function (m) { return '<tr><td class="cell-main"><strong>' + esc(m.title) + '</strong><div class="small muted">' + esc((m.artists || []).join(', ')) + '</div></td><td data-label="Belongs in">' + esc((m.true || []).join(', ')) + '</td><td data-label="Routed to">' + esc(m.predicted) + '</td><td data-label="By rule">' + esc(m.rule) + '</td></tr>'; }).join('') + '</tbody></table></div>';
-      } else {
-        h += '<p>Song names are only shown in Local mode, when <code>logs/backtest-detail.json</code> exists. That file is never published, so playlists appear as P01, P02 and rules as R01, R02 here. Run <code>python -m src.backtest</code> on your computer, then <code>python -m src.dashboard</code>.</p>';
-      }
-      return h + '</div>';
-    }
-  };
-
-  window.DashViews = { VIEWS: V, ORDER: ['overview', 'inbox', 'rules', 'playlists', 'runs', 'safety', 'signals', 'backtest'], viewHead: viewHead, explainHtml: explainHtml, esc: esc };
+  window.DashViews = { VIEWS: V, ORDER: ['overview', 'inbox', 'rules', 'playlists', 'runs', 'signals'], viewHead: viewHead, explainHtml: explainHtml, esc: esc };
 })();

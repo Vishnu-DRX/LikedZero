@@ -49,8 +49,6 @@ const SHELL = [
   'dashboard/fixtures/2026-09-19.json',
   'dashboard/fixtures/2026-09-20.json',
   'dashboard/fixtures/2026-09-21.json',
-  'dashboard/fixtures/backtest-detail.json',
-  'dashboard/fixtures/backtest.json',
   'dashboard/fixtures/enrichment-coverage.json',
   'dashboard/fixtures/latest-plan.json',
   'dashboard/fixtures/runs.json',

@@ -2,8 +2,12 @@
 
 Writes docs/dashboard/fixtures/*.json. The plan / run entries / runs index are produced by the REAL builders in
 ``src.artifacts`` from fabricated tracks, playlists and config (obviously fake artists and titles); the rest
-(per-run logs, coverage, precision, backtest) is hand-built to the shapes in docs/dashboard/DATA.md.
+(per-run logs, coverage, precision) is hand-built to the shapes in docs/dashboard/DATA.md.
 Everything uses fixed timestamps, so regenerating is byte-for-byte reproducible (tests rely on it).
+
+Master decisions 16 removed the dashboard's Backtest view, so this script no longer writes backtest.json /
+backtest-detail.json fixtures -- those are still real outputs of `python -m src.backtest` (see
+tests/test_backtest.py), just no longer read by the dashboard.
 """
 
 from __future__ import annotations
@@ -308,63 +312,6 @@ def coverage() -> dict:
     }
 
 
-_BT_NAMES = ["Fake Malayalam Mix", "Fake Hindi Hits", "Fake Rock", "Fake Chill", "Fake Latino"]
-_BT_TP = [104, 80, 262, 40, 0]
-_BT_UNROUTED = [8, 3, 20, 2, 30]
-_BT_CONF = [(0, 1, 6), (1, 0, 4), (2, 3, 20), (3, 2, 3), (1, 3, 5), (0, 3, 2), (2, 0, 3)]
-_BT_RULES = [("Malayalam favourites", 110, 104), ("Hindi hits", 90, 80), ("Rock legends", 270, 262), ("Lo-fi study", 60, 40),
-             ("Spanish nights", 0, 0)]
-
-
-def _ratio(a: int, b: int):
-    return round(a / b, 4) if b else None
-
-
-def backtest(detail: bool) -> dict:
-    n = len(_BT_NAMES)
-    out_mis = [sum(c for t, _, c in _BT_CONF if t == i) for i in range(n)]
-    in_mis = [sum(c for _, p, c in _BT_CONF if p == i) for i in range(n)]
-    playlists = []
-    for i in range(n):
-        tracks = _BT_TP[i] + _BT_UNROUTED[i] + out_mis[i]
-        predicted = _BT_TP[i] + in_mis[i]
-        row = {"id": f"P{i + 1:02d}"}
-        if detail:
-            row["name"] = _BT_NAMES[i]
-        row.update({"tracks": tracks, "predicted": predicted, "tp": _BT_TP[i], "precision": _ratio(_BT_TP[i], predicted),
-                    "recall": _ratio(_BT_TP[i], tracks), "unrouted": _BT_UNROUTED[i]})
-        playlists.append(row)
-    total_tracks = sum(p["tracks"] for p in playlists)
-    routed = sum(p["predicted"] for p in playlists)
-    correct = sum(_BT_TP)
-    rules = []
-    for i, (name, pred, ok) in enumerate(_BT_RULES):
-        row = {"name_id": f"R{i + 1:02d}"}
-        if detail:
-            row["name"] = name
-        row.update({"predicted": pred, "correct": ok, "precision": _ratio(ok, pred)})
-        rules.append(row)
-    data = {
-        "version": 1, "generated_at": "2026-09-21T05:45:00+00:00", "config_hash": config_hash(CONFIG_TEXT),
-        "all_rules_enabled": True, "inbox": {"tracks": total_tracks, "playlists": n}, "playlists": playlists,
-        "confusions": [{"true": f"P{t + 1:02d}", "predicted": f"P{p + 1:02d}", "count": c} for t, p, c in _BT_CONF],
-        "totals": {"tracks": total_tracks, "routed": routed, "correct": correct, "misrouted": routed - correct,
-                   "unrouted": sum(_BT_UNROUTED), "precision": _ratio(correct, routed), "recall": _ratio(correct, total_tracks)},
-        "rules": rules,
-    }
-    if detail:
-        data["top_misroutes"] = [
-            {"title": "Fake Anthem Remix", "artists": ["Fake Band Alpha"], "true": ["Fake Rock"], "predicted": "Fake Chill", "rule": "Lo-fi study"},
-            {"title": "Sample Ballad III", "artists": ["Fake Band Beta"], "true": ["Fake Rock"], "predicted": "Fake Chill", "rule": "Lo-fi study"},
-            {"title": "Fake Dil (Slow)", "artists": ["Pyaar Placeholder"], "true": ["Fake Hindi Hits"], "predicted": "Fake Chill", "rule": "Lo-fi study"},
-            {"title": "Placeholder Pyaar II", "artists": ["Pyaar Placeholder"], "true": ["Fake Hindi Hits", "Fake Malayalam Mix"],
-             "predicted": "Fake Malayalam Mix", "rule": "Malayalam favourites"},
-            {"title": "Mazha Loop", "artists": ["Vayali Test"], "true": ["Fake Malayalam Mix"], "predicted": "Fake Hindi Hits", "rule": "Hindi hits"},
-            {"title": "Nameless Loop 09", "artists": ["Beats Not Real"], "true": ["Fake Chill"], "predicted": "Fake Rock", "rule": "Rock legends"},
-        ]
-    return data
-
-
 # ----------------------------------------------------------------------------- entry point
 def generate(out: Path | str = DEFAULT_OUT) -> list[str]:
     out = Path(out)
@@ -374,8 +321,6 @@ def generate(out: Path | str = DEFAULT_OUT) -> list[str]:
     build_runs(out, plan)
     atomic_write_json(out / "enrichment-coverage.json", coverage())
     atomic_write_json(out / "signal-precision.json", PRECISION)
-    atomic_write_json(out / "backtest.json", backtest(False))
-    atomic_write_json(out / "backtest-detail.json", backtest(True))
     return sorted(p.name for p in out.glob("*.json"))
 
 
