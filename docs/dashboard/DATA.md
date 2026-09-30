@@ -74,11 +74,7 @@ language_source_counts:{playlist,script,hint,country_default,none}, language_dis
 `{version, generated_at, min_precision:0.9, min_samples:10, by_signal:{ "<signal>": { "<language>": {truth, predicted, correct, precision|null, recall|null} } },
 qualified:{ "<language>": ["playlist","script",...] }}` where signals are `playlist` (leave-one-out), `script`, `hint`, `country_default`.
 
-## `backtest.json` (counts only; playlists labelled P01..)
-`{version, generated_at, config_hash, all_rules_enabled:bool, inbox:{tracks, playlists}, playlists:[{id, tracks, predicted, tp, precision|null, recall|null, unrouted}],
-confusions:[{true, predicted, count}], totals:{tracks, routed, correct, misrouted, unrouted, precision|null, recall|null},
-rules:[{name_id ("R01"..), predicted, correct, precision|null}]}`
-
-## `backtest-detail.json` (git-ignored; Local mode only — has names)
-Same shape as `backtest.json` plus `playlists[].name`, `rules[].name`, and `top_misroutes:[{title, artists, true:[playlist names], predicted, rule}]`.
-When present (Local mode) the Backtest view shows names instead of P01/R01 labels.
+`backtest.json` / `backtest-detail.json` / `backtest-detail.md` are still real outputs of `python -m src.backtest`
+(precision/recall per playlist, confusions, top misroutes — see that module's own docstring), but Master decisions
+16 removed the dashboard's Backtest view, so they are no longer part of this data contract and the dashboard never
+reads them.

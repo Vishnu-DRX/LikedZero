@@ -8,21 +8,17 @@
     plan: 'latest-plan.json',
     runs: 'runs.json',
     coverage: 'enrichment-coverage.json',
-    precision: 'signal-precision.json',
-    backtest: 'backtest.json',
-    detail: 'backtest-detail.json'
+    precision: 'signal-precision.json'
   };
   var COMMANDS = {
     plan: 'python -m src.sync',
     runs: 'python -m src.sync',
     coverage: 'python -m src.enrich --report',
-    precision: 'python -m src.backtest',
-    backtest: 'python -m src.backtest',
-    detail: 'python -m src.backtest'
+    precision: 'python -m src.backtest'
   };
   var LABELS = {
     plan: 'Inbox snapshot', runs: 'Run history', coverage: 'Enrichment coverage',
-    precision: 'Signal precision', backtest: 'Backtest', detail: 'Backtest detail'
+    precision: 'Signal precision'
   };
   // decision 31: three sources only. 'repo' reads the fork's committed logs; 'fixtures' is the bundled demo data;
   // 'files' is "Open local files" — a drag-and-drop/file-picker source, parsed entirely client-side, never uploaded.
@@ -34,9 +30,10 @@
   var STALE_MS = 2 * 24 * 3600 * 1000;
   // decision 65: theme is no longer a per-dashboard key -- it uses the same shared 'likedzero-theme' key
   // (assets/ui.js's THEME_KEY) as every other page now that the dashboard uses the shared theme toggle.
+  // Master decisions 16: the Simple/Detailed mode toggle (and its 'mode'/'modeCalloutSeen' keys) is removed --
+  // every view always renders its full content now.
   var KEY = {
-    source: 'likedzero.dashboard.source', repo: 'likedzero.dashboard.repo',
-    mode: 'likedzero.dashboard.mode', modeCalloutSeen: 'likedzero.dashboard.modeCalloutSeen',
+    source: 'likedzero.dashboard.source', repo: 'likedzero.dashboard.repo'
   };
   var RAW_RE = /^https:\/\/raw\.githubusercontent\.com\/[\w.-]+\/[\w.-]+\/[\w.\/-]+\/$/;
 

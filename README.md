@@ -108,18 +108,19 @@ label above the source picker:
 - **Open local files** is a drag-and-drop/file-picker area that reads `logs/*.json` files entirely in your browser via the File API — nothing is uploaded anywhere. Committed logs never carry a song's title, artist or Spotify URI unless `logging.include_track_names: true` is set (default is off, so public forks show counts and decisions only); Open local files is the only source that can show you real titles, since the files never leave your computer.
 
 The source picker remembers your last choice. Every view shows when its data was made; a yellow banner appears
-if it is more than 2 days old. The dashboard also has a **Simple / Detailed** toggle (Simple is the default for
-a first-time visitor): Simple shows one health banner, four KPI cards and a plain-English Inbox; Detailed is
-everything below.
+if it is more than 2 days old. Every view always renders its full content — there is no reduced Simple mode.
 
 - **Overview** asks "is it healthy?": last run and its verdict, whether an inbox start date (`inbox_since`) is set, next scheduled run (or "Not scheduled"), liked songs, how many are pending, moves this week, errors and warnings, the safety verdict, and one sentence on what the next run would do. A **Run now** button dispatches the Sync workflow directly from here (via a token you create and control).
 - **Inbox** asks "what is waiting, and why?": every liked song with its decision. Search, filter and sort it, then click a title to open the **Explain** drawer: each rule in order with passed and failed conditions, and the language and genre signals behind the decision.
 - **Rules** asks "what does each rule do?": how many songs each rule matches and wins, when it last matched, and flags for problem rules.
 - **Playlists** asks "can every target be written to?": found, missing, not writable or ambiguous, its size and how many songs the next run adds.
-- **Runs** is the history, with a detail page per run and a side-by-side comparison of two runs.
-- **Safety** asks "has anything been lost, and can I undo it?": the liked-count timeline, reconcile result and restore command for each apply run, and the journal of removals.
+- **Runs** is the history, with a detail page per run — including the reconcile result, restore command and journal of removals for apply runs — and a side-by-side comparison of two runs.
 - **Signals** asks "how far can each language signal be trusted?": coverage, and precision per signal and language.
-- **Backtest** asks "would the rules route songs correctly?": precision and recall per playlist, confusions and worst misroutes. Names appear only in Local mode; elsewhere playlists are P01, P02 and rules R01, R02.
+
+The dashboard no longer has separate Safety or Backtest tabs: the reconcile/restore/journal detail they showed
+lives in each apply run's detail page under **Runs**, and `python -m src.backtest` (precision/recall per
+playlist, confusions, worst misroutes) is still a standalone command-line tool — its safety guarantees and
+measurements are unchanged, only the dedicated dashboard tabs for them were removed.
 
 Colours are never the only clue; every badge has a word. Green (ok) means fine, blue (info) means neutral
 information such as a dry run or a song that is too young, amber (warning) means look at this, red means a
