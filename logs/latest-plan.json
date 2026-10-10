@@ -1,8 +1,8 @@
 {
  "version": 1,
- "generated_at": "2026-10-10T19:01:15+00:00",
- "run_id": "20261010T190115Z",
- "mode": "dry_run",
+ "generated_at": "2026-10-10T19:01:37+00:00",
+ "run_id": "20261010T190137Z",
+ "mode": "apply",
  "what_if": false,
  "inbox_kind": "legacy_library",
  "config_hash": "fb056f4fe48e",
@@ -470,7 +470,7 @@
      }
     ],
     "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.0002624409837962963
+    "age_days": 0.000514449375
    }
   }
  ],
