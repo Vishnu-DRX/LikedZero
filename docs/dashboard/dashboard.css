@@ -105,6 +105,7 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
   .tabs ul { gap: 0; }
   .tabs a { flex: 1 1 auto; justify-content: center; padding: 0 var(--space-2); font-size: var(--text-sm); }
   @media (max-width: 30rem) { .tabs a { padding: 0 6px; font-size: 0.8125rem; } }
+  @media (max-width: 24rem) { .tabs a { padding: 0 3px; font-size: 0.75rem; } }
   .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
   .stack tr { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); }
