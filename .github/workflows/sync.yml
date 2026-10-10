@@ -9,7 +9,10 @@ name: Sync
 # defence, the planner never evaluates a song liked before it, and --max-moves (default 50) still caps the run.
 # Manual runs are unchanged: a live one needs dry_run unticked AND the `newest` input.
 # Limits: GitHub can delay a scheduled run by 5-20+ minutes (a slot stays claimable for 90 minutes), and
-# disables scheduled workflows in a repo with no activity for 60 days.
+# disables scheduled workflows in a repo with no activity for 60 days. The "Keep the schedule alive" steps below
+# fight that: once the last commit by a person is 30+ days old, one tick a day disables and re-enables this
+# workflow through the API (needs `actions: write`). That is best-effort -- GitHub does not document what counts as
+# activity -- so if scheduled runs ever stop, press "Enable workflow" in the Actions tab.
 #
 # `vars.LIKEDZERO_CRON` (a repository *variable*, not a secret) is a legacy, informational fallback: it gates
 # nothing and is only used for the dashboard Overview when config.yaml has no enabled `schedule:`.
@@ -39,6 +42,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write   # only for the keepalive step's disable/enable of this workflow
 
 jobs:
   sync:
@@ -54,6 +58,8 @@ jobs:
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the keepalive check reads commit history
 
       - uses: actions/setup-python@v5
         with:
@@ -61,6 +67,28 @@ jobs:
           cache: pip
 
       - run: python -m pip install -r requirements.txt
+
+      - name: Keep the schedule alive (check)
+        # Never allowed to break a sync: a failure here is only a warning.
+        id: keepalive
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: python -m src.keepalive
+
+      - name: Keep the schedule alive (refresh)
+        if: github.event_name == 'schedule' && steps.keepalive.outputs.refresh == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DAYS: ${{ steps.keepalive.outputs.days }}
+        run: |
+          set -euo pipefail
+          echo "::notice::No commit by a person for ${DAYS} days; refreshing this workflow so GitHub keeps the schedule on."
+          url="repos/${REPO}/actions/workflows/sync.yml"
+          # Whatever happens after the disable, always try to switch it back on.
+          trap 'gh api -X PUT "${url}/enable" || gh api -X PUT "${url}/enable"' EXIT
+          gh api -X PUT "${url}/disable"
 
       - name: Schedule gate
         id: gate
