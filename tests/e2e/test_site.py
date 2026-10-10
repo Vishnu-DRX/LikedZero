@@ -116,6 +116,33 @@ def test_page_loads_cleanly(site_page, site, page_name, path, width):
     assert not errors, f"{page_name}: {errors}"
 
 
+# `body { overflow-x: clip }` hides sideways overflow from scrollWidth, so the check above can pass while content is
+# cut off. Measure the actual boxes instead, at real phone widths.
+@pytest.mark.parametrize("page_name,path", [("home", "index.html"), ("setup", "setup/")])
+@pytest.mark.parametrize("width", [360, 390, 430])
+def test_mobile_content_not_clipped_and_has_gutters(site_page, site, page_name, path, width):
+    page, _ = site_page(width=width, height=900)
+    page.goto(site + path)
+    page.wait_for_load_state("networkidle")
+    page.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")
+    bad = page.evaluate("""() => {
+        const vw = document.documentElement.clientWidth, out = [];
+        document.querySelectorAll('main *').forEach(e => {
+            if (e.closest('svg') || getComputedStyle(e).position === 'fixed') return;
+            const r = e.getBoundingClientRect();
+            if (r.width && (r.right > vw + 1 || r.left < -1)) out.push(e.tagName + '.' + e.className + ' ' + Math.round(r.left) + '..' + Math.round(r.right));
+        });
+        return out;
+    }""")
+    assert not bad, f"{page_name} at {width}px: boxes outside the viewport: {bad[:5]}"
+    # prose must not touch the screen edge (FAQ answers / step cards keep a gutter)
+    edge = page.evaluate("""() => [...document.querySelectorAll('main p, main summary, main h1, main h2')]
+        .filter(e => e.getBoundingClientRect().width)
+        .map(e => Math.min(e.getBoundingClientRect().left, document.documentElement.clientWidth - e.getBoundingClientRect().right))
+        .reduce((m, v) => Math.min(m, v), 999)""")
+    assert edge >= 12, f"{page_name} at {width}px: text only {edge}px from the screen edge"
+
+
 def test_pages_load_across_available_browsers(available_browsers, site):
     def check(name, browser):
         ctx = browser.new_context(viewport={"width": 1280, "height": 900})
