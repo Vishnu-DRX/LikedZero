@@ -150,7 +150,8 @@ def builder(make_page, site):
 def _launch_one(pw, name):
     """Try to launch one browser family, returning None (never raising) if it isn't available."""
     if name == "chromium":
-        for kwargs in ({}, {"channel": "msedge"}, {"channel": "chrome"}):
+        local = [{"executable_path": os.environ["LIKEDZERO_CHROMIUM"]}] if os.environ.get("LIKEDZERO_CHROMIUM") else []
+        for kwargs in (*local, {}, {"channel": "msedge"}, {"channel": "chrome"}):
             try:
                 return pw.chromium.launch(**kwargs)
             except Exception:  # noqa: BLE001

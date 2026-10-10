@@ -42,14 +42,14 @@
 .site-footer-copy { margin: 0; }
 
 /* ------------------------------------------------------------ hero */
-.hero { padding: var(--space-8) 0 var(--space-7); text-align: center; }
+.hero { padding-block: var(--space-8) var(--space-7); text-align: center; }
 .hero-inner { max-width: 44rem; margin: 0 auto; }
 .hero h1 { font-size: clamp(2.2rem, 6vw, var(--text-3xl)); }
 .hero-sub { font-size: var(--text-lg); color: var(--color-text-secondary); margin: 0 0 var(--space-5); }
 .hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
 
 /* ------------------------------------------------------------ generic page sections */
-.section { padding: var(--space-7) 0; }
+.section { padding-block: var(--space-7); } /* block only: .section.container must keep its side gutters */
 .section-head { max-width: 40rem; margin: 0 auto var(--space-6); text-align: center; }
 .section-head p { color: var(--color-text-secondary); margin: 0; }
 
@@ -79,12 +79,13 @@
 
 /* setup guide */
 .setup-steps { display: flex; flex-direction: column; gap: var(--space-5); counter-reset: step; }
-.setup-step { display: grid; grid-template-columns: 40px 1fr; gap: var(--space-4); }
+.setup-step { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-4); }
+.setup-step > .card { min-width: 0; }
 .setup-step-num { counter-increment: step; display: inline-grid; place-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-elevated); border: 2px solid var(--color-accent); color: var(--color-accent-text); font-weight: var(--weight-bold); }
 .setup-step-num::before { content: counter(step); }
 .setup-check { display: flex; gap: var(--space-2); align-items: flex-start; }
 .setup-check .icon { color: var(--color-accent-text); flex: none; margin-top: 2px; }
-@media (max-width: 560px) { .setup-step { grid-template-columns: 1fr; } .setup-step-num { display: none; } }
+@media (max-width: 560px) { .code pre { white-space: pre-wrap; overflow-wrap: anywhere; } .setup-step { grid-template-columns: minmax(0, 1fr); } .setup-step > .card { padding: var(--space-4); } .setup-step-num { display: none; } }
 
 /* 404 */
 .notfound { text-align: center; padding: var(--space-8) 0; }
