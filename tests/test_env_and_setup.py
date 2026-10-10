@@ -125,9 +125,9 @@ def test_run_setup_failure_message_has_no_code_or_verifier(tmp_path, monkeypatch
 
 
 def test_smoke_refuses_without_live_flag(monkeypatch, capsys):
-    monkeypatch.delenv("SPOTISORT_LIVE", raising=False)
+    monkeypatch.delenv("LIKEDZERO_LIVE", raising=False)
     assert sc.main(["--smoke", "--env", "definitely-missing.env"]) == 2
-    assert "SPOTISORT_LIVE=1" in capsys.readouterr().err
+    assert "LIKEDZERO_LIVE=1" in capsys.readouterr().err
 
 
 def test_setup_without_client_id_fails_cleanly(monkeypatch, capsys):

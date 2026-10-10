@@ -8,9 +8,9 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def pytest_collection_modifyitems(config, items):
-    if os.environ.get("SPOTISORT_LIVE") == "1":
+    if os.environ.get("LIKEDZERO_LIVE") == "1":
         return
-    skip = pytest.mark.skip(reason="live test: set SPOTISORT_LIVE=1")
+    skip = pytest.mark.skip(reason="live test: set LIKEDZERO_LIVE=1")
     for item in items:
         if "live" in item.keywords:
             item.add_marker(skip)

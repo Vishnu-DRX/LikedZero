@@ -143,7 +143,7 @@ def builder(make_page, site):
 
 
 # ---------------------------------------------------------------------------------- multi-browser (site tests)
-# SPOTISORT_BROWSERS controls which browser families the site tests (tests/e2e/test_site.py) run against:
+# LIKEDZERO_BROWSERS controls which browser families the site tests (tests/e2e/test_site.py) run against:
 #   "auto" (default) = whichever of chromium/firefox/webkit can actually launch on this machine
 #   a comma list, e.g. "chromium,firefox" = only try those (CI sets this after installing all three)
 def _launch_one(pw, name):
@@ -166,11 +166,11 @@ def available_browsers(playwright_instance):
     """{name: Browser} for every browser family that could be launched.
 
     decision 46/P2: "auto" (the local-dev default) soft-skips whatever isn't installed -- but an EXPLICIT
-    SPOTISORT_BROWSERS list (what CI sets) is a promise that those browsers exist; a launch failure there is a
+    LIKEDZERO_BROWSERS list (what CI sets) is a promise that those browsers exist; a launch failure there is a
     real CI/environment problem and must fail the run loudly, not quietly shrink coverage to whichever browser
     happened to work while every test still reports green.
     """
-    wanted = os.environ.get("SPOTISORT_BROWSERS", "auto")
+    wanted = os.environ.get("LIKEDZERO_BROWSERS", "auto")
     explicit = wanted != "auto"
     names = ["chromium", "firefox", "webkit"] if not explicit else [n.strip() for n in wanted.split(",") if n.strip()]
     out = {}
@@ -185,8 +185,8 @@ def available_browsers(playwright_instance):
         for b in out.values():
             b.close()
         raise RuntimeError(
-            f"SPOTISORT_BROWSERS={wanted!r} explicitly requested {missing}, but launching failed. "
-            "Run `python -m playwright install --with-deps " + " ".join(missing) + "` or fix SPOTISORT_BROWSERS."
+            f"LIKEDZERO_BROWSERS={wanted!r} explicitly requested {missing}, but launching failed. "
+            "Run `python -m playwright install --with-deps " + " ".join(missing) + "` or fix LIKEDZERO_BROWSERS."
         )
     yield out
     for b in out.values():

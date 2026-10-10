@@ -1,7 +1,7 @@
 """Browser tests for the marketing site shell/Home/Setup/404/kitchen-sink (Master decisions 22-30).
 Run: python -m pytest tests/e2e -q -m e2e
 
-Cross-browser coverage follows SPOTISORT_BROWSERS (see conftest.py's `available_browsers` fixture):
+Cross-browser coverage follows LIKEDZERO_BROWSERS (see conftest.py's `available_browsers` fixture):
 "auto" (default) tries chromium/firefox/webkit and silently skips whichever can't launch on this machine.
 """
 

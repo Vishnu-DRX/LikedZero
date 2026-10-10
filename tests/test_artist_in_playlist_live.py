@@ -1,4 +1,4 @@
-"""Live, READ-ONLY (skipped unless SPOTISORT_LIVE=1): confirms the SHIPPED artist_in_playlist resolution
+"""Live, READ-ONLY (skipped unless LIKEDZERO_LIVE=1): confirms the SHIPPED artist_in_playlist resolution
 (src/enrichment/artist_playlist.py's ArtistPlaylistMap) reproduces the precision numbers measured in
 design/reports/measurement-round-2.md Task 1 -- the proof that the min_tracks+min_dominance simplification
 (Master decisions 11/decision 54) didn't change the measured result, using the real shipped code end to end,

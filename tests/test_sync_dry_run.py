@@ -97,7 +97,7 @@ def _reset(monkeypatch):
     monkeypatch.setattr(sync, "SpotifyClient", FakeClient)
     monkeypatch.setattr(sync, "load_env", lambda *a, **k: False)
     # defensive: never let an ambient env var make these tests see redacted titles
-    monkeypatch.delenv("SPOTISORT_COMMITTED_RUN", raising=False)
+    monkeypatch.delenv("LIKEDZERO_COMMITTED_RUN", raising=False)
 
 
 @pytest.fixture
@@ -465,40 +465,40 @@ class _Cfg:
 
 
 def test_hide_titles_auto_without_committed_run_env_shows_titles(monkeypatch):
-    monkeypatch.delenv("SPOTISORT_COMMITTED_RUN", raising=False)
+    monkeypatch.delenv("LIKEDZERO_COMMITTED_RUN", raising=False)
     assert sync.hide_titles(_args(), _Cfg(False)) is False
 
 
 def test_hide_titles_auto_with_committed_run_env_and_default_config_hides_titles(monkeypatch):
-    monkeypatch.setenv("SPOTISORT_COMMITTED_RUN", "1")
+    monkeypatch.setenv("LIKEDZERO_COMMITTED_RUN", "1")
     assert sync.hide_titles(_args(), _Cfg(False)) is True
 
 
 def test_hide_titles_auto_with_committed_run_env_and_opted_in_config_shows_titles(monkeypatch):
-    monkeypatch.setenv("SPOTISORT_COMMITTED_RUN", "1")
+    monkeypatch.setenv("LIKEDZERO_COMMITTED_RUN", "1")
     assert sync.hide_titles(_args(), _Cfg(True)) is False
 
 
 def test_hide_titles_ignores_ambient_github_actions_variable(monkeypatch):
     """Regression test: GitHub sets GITHUB_ACTIONS=true on EVERY step of EVERY workflow, including a plain `pytest`
     job. Keying redaction off it would silently hide titles in unrelated CI test runs (this exact bug shipped once)."""
-    monkeypatch.delenv("SPOTISORT_COMMITTED_RUN", raising=False)
+    monkeypatch.delenv("LIKEDZERO_COMMITTED_RUN", raising=False)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     assert sync.hide_titles(_args(), _Cfg(False)) is False
 
 
 def test_hide_titles_flag_always_overrides_env_and_config(monkeypatch):
-    monkeypatch.setenv("SPOTISORT_COMMITTED_RUN", "1")
+    monkeypatch.setenv("LIKEDZERO_COMMITTED_RUN", "1")
     assert sync.hide_titles(_args("always"), _Cfg(False)) is False
 
 
 def test_hide_titles_flag_never_overrides_env_and_config(monkeypatch):
-    monkeypatch.delenv("SPOTISORT_COMMITTED_RUN", raising=False)
+    monkeypatch.delenv("LIKEDZERO_COMMITTED_RUN", raising=False)
     assert sync.hide_titles(_args("never"), _Cfg(True)) is True
 
 
 def test_end_to_end_local_run_keeps_titles_by_default(env, monkeypatch):
-    monkeypatch.delenv("SPOTISORT_COMMITTED_RUN", raising=False)
+    monkeypatch.delenv("LIKEDZERO_COMMITTED_RUN", raising=False)
     tmp, cfg = env
     assert run(tmp, cfg) == 0
     log = read_log(tmp)
@@ -510,7 +510,7 @@ def test_end_to_end_local_run_keeps_titles_by_default(env, monkeypatch):
 
 
 def test_end_to_end_committed_run_hides_titles_by_default(env, monkeypatch):
-    monkeypatch.setenv("SPOTISORT_COMMITTED_RUN", "1")
+    monkeypatch.setenv("LIKEDZERO_COMMITTED_RUN", "1")
     tmp, cfg = env
     assert run(tmp, cfg) == 0
     log = read_log(tmp)
@@ -523,7 +523,7 @@ def test_end_to_end_committed_run_hides_titles_by_default(env, monkeypatch):
 
 
 def test_end_to_end_committed_run_with_opt_in_keeps_titles(env, monkeypatch):
-    monkeypatch.setenv("SPOTISORT_COMMITTED_RUN", "1")
+    monkeypatch.setenv("LIKEDZERO_COMMITTED_RUN", "1")
     tmp, cfg = env
     cfg.write_text(CONFIG + "logging:\n  include_track_names: true\n", encoding="utf-8")
     assert run(tmp, cfg) == 0
@@ -533,14 +533,14 @@ def test_end_to_end_committed_run_with_opt_in_keeps_titles(env, monkeypatch):
 
 
 def test_titles_flag_overrides_committed_run_env(env, monkeypatch):
-    monkeypatch.setenv("SPOTISORT_COMMITTED_RUN", "1")
+    monkeypatch.setenv("LIKEDZERO_COMMITTED_RUN", "1")
     tmp, cfg = env
     assert run(tmp, cfg, "--titles", "always") == 0
     assert "titles_hidden" not in read_log(tmp)
 
 
 def test_titles_never_hides_even_on_a_local_run(env, monkeypatch):
-    monkeypatch.delenv("SPOTISORT_COMMITTED_RUN", raising=False)
+    monkeypatch.delenv("LIKEDZERO_COMMITTED_RUN", raising=False)
     tmp, cfg = env
     assert run(tmp, cfg, "--titles", "never") == 0
     assert read_log(tmp)["titles_hidden"] is True

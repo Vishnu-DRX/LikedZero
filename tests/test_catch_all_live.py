@@ -1,4 +1,4 @@
-"""Live, READ-ONLY (skipped unless SPOTISORT_LIVE=1): confirms the real catch-all (`match: {any: true}`,
+"""Live, READ-ONLY (skipped unless LIKEDZERO_LIVE=1): confirms the real catch-all (`match: {any: true}`,
 Master decisions 12/decision 51) resolves correctly against the real account -- "SpotiSort Sink" exists and is
 writable, and a what-if preview with every rule enabled (including the disabled catch-all draft) never lets the
 catch-all claim a song an earlier, more specific rule already claimed.

@@ -62,7 +62,7 @@ def test_sync_live_run_requires_newest_selector_and_cap():
     assert "--apply" in run and "--newest" in run and "--max-moves" in run
     assert "exit 2" in run  # a live run without 'newest' is refused before python starts
     # decision 12: the manual-dispatch branch specifically never uses --allow-unselected -- only the
-    # schedule branch (decision 45/P1-2) does, and only when SPOTISORT_SCHEDULED_APPLY is set.
+    # schedule branch (decision 45/P1-2) does, and only when LIKEDZERO_SCHEDULED_APPLY is set.
     dispatch_branch = run.split('if [ "${IS_SCHEDULE:-false}"')[0]
     assert "--allow-unselected" not in dispatch_branch
 
@@ -72,7 +72,7 @@ def test_sync_schedule_branch_requires_the_apply_variable_and_uses_allow_unselec
     IS_SCHEDULE is always false today; this just proves the logic is correct for when one is added."""
     run = next(s["run"] for s in load("sync.yml")["jobs"]["sync"]["steps"] if s.get("name") == "Sync")
     schedule_branch = run.split('if [ "${IS_SCHEDULE:-false}"')[1].split("elif")[0]
-    assert "SPOTISORT_SCHEDULED_APPLY" in schedule_branch
+    assert "LIKEDZERO_SCHEDULED_APPLY" in schedule_branch
     assert "--apply --allow-unselected" in schedule_branch
     assert "--newest" not in schedule_branch  # a schedule cannot supply one
 
@@ -120,11 +120,11 @@ def test_journal_artifact_wording_is_not_overclaimed_as_private():
 
 
 def test_sync_step_marks_itself_as_a_committed_run_and_only_that_step(sync):
-    """SPOTISORT_COMMITTED_RUN gates title redaction (decision 32). It must be scoped to the Sync step alone —
+    """LIKEDZERO_COMMITTED_RUN gates title redaction (decision 32). It must be scoped to the Sync step alone —
     setting it at job level would also affect 'Check configuration exists', which is harmless today but would
     silently change behaviour if that step ever ran src.sync. Job-level env must not carry it either."""
     steps = sync["jobs"]["sync"]["steps"]
-    assert "SPOTISORT_COMMITTED_RUN" not in sync["jobs"]["sync"].get("env", {})
-    marked = [s for s in steps if "SPOTISORT_COMMITTED_RUN" in s.get("env", {})]
+    assert "LIKEDZERO_COMMITTED_RUN" not in sync["jobs"]["sync"].get("env", {})
+    marked = [s for s in steps if "LIKEDZERO_COMMITTED_RUN" in s.get("env", {})]
     assert [s["name"] for s in marked] == ["Sync"]
-    assert marked[0]["env"]["SPOTISORT_COMMITTED_RUN"] == "1"
+    assert marked[0]["env"]["LIKEDZERO_COMMITTED_RUN"] == "1"

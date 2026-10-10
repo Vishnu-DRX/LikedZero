@@ -236,7 +236,7 @@ def build_runs(out: Path, plan: dict) -> dict:
                           what_if=spec["what_if"])
         atomic_write_json(out / log_file, _run_log(spec, entry, plan))
         # decision 34: the Overview reads a top-level `schedule` field from runs.json (built by
-        # src.artifacts.schedule_info from the workflow's SPOTISORT_CRON). The demo fixtures show a fixed
+        # src.artifacts.schedule_info from the workflow's LIKEDZERO_CRON). The demo fixtures show a fixed
         # example schedule so "Next scheduled run" has something real to display in Demo mode.
         index = update_runs_index(runs_path, entry, when, schedule=schedule_info("0 3 * * *", NOW))
     return index

@@ -31,7 +31,7 @@ copy buttons and "you should see" checks. In short:
 4. Copy `.env.example` to `.env` and fill in `SPOTIFY_CLIENT_ID`.
 5. `python -m pip install -r requirements.txt`
 6. `python -m src.spotify_client --setup` opens the browser, captures the code on localhost:8888 and writes `SPOTIFY_REFRESH_TOKEN` to `.env`. Nothing secret is printed.
-7. Optional live read-only check: `SPOTISORT_LIVE=1 python -m src.spotify_client --smoke` (PowerShell: `$env:SPOTISORT_LIVE=1` first).
+7. Optional live read-only check: `LIKEDZERO_LIVE=1 python -m src.spotify_client --smoke` (PowerShell: `$env:LIKEDZERO_LIVE=1` first).
 8. `powershell scripts/set_secrets.ps1` once, to store the two Actions secrets (`SPOTIFY_CLIENT_ID`, `SPOTIFY_REFRESH_TOKEN`). The script reads `.env` locally and pipes the values to `gh` without echoing them.
 9. In your fork's **Settings → Actions → General → Workflow permissions**, select **Read and write permissions** (lets a run commit its own logs), then **Settings → Pages**, source **Deploy from a branch**, branch `main`, folder `/docs`.
 
@@ -94,8 +94,8 @@ it). Before ever enabling one:
 2. `--apply --allow-unselected` (what an unattended run needs, since a schedule can't supply `--newest`) is
    refused by `src/sync.py` itself unless `inbox_since` is set — this is enforced twice, once in the workflow
    and once in the tool, deliberately.
-3. Add a `schedule:` trigger to `sync.yml` and set the repository variable `SPOTISORT_SCHEDULED_APPLY=true`.
-   Until you do both, `IS_SCHEDULE`/`SPOTISORT_SCHEDULED_APPLY` logic already in the workflow stays dormant.
+3. Add a `schedule:` trigger to `sync.yml` and set the repository variable `LIKEDZERO_SCHEDULED_APPLY=true`.
+   Until you do both, `IS_SCHEDULE`/`LIKEDZERO_SCHEDULED_APPLY` logic already in the workflow stays dormant.
 
 ## How to read the dashboard
 
@@ -156,7 +156,7 @@ python -m pytest -q
 python -m pytest tests/e2e -q -m e2e   # needs `playwright install`
 ```
 
-Live tests are skipped unless `SPOTISORT_LIVE=1`.
+Live tests are skipped unless `LIKEDZERO_LIVE=1`.
 
 ## License
 
