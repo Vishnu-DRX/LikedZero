@@ -9,7 +9,7 @@
 
 /* ------------------------------------------------------------ page layout */
 .wrap { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-4); }
-main.wrap { padding: var(--space-5) 0 var(--space-7); min-width: 0; }
+main.wrap { padding-block: var(--space-5) var(--space-7); min-width: 0; }
 body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist name must not force horizontal scroll */
 
 .page-title { padding: var(--space-5) 0 var(--space-2); }
@@ -101,18 +101,21 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
 .result-count { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-2); }
 
 @media (max-width: 47.99rem) {
+  /* all six tabs visible at phone width instead of a half-cut scrolling strip */
+  .tabs ul { gap: 0; }
+  .tabs a { flex: 1 1 auto; justify-content: center; padding: 0 var(--space-2); font-size: var(--text-sm); }
+  @media (max-width: 30rem) { .tabs a { padding: 0 6px; font-size: 0.8125rem; } }
   .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
   .stack tr { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); }
-  .stack td { display: flex; justify-content: space-between; gap: var(--space-4); border: 0; padding: var(--space-1) 0; text-align: right; }
-  .stack td::before { content: attr(data-label); flex: none; max-width: 45%; text-align: left; color: var(--color-text-secondary); font-weight: var(--weight-medium); }
-  .stack td.cell-main { display: block; text-align: left; font-size: var(--text-md); }
+  /* Label in a fixed left column, value (which may be several inline pieces: badge + text, code + note) flowing
+     in the right column. A flex row split such cells into narrow side-by-side fragments on phones. */
+  .stack td { position: relative; display: block; border: 0; padding: var(--space-1) 0 var(--space-1) 40%; text-align: left; min-height: 1.75rem; overflow-wrap: anywhere; }
+  .stack td::before { content: attr(data-label); position: absolute; left: 0; top: var(--space-1); width: 36%; color: var(--color-text-secondary); font-weight: var(--weight-medium); overflow-wrap: normal; hyphens: auto; }
+  .stack td.num { text-align: left; }
+  .stack td.cell-main { padding-left: 0; font-size: var(--text-md); }
   .stack td.cell-main::before { display: none; }
-  /* Let long values (badges, signal lists) wrap inside the card instead of pushing it past the screen edge;
-     wider fallback fonts (e.g. DejaVu Sans on Linux) otherwise overflow 375 px by a few pixels. */
-  .stack td > * { min-width: 0; overflow-wrap: anywhere; }
-  .stack td .badge { white-space: normal; }
-  .stack td.num { text-align: right; }
+  .stack td .badge { white-space: normal; max-width: 100%; }
   .stack tr.row-bad, .stack tr.row-warn { border-left-width: 4px; }
   .stack tr.row-bad { border-left-color: var(--color-danger); }
   .stack tr.row-warn { border-left-color: var(--color-warning); }

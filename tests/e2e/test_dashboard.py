@@ -1060,3 +1060,29 @@ def test_rules_view_shows_any_of_summary(dash):
     expect(row).to_be_visible()
     row_text = row.inner_text()
     assert "any_of" in row_text and "OR" in row_text
+
+
+# ------------------------------------------------------------------------------------------- phone widths: nothing clipped
+@pytest.mark.parametrize("width", [360, 390, 430])
+@pytest.mark.parametrize("view", ["overview", "inbox", "rules", "playlists", "runs", "signals"])
+def test_phone_width_nothing_clipped_and_tabs_fit(dash, width, view):
+    """`body { overflow-x: clip }` hides sideways overflow from scrollWidth, so measure the real boxes: every visible
+    element must sit inside the viewport, the page text must keep a side gutter, and all six tabs must be visible
+    without scrolling the tab strip."""
+    page = dash(view, width=width, height=900)
+    res = page.evaluate("""() => {
+        const vw = document.documentElement.clientWidth, out = [];
+        document.querySelectorAll('main *').forEach(e => {
+            if (e.closest('svg, thead, .sr-only')) return;
+            const r = e.getBoundingClientRect();
+            if (r.width > 1 && (r.right > vw + 1 || r.left < -1)) out.push(e.tagName + '.' + e.className + ' ' + Math.round(r.left) + '..' + Math.round(r.right));
+        });
+        const tabs = document.querySelector('#tabs');
+        const edge = Math.min(...[...document.querySelectorAll('main h1, main h2, main p')]
+            .filter(e => e.getBoundingClientRect().width)
+            .map(e => { const r = e.getBoundingClientRect(); return Math.min(r.left, vw - r.right); }));
+        return {out, edge, tabsScroll: tabs.scrollWidth - tabs.clientWidth};
+    }""")
+    assert not res["out"], f"{view} at {width}px: boxes outside the viewport: {res['out'][:5]}"
+    assert res["edge"] >= 12, f"{view} at {width}px: text only {res['edge']}px from the screen edge"
+    assert res["tabsScroll"] <= 0, f"{view} at {width}px: tab strip scrolls sideways by {res['tabsScroll']}px"
