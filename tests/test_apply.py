@@ -690,3 +690,18 @@ def test_property_no_liked_song_ends_in_neither_place(seed, monkeypatch):
         assert removed == set() and fs.count("remove_saved_tracks_batched") == 0
     if removed:
         assert fs.first("note:journal") < fs.first("remove_saved_tracks_batched")
+
+
+def test_top_position_ignored_by_spotify_keeps_songs_liked_and_fails_loudly():
+    fs, t, ex = _world_with_existing(2)
+    fs.ignore_position = True
+    res, _ = run(fs, mv(t, position="top"))
+    assert res.exit_code == EXIT_FAILED and any("not at the top" in e for e in res.errors)
+    assert fs.count("remove_saved_tracks_batched") == 0 and set(fs.liked) == set(uris_of(t))
+    assert all(safe(fs, u, "P1") for u in uris_of(t))
+
+
+def test_top_position_verified_when_spotify_honours_it():
+    fs, t, ex = _world_with_existing(2)
+    res, _ = run(fs, mv(t, position="top"))
+    assert res.ok and fs.playlist_uris("P1")[:2] == uris_of(t) and fs.liked == []

@@ -152,14 +152,30 @@ def _confirm_journal_remove_reconcile(
     # 3. confirm by re-reading the targets
     confirmed: set[str] = set()
     for pid, uris in wanted.items():
-        def read(pid=pid) -> set[str]:
-            return {t.uri for t in client.iter_playlist_items(pid)}
+        # Songs this run inserted at the top must actually be the first entries; Spotify ignoring `position`
+        # would otherwise drop them at the bottom unnoticed (the song is safe, but not where the rule says).
+        at_top = {m["uri"] for m in live
+                  if m["playlist_id"] == pid and m.get("target_position") == "top" and not m.get("already_in_target")}
 
-        present = _poll(read, lambda p, uris=uris: uris <= p, sleep)
+        def read(pid=pid) -> list[str]:
+            return [t.uri for t in client.iter_playlist_items(pid)]
+
+        def settled(order: list[str], uris=uris, at_top=at_top) -> bool:
+            return uris <= set(order) and set(order[:len(at_top)]) == at_top
+
+        order = _poll(read, settled, sleep)
+        present = set(order)
         confirmed |= uris & present
         missing = uris - present
         if missing:
             res.errors.append(f"{len(missing)} song(s) not confirmed in target playlist; they stay in Liked Songs")
+        elif not settled(order):
+            # In the playlist but not at the top: keep them in Liked Songs and fail loudly.
+            confirmed -= at_top
+            res.errors.append(
+                f"{len(at_top)} song(s) were added but are not at the top of the target playlist "
+                "(Spotify may have ignored 'position'); they stay in Liked Songs"
+            )
     res.confirmed = sorted(confirmed)
     if not confirmed:
         res.exit_code = EXIT_FAILED if res.errors else EXIT_OK
