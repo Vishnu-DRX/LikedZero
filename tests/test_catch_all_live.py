@@ -1,6 +1,6 @@
 """Live, READ-ONLY (skipped unless LIKEDZERO_LIVE=1): confirms the real catch-all (`match: {any: true}`,
-Master decisions 12/decision 51) resolves correctly against the real account -- "SpotiSort Sink" exists and is
-writable, and a what-if preview with every rule enabled (including the disabled catch-all draft) never lets the
+Master decisions 12/decision 51) resolves correctly against the real account -- its target playlist (read from
+config.yaml, so it follows retargets) exists and is writable, and a what-if preview with every rule enabled (including the disabled catch-all draft) never lets the
 catch-all claim a song an earlier, more specific rule already claimed.
 """
 
@@ -18,12 +18,14 @@ from src.spotify_client import SpotifyClient, load_env
 pytestmark = pytest.mark.live
 
 
-def test_spotisort_sink_resolves_and_is_writable():
+def test_catch_all_target_resolves_and_is_writable():
     load_env()
+    config = load_config("config.yaml")
+    target = next(r.target_playlist for r in config.rules if r.match == {"any": True})
     client = SpotifyClient.from_env(dry_run=True)
     playlists = list(client.iter_my_playlists())
-    pl, problem, warning = resolve_target("SpotiSort Sink", playlists)
-    assert pl is not None, f"SpotiSort Sink did not resolve: {problem} / {warning}"
+    pl, problem, warning = resolve_target(target, playlists)
+    assert pl is not None, f"catch-all target {target!r} did not resolve: {problem} / {warning}"
     assert pl.usable
 
 
