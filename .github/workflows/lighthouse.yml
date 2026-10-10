@@ -13,5 +13,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v11
         with:
           configPath: ./lighthouserc.json
+          # median of 3: a single run on a shared runner swings the performance score by several points
+          runs: 3
           uploadArtifacts: true
           temporaryPublicStorage: true
