@@ -7,12 +7,12 @@ Vanilla CSS/JS, no build step. Three files, load in this order on every page:
 <link rel="stylesheet" href="assets/components.css" />   <!-- every component below -->
 <link rel="stylesheet" href="assets/site.css" />          <!-- marketing-site-only layout (header/footer/hero/etc.) -->
 ...
-<script src="assets/ui.js" defer></script>                <!-- behaviour, exposes window.SpotiUI -->
+<script src="assets/ui.js" defer></script>                <!-- behaviour, exposes window.LZUI -->
 <script src="assets/shell.js" defer data-active="home"></script> <!-- header/footer, see "Site shell" below -->
 ```
 
 Adjust relative paths (`../assets/...`) for pages nested one level deep (e.g. `docs/setup/index.html`).
-`ui.js` self-initializes on `DOMContentLoaded` and is idempotent — call `SpotiUI.init(container)` again after
+`ui.js` self-initializes on `DOMContentLoaded` and is idempotent — call `LZUI.init(container)` again after
 injecting new markup (e.g. rows added by a framework-free render function) to wire up tooltips/tabs/tag
 inputs/sortable headers/copy buttons inside it.
 
@@ -86,7 +86,7 @@ this for you).
   </div>
 </div>
 ```
-Auto-wired by `ui.js` on `[data-tag-input]` (also callable manually: `SpotiUI.tagInput(el, opts)`).
+Auto-wired by `ui.js` on `[data-tag-input]` (also callable manually: `LZUI.tagInput(el, opts)`).
 - `opts.values` (array) or `data-values="a,b"` sets the initial chips.
 - `opts.onChange(values)` fires on every add/remove; also dispatches a bubbling `ui:tags-change` CustomEvent
   (`event.detail` = current array) so a parent controller doesn't need to hold a reference.
@@ -115,7 +115,7 @@ Auto-wired by `ui.js` on `[data-tag-input]` (also callable manually: `SpotiUI.ta
 ```
 `ui.js` auto-selects the first `aria-selected="true"` tab (or the first tab) per `[role="tablist"]` on init,
 manages `hidden` on panels, arrow-key/Home/End navigation, and fires a bubbling `ui:tab` CustomEvent
-(`detail` = the selected tab element). Programmatic select: `SpotiUI.selectTab(tabEl, focus?)`.
+(`detail` = the selected tab element). Programmatic select: `LZUI.selectTab(tabEl, focus?)`.
 
 ## Modal + side drawer
 
@@ -134,21 +134,21 @@ manages `hidden` on panels, arrow-key/Home/End navigation, and fires a bubbling 
 <button data-open="my-modal">Open</button>
 ```
 For a side drawer, swap `.overlay` → `.overlay .overlay-side` and `.dialog` → `.drawer`.
-- Open declaratively with `data-open="<id>"` on any trigger, or `SpotiUI.open(idOrEl, {trigger})`.
-- Close with `data-close` on any element inside, clicking the scrim, `Esc`, or `SpotiUI.close()`.
+- Open declaratively with `data-open="<id>"` on any trigger, or `LZUI.open(idOrEl, {trigger})`.
+- Close with `data-close` on any element inside, clicking the scrim, `Esc`, or `LZUI.close()`.
 - Handles: focus trap (Tab wraps within the panel), focus moves to `[data-autofocus]` or the first focusable
   element on open, focus returns to the trigger on close, everything outside is `inert`, background scroll is
   locked (`body.ui-locked`), nested overlays stack correctly (`Esc`/close always affects the topmost).
-- `SpotiUI.confirm({title, message, confirmLabel, cancelLabel, danger}) → Promise<boolean>` builds a
+- `LZUI.confirm({title, message, confirmLabel, cancelLabel, danger}) → Promise<boolean>` builds a
   throwaway confirm dialog with the same accessibility wiring — use this instead of `window.confirm`.
 - Events: `ui:open` / `ui:close` (bubbling, `detail` = the overlay element).
 
 ## Toasts
 
 ```js
-SpotiUI.toast('Configuration saved.', { type: 'success' });         // 'info' (default) | 'success' | 'warning' | 'error'
-SpotiUI.toast('Could not save.', { type: 'error', timeout: 0 });     // timeout: 0 = sticky until dismissed
-SpotiUI.toast('Version dropped.', { action: { label: 'Undo', onClick: fn } });
+LZUI.toast('Configuration saved.', { type: 'success' });         // 'info' (default) | 'success' | 'warning' | 'error'
+LZUI.toast('Could not save.', { type: 'error', timeout: 0 });     // timeout: 0 = sticky until dismissed
+LZUI.toast('Version dropped.', { action: { label: 'Undo', onClick: fn } });
 ```
 Container is `role="region" aria-live="polite"`; `type: 'error'` toasts additionally get `role="alert"`.
 Auto-dismiss pauses on hover/focus. Returns `{ dismiss(), el }`.
@@ -163,8 +163,8 @@ Any element with `data-tip="…text…"` gets a tooltip automatically — no man
 **and** keyboard focus, dismisses on `Esc`/blur/scroll, is reachable on touch (tap toggles it), and is wired
 as `role="tooltip"` + `aria-describedby` pointing at the trigger. **Never put information nowhere else** — the
 tooltip text should be a supplement (e.g. an example), not the only place a required fact is stated.
-Non-focusable triggers (e.g. a `<span>`) are auto-tabindexed to `0`. Programmatic: `SpotiUI.showTip(el)` /
-`SpotiUI.hideTip()`.
+Non-focusable triggers (e.g. a `<span>`) are auto-tabindexed to `0`. Programmatic: `LZUI.showTip(el)` /
+`LZUI.hideTip()`.
 
 ## Popover
 
@@ -203,7 +203,7 @@ A badge/chip conveying status must still include a text word — colour is never
 - `th[data-sort="text"|"num"]` gets a sort button auto-injected (sticky header is automatic via `.table`).
   Click toggles ascending/descending, updates `aria-sort`, announces the change, and moves `<tr>`s in place —
   no framework needed. Provide `data-value` on `<td>` when the sortable value differs from its rendered text
-  (e.g. a raw number backing a formatted string). Programmatic: `SpotiUI.sortBy(thEl, 'ascending'|'descending')`.
+  (e.g. a raw number backing a formatted string). Programmatic: `LZUI.sortBy(thEl, 'ascending'|'descending')`.
   Fires a bubbling `ui:sort` CustomEvent.
 - For a phone card layout instead of horizontal scroll (decision 34), that's a page-level concern: render an
   alternate `.card` list at narrow widths rather than relying on this table markup — `components.css` does not
@@ -250,11 +250,11 @@ Numbers are pure CSS counters; `.is-done` shows a check, `aria-current="step"` h
 </div>
 ```
 `ui.js` injects a `.code-copy` button into any `.code[data-copyable]` on init (idempotent — re-running
-`SpotiUI.init()` won't double it up). The button copies the container's `<code>`/`<pre>` text by default;
+`LZUI.init()` won't double it up). The button copies the container's `<code>`/`<pre>` text by default;
 override with `data-copy="literal text"` on the button yourself, or `data-copy-target="#selector"` on the
 `.code` wrapper to copy a different element's text. Uses `navigator.clipboard` when available, falls back to
 a hidden-textarea `execCommand('copy')`, and always announces success/failure via the shared live region.
-Manual copy anywhere: `SpotiUI.copy(text) → Promise`.
+Manual copy anywhere: `LZUI.copy(text) → Promise`.
 
 ## Disclosure (FAQ / details)
 
@@ -278,22 +278,22 @@ flags an unnamed `role="meter"` as a serious violation.
 
 ---
 
-## Global helpers exposed on `window.SpotiUI`
+## Global helpers exposed on `window.LZUI`
 
 | Call | Purpose |
 |---|---|
-| `SpotiUI.init(root?)` | (Re-)wire tooltips/tabs/tag-inputs/sortable-headers/copy-buttons under `root` (default: whole document). Idempotent. |
-| `SpotiUI.theme.current()` | `'dark'` \| `'light'` — resolves explicit choice or `prefers-color-scheme`. |
-| `SpotiUI.theme.set('dark'\|'light'\|null)` | Set/persist (`localStorage`), or `null` to clear the override and follow the OS. |
-| `SpotiUI.theme.toggle()` | Flip between dark/light; wired automatically to any `[data-theme-toggle]` button. |
-| `SpotiUI.open(idOrEl, {trigger}?)` / `SpotiUI.close(idOrEl?)` | Modal/drawer control (see above). |
-| `SpotiUI.confirm(opts) → Promise<boolean>` | Accessible confirm dialog, see Modal section. |
-| `SpotiUI.toast(msg, opts?) → {dismiss, el}` | See Toasts. |
-| `SpotiUI.announce(msg)` | Push a message to the shared polite live region (for state changes with no visible focus target). |
-| `SpotiUI.tagInput(el, opts?)` | Manually attach/get a tag-input controller. |
-| `SpotiUI.sortBy(th, dir?)` / `SpotiUI.selectTab(tab, focus?)` | Programmatic table sort / tab select. |
-| `SpotiUI.copy(text) → Promise` | Clipboard write with fallback. |
-| `SpotiUI.showTip(el)` / `SpotiUI.hideTip()` / `SpotiUI.openPopover(el)` / `SpotiUI.closePopover()` | Manual tooltip/popover control. |
+| `LZUI.init(root?)` | (Re-)wire tooltips/tabs/tag-inputs/sortable-headers/copy-buttons under `root` (default: whole document). Idempotent. |
+| `LZUI.theme.current()` | `'dark'` \| `'light'` — resolves explicit choice or `prefers-color-scheme`. |
+| `LZUI.theme.set('dark'\|'light'\|null)` | Set/persist (`localStorage`), or `null` to clear the override and follow the OS. |
+| `LZUI.theme.toggle()` | Flip between dark/light; wired automatically to any `[data-theme-toggle]` button. |
+| `LZUI.open(idOrEl, {trigger}?)` / `LZUI.close(idOrEl?)` | Modal/drawer control (see above). |
+| `LZUI.confirm(opts) → Promise<boolean>` | Accessible confirm dialog, see Modal section. |
+| `LZUI.toast(msg, opts?) → {dismiss, el}` | See Toasts. |
+| `LZUI.announce(msg)` | Push a message to the shared polite live region (for state changes with no visible focus target). |
+| `LZUI.tagInput(el, opts?)` | Manually attach/get a tag-input controller. |
+| `LZUI.sortBy(th, dir?)` / `LZUI.selectTab(tab, focus?)` | Programmatic table sort / tab select. |
+| `LZUI.copy(text) → Promise` | Clipboard write with fallback. |
+| `LZUI.showTip(el)` / `LZUI.hideTip()` / `LZUI.openPopover(el)` / `LZUI.closePopover()` | Manual tooltip/popover control. |
 
 Theme persistence key: `localStorage['likedzero-theme']` (`'dark'` / `'light'` / absent = follow OS). All
 storage access is wrapped in `try/catch` with a silent no-op fallback — the library never throws if storage
@@ -320,7 +320,7 @@ Key points for pages that embed it:
   local `python -m http.server` root — never hardcode `/LikedZero/` anywhere in page markup.
 - Footer content (author name + socials) is read once from `docs/site.config.json` at the site root; only
   keys present in that file are rendered (no empty icons/placeholders for missing socials).
-- `window.SpotiShell.deriveFork(locationLike?)` is exposed for unit testing the "Your fork" derivation without
+- `window.LZShell.deriveFork(locationLike?)` is exposed for unit testing the "Your fork" derivation without
   a real navigation (pass a `{hostname, pathname}`-shaped object).
 
 ---

@@ -229,14 +229,14 @@
         doc.body.appendChild(footer);
         wireFork();
         loadStars();
-        if (window.SpotiUI) window.SpotiUI.init(footer);
+        if (window.LZUI) window.LZUI.init(footer);
       });
 
-    if (window.SpotiUI) window.SpotiUI.init(header);
+    if (window.LZUI) window.LZUI.init(header);
   }
 
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', mount); else mount();
 
   // Exposed for the fork-link unit test (decision 30: "unit-tested via URL override") and for debugging.
-  window.SpotiShell = { deriveFork: deriveFork, ROOT: ROOT, UPSTREAM_URL: UPSTREAM_URL };
+  window.LZShell = { deriveFork: deriveFork, ROOT: ROOT, UPSTREAM_URL: UPSTREAM_URL };
 })();

@@ -1,12 +1,12 @@
 // LikedZero Configure: guided stepper form -> config object -> validation + YAML preview + versions.
-// Vanilla JS. Depends on jsyaml (vendored), SpotiLang, SpotiValidate (validate.js), SpotiSchema (schema.js),
-// SpotiUI (assets/ui.js) and SpotiShell (assets/shell.js, for the header/footer only).
+// Vanilla JS. Depends on jsyaml (vendored), LZLang, LZValidate (validate.js), LZSchema (schema.js),
+// LZUI (assets/ui.js) and LZShell (assets/shell.js, for the header/footer only).
 (function () {
   'use strict';
 
-  var Lang = window.SpotiLang;
-  var V = window.SpotiValidate;
-  var UI = window.SpotiUI;
+  var Lang = window.LZLang;
+  var V = window.LZValidate;
+  var UI = window.LZUI;
 
   // ---------------------------------------------------------------- namespacing (decision 28)
   function deriveOwnerRepo() {
@@ -1501,9 +1501,9 @@
   // ---------------------------------------------------------------- schema drawer
   function renderSchema() {
     var tbody = document.querySelector('#schema-table tbody');
-    if (!tbody || !window.SpotiSchema) return;
+    if (!tbody || !window.LZSchema) return;
     tbody.innerHTML = '';
-    window.SpotiSchema.SCHEMA.forEach(function (row) {
+    window.LZSchema.SCHEMA.forEach(function (row) {
       tbody.appendChild(h('tr', null, h('td', null, h('code', { text: row.key })), h('td', { text: row.type }), h('td', { text: row.def }), h('td', { text: row.note })));
     });
   }
@@ -1653,7 +1653,7 @@
 
     if (UI) UI.init(document);
 
-    window.__spotiBuilder = { ready: true };
+    window.__lzBuilder = { ready: true };
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       navigator.serviceWorker.register('../sw.js').catch(function () { /* offline support is optional */ });
     }

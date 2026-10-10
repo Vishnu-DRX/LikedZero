@@ -95,14 +95,14 @@
         } else if (key === 'language_in') {
           var langOk = true;
           for (var i = 0; i < value.length; i++) {
-            if (root.SpotiLang.normalize(value[i]) === null) {
+            if (root.LZLang.normalize(value[i]) === null) {
               add(field, 'unknown language ' + pyRepr(value[i]) + " in 'language_in' (e.g. " +
-                root.SpotiLang.CANONICAL.slice(0, 6).join(', ') + ', or an ISO code)');
+                root.LZLang.CANONICAL.slice(0, 6).join(', ') + ', or an ISO code)');
               langOk = false;
               break;
             }
           }
-          if (langOk) clean[key] = value.map(function (v) { return root.SpotiLang.normalize(v); });
+          if (langOk) clean[key] = value.map(function (v) { return root.LZLang.normalize(v); });
         } else if (key === 'artist_country_in') {
           var bad = value.filter(function (v) { return !COUNTRY_CODE_RE.test(v.trim()); });
           if (bad.length) {
@@ -207,7 +207,7 @@
     } else {
       Object.keys(lp).forEach(function (name) {
         var lang = lp[name];
-        var canon = root.SpotiLang.normalize(lang);
+        var canon = root.LZLang.normalize(lang);
         if (!nonemptyStr(name)) {
           top('language_playlists', "'language_playlists': playlist names must be non-empty strings", { lpName: name });
         } else if (canon === null) {
@@ -287,7 +287,7 @@
     return { errors: errors };
   }
 
-  root.SpotiValidate = {
+  root.LZValidate = {
     validateConfig: validateConfig,
     MATCH_KEYS: MATCH_KEYS,
     LIST_MATCH_KEYS: LIST_MATCH_KEYS,

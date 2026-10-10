@@ -93,7 +93,7 @@ def test_run_now_targets_the_viewers_own_fork(make_page, site):
 def test_save_to_github_targets_the_viewers_own_fork(make_page, site):
     page, _ = make_page()
     open_fork_page(page, "builder/")
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     start_blank(page)
     add_chips(add_rule(page, "Chill", "Chill Vault"), "genre_contains", "chill")
     goto_review(page)

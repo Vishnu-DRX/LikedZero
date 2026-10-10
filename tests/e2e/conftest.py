@@ -138,7 +138,7 @@ def serve_fake_origin(page, origin, base_path):
 def builder(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     return page
 
 

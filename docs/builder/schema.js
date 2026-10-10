@@ -36,5 +36,5 @@
     { key: 'rules[].target_position', type: '"top" | "bottom"', def: 'bottom', note: 'top inserts new songs at index 0; existing order is kept.' }
   ];
 
-  root.SpotiSchema = { SCHEMA: SCHEMA };
+  root.LZSchema = { SCHEMA: SCHEMA };
 })(typeof window !== 'undefined' ? window : globalThis);

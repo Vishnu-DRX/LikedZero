@@ -114,7 +114,7 @@ def make_advanced(page):
 def builder(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     start_blank(page)
     make_advanced(page)
     return page
@@ -124,7 +124,7 @@ def builder(make_page, site):
 def builder_basic(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     start_blank(page)
     return page
 
@@ -140,7 +140,7 @@ def test_page_loads_without_external_requests_or_errors(make_page, site):
     page.on("console", lambda m: (m.type == "error" and "Failed to load resource" not in m.text) and errors.append(m.text))
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     page.wait_for_load_state("networkidle")
     assert page.locator("h1").text_content() == "Configure"
     # the shared site shell (U1) fetches the GitHub star count at runtime and fails silently if it errors
@@ -163,12 +163,12 @@ def test_landing_page_links_to_configure(make_page, site):
 def test_templates_shown_on_first_visit_and_not_after(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     expect(page.locator("#templates")).to_be_visible()
     expect(page.locator("#wizard")).to_be_hidden()
     start_blank(page)
     page.reload()
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     expect(page.locator("#templates")).to_be_hidden()
     expect(page.locator("#wizard")).to_be_visible()
 
@@ -176,7 +176,7 @@ def test_templates_shown_on_first_visit_and_not_after(make_page, site):
 def test_template_language_prefills_rule_and_playlist(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     page.get_by_role("button", name="Sort by language").click()
     data = preview_data(page)
     assert data["language_playlists"] == {"Chill Hindi": "hindi"}
@@ -186,7 +186,7 @@ def test_template_language_prefills_rule_and_playlist(make_page, site):
 def test_template_artist_prefills_rule(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     page.get_by_role("button", name="Sort by artist").click()
     data = preview_data(page)
     assert data["rules"][0]["match"] == {"artist_in": ["Bonobo", "Tycho"]}
@@ -443,7 +443,7 @@ def add_unless_cond(r, key):
 def test_unless_hidden_in_basic_shown_in_advanced(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     add_rule(page, "R", "P")
     expect(page.locator(".unless-conds").first).to_be_hidden()
@@ -567,7 +567,7 @@ def test_alias_normalisation_in_chips_and_yaml(builder):
 
 
 def test_alias_table_matches_python(builder):
-    js = builder.evaluate("(aliases) => aliases.map(a => window.SpotiLang.normalize(a))", list(ALIASES))
+    js = builder.evaluate("(aliases) => aliases.map(a => window.LZLang.normalize(a))", list(ALIASES))
     assert js == [normalize_language(a) for a in ALIASES]
 
 
@@ -724,7 +724,7 @@ PARITY = [
 
 @pytest.mark.parametrize("doc", PARITY, ids=[f"doc{i}" for i in range(len(PARITY))])
 def test_js_validator_matches_python_messages(builder, doc):
-    js = builder.evaluate("(d) => window.SpotiValidate.validateConfig(d).errors.map(e => e.msg)", doc)
+    js = builder.evaluate("(d) => window.LZValidate.validateConfig(d).errors.map(e => e.msg)", doc)
     try:
         parse_config(doc)
         py = []
@@ -759,7 +759,7 @@ def test_logging_default_false_and_toggle_updates_yaml(builder_basic):
 def test_basic_hides_advanced_fields_and_persists_across_reload(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     add_rule(page, "R", "P")
     expect(page.locator("[data-advanced-only]").first).to_be_hidden()
@@ -767,7 +767,7 @@ def test_basic_hides_advanced_fields_and_persists_across_reload(make_page, site)
     goto_review(page)
     expect(page.locator("#yaml-edit")).to_be_visible()
     page.reload()
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     assert page.locator("#advanced-toggle").is_checked()
 
 
@@ -814,13 +814,13 @@ def test_import_bad_yaml(builder):
 def test_autosave_and_reload_recovery(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     add_rule(page, "Persisted", "P")
     add_chips(rule(page, 0), "genre_contains", "jazz")
     page.wait_for_timeout(600)  # debounce
     page.reload()
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     assert names_in_preview(page) == ["Persisted"]
 
 
@@ -901,7 +901,7 @@ def test_storage_blocked_banner(make_page, site):
         "Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });"
     )
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     expect(page.locator("#storage-banner")).to_be_visible()
     start_blank(page)
     add_rule(page, "StillWorks", "P")
@@ -935,7 +935,7 @@ def test_axe_zero_serious_or_critical_with_unless_and_any_of_panels(make_page, s
     test_axe_zero_serious_or_critical_on_wizard_step_without_modal for that one (now fixed)."""
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     make_advanced(page)
     r = add_rule(page, "Region", "P")
@@ -976,7 +976,7 @@ def test_axe_zero_serious_or_critical_on_wizard_step_without_modal(make_page, si
     open, so a regression here can't hide behind that blind spot again."""
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     add_chips(add_rule(page, "A", "P"), "genre_contains", "x")
     axe = Axe()
@@ -990,7 +990,7 @@ def test_axe_zero_serious_or_critical_on_wizard_step_without_modal(make_page, si
 def test_axe_zero_serious_or_critical_with_stepper_and_modal_and_drawer(make_page, site, theme):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     if theme == "light":
         page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
@@ -1011,7 +1011,7 @@ def test_axe_zero_serious_or_critical_with_stepper_and_modal_and_drawer(make_pag
 def test_keyboard_only_walkthrough_basics_to_review_and_save(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     page.get_by_role("button", name="Start blank").focus()
     page.keyboard.press("Enter")
     expect(page.locator("#wizard")).to_be_visible()
@@ -1056,7 +1056,7 @@ STEPS = [(1, "basics"), (2, "languages"), (3, "rules"), (4, "review")]
 def test_step_screenshots(make_page, site, step, name, width, height, theme):
     page, _ = make_page(width=width, height=height)
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     start_blank(page)
     add_chips(add_rule(page, "Example rule", "Example Playlist"), "genre_contains", "jazz")
     if theme == "light":
@@ -1081,6 +1081,6 @@ def test_manifest_present(make_page, site):
 def test_service_worker_registers(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")
-    page.wait_for_function("window.__spotiBuilder")
+    page.wait_for_function("window.__lzBuilder")
     scope = page.evaluate("navigator.serviceWorker.ready.then(r => r.scope)")
     assert scope == site

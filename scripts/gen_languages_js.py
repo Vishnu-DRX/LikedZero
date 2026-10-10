@@ -37,7 +37,7 @@ def render() -> str:
         "    var key = value.trim().toLowerCase();\n"
         "    return Object.prototype.hasOwnProperty.call(ALIASES, key) ? ALIASES[key] : null;\n"
         "  }\n"
-        "  root.SpotiLang = { CANONICAL: CANONICAL, ALIASES: ALIASES, normalize: normalize };\n"
+        "  root.LZLang = { CANONICAL: CANONICAL, ALIASES: ALIASES, normalize: normalize };\n"
         "})(typeof window !== 'undefined' ? window : globalThis);\n"
     )
 

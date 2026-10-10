@@ -78,9 +78,9 @@ def test_shell_and_home_byte_budget():
 def test_fork_link_derivation_real(site_page, site, hostname, pathname, expect_url):
     page, _ = site_page()
     page.goto(site)
-    page.wait_for_function("window.SpotiShell")
+    page.wait_for_function("window.LZShell")
     result = page.evaluate(
-        "([h, p]) => window.SpotiShell.deriveFork({hostname: h, pathname: p})",
+        "([h, p]) => window.LZShell.deriveFork({hostname: h, pathname: p})",
         [hostname, pathname],
     )
     if expect_url is None:
@@ -134,7 +134,7 @@ def test_pages_load_across_available_browsers(available_browsers, site):
 def test_keyboard_skip_link_and_theme_toggle_persist(site_page, site):
     page, _ = site_page()
     page.goto(site)
-    page.wait_for_function("window.SpotiUI")
+    page.wait_for_function("window.LZUI")
     page.keyboard.press("Tab")  # first focus stop should be the skip link
     active = page.evaluate("document.activeElement.className")
     assert "skip-link" in active
@@ -158,7 +158,7 @@ def test_keyboard_skip_link_and_theme_toggle_persist(site_page, site):
     assert toggle.locator(f".{visible_icon}").evaluate("e => getComputedStyle(e).display") != "none"
     assert toggle.locator(f".{hidden_icon}").evaluate("e => getComputedStyle(e).display") == "none"
     page.reload()
-    page.wait_for_function("window.SpotiUI")
+    page.wait_for_function("window.LZUI")
     assert page.evaluate("document.documentElement.getAttribute('data-theme')") == after
     assert toggle.locator(f".{visible_icon}").evaluate("e => getComputedStyle(e).display") != "none"
 
@@ -166,7 +166,7 @@ def test_keyboard_skip_link_and_theme_toggle_persist(site_page, site):
 def test_mobile_menu_keyboard_and_escape(site_page, site):
     page, _ = site_page(width=375, height=812)
     page.goto(site)
-    page.wait_for_function("window.SpotiUI")
+    page.wait_for_function("window.LZUI")
     btn = page.locator("#site-menu-btn")
     assert btn.get_attribute("aria-expanded") == "false"
     btn.click()
@@ -178,7 +178,7 @@ def test_mobile_menu_keyboard_and_escape(site_page, site):
 def test_tooltip_on_focus_and_escape(site_page, site):
     page, _ = site_page()
     page.goto(site + "assets/kitchen-sink.html")
-    page.wait_for_function("window.SpotiUI")
+    page.wait_for_function("window.LZUI")
     help_btn = page.locator(".help").first
     help_btn.focus()
     tip_id = help_btn.get_attribute("data-tip-id")
@@ -192,7 +192,7 @@ def test_tooltip_on_focus_and_escape(site_page, site):
 def test_copy_buttons_present_on_setup(site_page, site):
     page, _ = site_page()
     page.goto(site + "setup/")
-    page.wait_for_function("window.SpotiUI")
+    page.wait_for_function("window.LZUI")
     buttons = page.locator(".code-copy")
     assert buttons.count() >= 5  # one per command/URL block
 
@@ -218,7 +218,7 @@ def test_axe_home_with_mobile_menu_open(site_page, site):
     page, _ = site_page(width=375, height=812)
     page.emulate_media(reduced_motion="reduce")  # avoid scanning mid-transition (opacity/transform in flight)
     page.goto(site)
-    page.wait_for_function("window.SpotiUI")
+    page.wait_for_function("window.LZUI")
     page.locator("#site-menu-btn").click()
     axe = Axe()
     results = axe.run(page)
