@@ -2,14 +2,16 @@ name: Sync
 
 # Manual only (decision 38): no `schedule:` trigger below yet, so nothing runs automatically. When the owner
 # is ready to enable one: add   schedule: [{cron: "0 3 * * *"}]   to `on:` below, set the repository *variable*
-# SPOTISORT_SCHEDULED_APPLY=true, and set `inbox_since` in config.yaml first (decision 45/P1-2 -- the Sync step
+# LIKEDZERO_SCHEDULED_APPLY=true, and set `inbox_since` in config.yaml first (decision 45/P1-2 -- the Sync step
 # below, and src/sync.py itself as a second line of defence, both refuse an unattended --apply without it, so a
 # schedule can never reach the whole legacy library). Until a `schedule:` trigger exists, `github.event_name` is
 # always `workflow_dispatch` here, so all of this is dormant.
 #
-# `vars.SPOTISORT_CRON` (a repository *variable*, not a secret) is informational only right now: it does not
+# `vars.LIKEDZERO_CRON` (a repository *variable*, not a secret) is informational only right now: it does not
 # gate anything, it just lets `src.sync --cron` describe the intended schedule on the dashboard Overview
 # ("Next scheduled run: ...") before a real `schedule:` trigger exists.
+#
+# Both variables still fall back to their pre-rename `SPOTISORT_*` names, so a fork that set those keeps working.
 on:
   workflow_dispatch:
     inputs:
@@ -43,9 +45,9 @@ jobs:
       DRY_RUN: ${{ inputs.dry_run }}
       NEWEST: ${{ inputs.newest }}
       MAX_MOVES: ${{ inputs.max_moves }}
-      SPOTISORT_CRON: ${{ vars.SPOTISORT_CRON }}
+      LIKEDZERO_CRON: ${{ vars.LIKEDZERO_CRON || vars.SPOTISORT_CRON }}
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
-      SPOTISORT_SCHEDULED_APPLY: ${{ vars.SPOTISORT_SCHEDULED_APPLY }}
+      LIKEDZERO_SCHEDULED_APPLY: ${{ vars.LIKEDZERO_SCHEDULED_APPLY || vars.SPOTISORT_SCHEDULED_APPLY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,18 +77,18 @@ jobs:
         env:
           # Only this step (the one that produces logs the next step commits) marks itself as a "committed run",
           # so logging.include_track_names is honoured only for output that is actually about to be published.
-          SPOTISORT_COMMITTED_RUN: "1"
+          LIKEDZERO_COMMITTED_RUN: "1"
         run: |
           set -euo pipefail
           args=(--config config.yaml --max-moves "${MAX_MOVES:-50}")
-          if [ -n "${SPOTISORT_CRON:-}" ]; then
-            args+=(--cron "${SPOTISORT_CRON}")
+          if [ -n "${LIKEDZERO_CRON:-}" ]; then
+            args+=(--cron "${LIKEDZERO_CRON}")
           fi
           if [ "${IS_SCHEDULE:-false}" = "true" ]; then
             # decision 45/P1-2: a schedule can supply no 'newest' input, so it uses --allow-unselected instead --
             # which src.sync itself refuses unless config.yaml sets inbox_since, so a schedule can never reach
             # the whole legacy library even if this workflow's own gating here were ever wrong.
-            if [ "${SPOTISORT_SCHEDULED_APPLY:-false}" = "true" ]; then
+            if [ "${LIKEDZERO_SCHEDULED_APPLY:-false}" = "true" ]; then
               args+=(--apply --allow-unselected)
             fi
           elif [ "${DRY_RUN:-true}" != "true" ]; then

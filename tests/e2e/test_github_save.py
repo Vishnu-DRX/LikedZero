@@ -28,7 +28,7 @@ OWNER, REPO = "someoneelse", "their-fork"
 def open_fork_builder(page):
     serve_fake_origin(page, ORIGIN, BASE_PATH)
     page.goto(f"{ORIGIN}{BASE_PATH}builder/")
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
 
 
 def draft_a_rule(page):
@@ -89,7 +89,7 @@ def test_save_to_github_reuses_run_now_token(make_page, site):
 def test_not_on_pages_shows_a_clear_message_instead_of_guessing(make_page, site):
     page, _ = make_page()
     page.goto(site + "builder/")  # 127.0.0.1 host: no owner/repo can be derived
-    page.wait_for_function("window.__spotiBuilder && window.__spotiBuilder.ready")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
     draft_a_rule(page)
     page.get_by_role("button", name="Save to GitHub").click()
     expect(page.locator("#github-save-dialog")).to_be_visible()

@@ -491,7 +491,7 @@ def test_from_env_builds_client_dry_run_by_default():
     assert c.dry_run is True and c._client_secret is None
 
 
-# ------------------------------------------------------------ live (skipped unless SPOTISORT_LIVE=1)
+# ------------------------------------------------------------ live (skipped unless LIKEDZERO_LIVE=1)
 
 
 @pytest.mark.live
@@ -512,7 +512,7 @@ def test_save_tracks_sends_nothing_when_everything_already_liked():
 def test_smoke_output_is_counts_only(load_fixture, monkeypatch, capsys):
     routes = paged_routes(load_fixture)
     client, _, _ = make(routes)
-    monkeypatch.setenv("SPOTISORT_LIVE", "1")
+    monkeypatch.setenv("LIKEDZERO_LIVE", "1")
     monkeypatch.setattr(sc.SpotifyClient, "from_env", classmethod(lambda cls, **kw: client))
     assert sc.main(["--smoke", "--env", "missing.env"]) == 0
     out = capsys.readouterr().out

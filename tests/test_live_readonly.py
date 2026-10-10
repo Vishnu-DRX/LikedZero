@@ -1,4 +1,4 @@
-"""Live, READ-ONLY checks (skipped unless SPOTISORT_LIVE=1). Never writes."""
+"""Live, READ-ONLY checks (skipped unless LIKEDZERO_LIVE=1). Never writes."""
 
 from __future__ import annotations
 

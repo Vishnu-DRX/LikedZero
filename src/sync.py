@@ -75,8 +75,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--rule", default=None, help="only plan moves for the rule with this name")
     p.add_argument("--titles", choices=("auto", "always", "never"), default="auto",
                    help="song titles in written logs: auto = follow logging.include_track_names on a committed "
-                        "workflow run (SPOTISORT_COMMITTED_RUN=1), always visible on an ordinary local run")
-    p.add_argument("--cron", default=os.environ.get("SPOTISORT_CRON"), help="cron of the schedule, shown on the dashboard Overview")
+                        "workflow run (LIKEDZERO_COMMITTED_RUN=1), always visible on an ordinary local run")
+    p.add_argument("--cron", default=os.environ.get("LIKEDZERO_CRON"), help="cron of the schedule, shown on the dashboard Overview")
     p.add_argument("--what-if-enable-all", action="store_true", help="preview: treat disabled rules as enabled (dry-run only)")
     p.add_argument("--no-network", action="store_true", help="do not call MusicBrainz (cache + local signals only)")
     return p.parse_args(argv)
@@ -164,13 +164,13 @@ def hide_titles(args: argparse.Namespace, config) -> bool:
 
     Deliberately does NOT key off the ambient ``GITHUB_ACTIONS`` variable, which GitHub sets on every step of
     every workflow (including a plain ``pytest`` job) and would silently redact titles in unrelated test runs.
-    Only the sync workflow's own commit-producing step sets ``SPOTISORT_COMMITTED_RUN``.
+    Only the sync workflow's own commit-producing step sets ``LIKEDZERO_COMMITTED_RUN``.
     """
     if args.titles == "always":
         return False
     if args.titles == "never":
         return True
-    return bool(os.environ.get("SPOTISORT_COMMITTED_RUN")) and not config.include_track_names
+    return bool(os.environ.get("LIKEDZERO_COMMITTED_RUN")) and not config.include_track_names
 
 
 def run(args: argparse.Namespace) -> int:

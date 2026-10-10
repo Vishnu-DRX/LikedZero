@@ -200,5 +200,5 @@
     var key = value.trim().toLowerCase();
     return Object.prototype.hasOwnProperty.call(ALIASES, key) ? ALIASES[key] : null;
   }
-  root.SpotiLang = { CANONICAL: CANONICAL, ALIASES: ALIASES, normalize: normalize };
+  root.LZLang = { CANONICAL: CANONICAL, ALIASES: ALIASES, normalize: normalize };
 })(typeof window !== 'undefined' ? window : globalThis);

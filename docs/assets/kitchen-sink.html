@@ -240,12 +240,12 @@ fallback_playlist: null</code></pre></div>
 <script src="ui.js"></script>
 <script>
   document.getElementById('ks-confirm-btn').addEventListener('click', function () {
-    SpotiUI.confirm({ title: 'Restore this version?', message: 'This replaces your current draft.', confirmLabel: 'Restore', cancelLabel: 'Cancel' });
+    LZUI.confirm({ title: 'Restore this version?', message: 'This replaces your current draft.', confirmLabel: 'Restore', cancelLabel: 'Cancel' });
   });
-  document.getElementById('ks-toast-info').addEventListener('click', function () { SpotiUI.toast('This is an info toast.'); });
-  document.getElementById('ks-toast-success').addEventListener('click', function () { SpotiUI.toast('Configuration saved.', { type: 'success' }); });
-  document.getElementById('ks-toast-warning').addEventListener('click', function () { SpotiUI.toast('Data is 3 days old.', { type: 'warning' }); });
-  document.getElementById('ks-toast-error').addEventListener('click', function () { SpotiUI.toast('Could not save.', { type: 'error' }); });
+  document.getElementById('ks-toast-info').addEventListener('click', function () { LZUI.toast('This is an info toast.'); });
+  document.getElementById('ks-toast-success').addEventListener('click', function () { LZUI.toast('Configuration saved.', { type: 'success' }); });
+  document.getElementById('ks-toast-warning').addEventListener('click', function () { LZUI.toast('Data is 3 days old.', { type: 'warning' }); });
+  document.getElementById('ks-toast-error').addEventListener('click', function () { LZUI.toast('Could not save.', { type: 'error' }); });
 </script>
 </body>
 </html>

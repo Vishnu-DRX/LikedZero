@@ -201,11 +201,11 @@
   }
 
   // ------------------------------------------------------------------ explain drawer
-  // decision 65: reuses the shared overlay system (assets/ui.js's SpotiUI.open/close) instead of this file's
+  // decision 65: reuses the shared overlay system (assets/ui.js's LZUI.open/close) instead of this file's
   // own parallel focus-trap/inert/Escape implementation -- the same machinery every dialog and drawer
   // elsewhere on the site already runs on. The panel itself stays a slide-in side drawer (decision 65
   // explicitly keeps this dashboard-only panel's own pattern; only the underlying plumbing is shared now).
-  var UI = window.SpotiUI;
+  var UI = window.LZUI;
   function openDrawer(index, trigger) {
     var p = data && data.files.plan.status === 'ok' ? data.files.plan.data : null;
     var song = p && p.songs[index];

@@ -1,10 +1,24 @@
 /* LikedZero UI behaviours (Master decision 23/24). Vanilla, no dependencies. API: docs/assets/COMPONENTS.md.
-   Exposes window.SpotiUI. Most behaviour is event-delegated, so dynamically inserted markup just works;
-   call SpotiUI.init(root) after inserting markup that needs setup (tooltips, tabs, tag inputs, copy buttons, sortable tables). */
+   Exposes window.LZUI. Most behaviour is event-delegated, so dynamically inserted markup just works;
+   call LZUI.init(root) after inserting markup that needs setup (tooltips, tabs, tag inputs, copy buttons, sortable tables). */
 (function () {
   'use strict';
   var THEME_KEY = 'likedzero-theme';
   var doc = document, root = doc.documentElement;
+  // One-time carry-over of settings saved before the SpotiSort -> LikedZero rename: copies every
+  // `spotisort*` localStorage key to its `likedzero*` name (repo segment `/SpotiSort` -> `/LikedZero`),
+  // never overwriting a key that already exists. Old keys are left in place.
+  try {
+    if (!localStorage.getItem('likedzero.migrated')) {
+      for (var mi = 0; mi < localStorage.length; mi += 1) {
+        var oldKey = localStorage.key(mi);
+        if (!oldKey || oldKey.indexOf('spotisort') !== 0) continue;
+        var newKey = 'likedzero' + oldKey.slice('spotisort'.length).replace('/SpotiSort', '/LikedZero');
+        if (localStorage.getItem(newKey) === null) localStorage.setItem(newKey, localStorage.getItem(oldKey));
+      }
+      localStorage.setItem('likedzero.migrated', '1');
+    }
+  } catch (e) { /* storage blocked: nothing to migrate */ }
   var uid = 0;
   // Apply a persisted theme choice as early as possible (before the rest of this file even parses further),
   // so a reload restores dark/light without waiting for DOMContentLoaded. A tiny inline snippet in each
@@ -380,7 +394,7 @@
   window.addEventListener('resize', function () { hideTip(true); closePopover(); });
   if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: light)').addEventListener('change', theme.sync); } catch (e) { /* old Safari */ } }
 
-  window.SpotiUI = { theme: theme, open: open, close: close, confirm: confirmDialog, toast: toast, announce: announce, init: init, tagInput: tagInput,
+  window.LZUI = { theme: theme, open: open, close: close, confirm: confirmDialog, toast: toast, announce: announce, init: init, tagInput: tagInput,
     sortBy: sortBy, selectTab: selectTab, copy: copyText, showTip: showTip, hideTip: function () { hideTip(true); }, openPopover: openPopover, closePopover: closePopover };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', function () { init(); }); else init();
 })();

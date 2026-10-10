@@ -1,12 +1,11 @@
 // LikedZero service worker: cache-first for the app shell so the builder works offline.
 // Bump CACHE_VERSION whenever any cached file changes. All URLs are relative to this file
 // (works under the /LikedZero/ GitHub Pages base path).
-const CACHE_VERSION = 'v14';
+const CACHE_VERSION = 'v15';
 const CACHE_NAME = 'likedzero-shell-' + CACHE_VERSION;
 const SHELL = [
   './',
   'index.html',
-  'style.css',
   'app.js',
   'manifest.webmanifest',
   '404.html',
@@ -66,7 +65,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('likedzero-shell-') && k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => (k.startsWith('likedzero-shell-') || k.startsWith('spotisort-shell-')) && k !== CACHE_NAME).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

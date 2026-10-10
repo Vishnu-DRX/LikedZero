@@ -711,7 +711,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m src.spotify_client", description=__doc__.split("\n")[0])
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--setup", action="store_true", help="one-time PKCE login; saves the refresh token to .env")
-    group.add_argument("--smoke", action="store_true", help="read-only live check (needs SPOTISORT_LIVE=1)")
+    group.add_argument("--smoke", action="store_true", help="read-only live check (needs LIKEDZERO_LIVE=1)")
     parser.add_argument("--env", default=".env", help="path to the .env file (default: .env)")
     args = parser.parse_args(argv)
 
@@ -724,8 +724,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             run_setup(client_id, args.env)
             return 0
-        if os.environ.get("SPOTISORT_LIVE") != "1":
-            print("Refusing to hit the live API: set SPOTISORT_LIVE=1 to run --smoke.", file=sys.stderr)
+        if os.environ.get("LIKEDZERO_LIVE") != "1":
+            print("Refusing to hit the live API: set LIKEDZERO_LIVE=1 to run --smoke.", file=sys.stderr)
             return 2
         counts = smoke(SpotifyClient.from_env(dry_run=True))
     except (SpotifyError, ValueError) as exc:
