@@ -106,7 +106,7 @@ def test_sync_caches_enrichment_and_does_not_commit_it(sync):
 
 
 def test_sync_permissions_and_bot_identity(sync):
-    assert sync["permissions"] == {"contents": "write"}
+    assert sync["permissions"] == {"contents": "write", "actions": "write"}
     commit = next(s["run"] for s in sync["jobs"]["sync"]["steps"] if s.get("name") == "Commit run logs")
     assert "likedzero-bot" in commit
 
@@ -138,3 +138,27 @@ def test_sync_step_marks_itself_as_a_committed_run_and_only_that_step(sync):
     marked = [s for s in steps if "LIKEDZERO_COMMITTED_RUN" in s.get("env", {})]
     assert [s["name"] for s in marked] == ["Sync"]
     assert marked[0]["env"]["LIKEDZERO_COMMITTED_RUN"] == "1"
+
+
+def test_keepalive_only_on_scheduled_ticks_and_can_never_fail_a_sync(sync):
+    steps = sync["jobs"]["sync"]["steps"]
+    check = next(s for s in steps if s.get("id") == "keepalive")
+    refresh = next(s for s in steps if s.get("name") == "Keep the schedule alive (refresh)")
+    for step in (check, refresh):
+        assert "github.event_name == 'schedule'" in step["if"] and step["continue-on-error"] is True
+    assert "steps.keepalive.outputs.refresh == 'true'" in refresh["if"]
+    assert "src.keepalive" in check["run"]
+    names = [s.get("name") for s in steps]
+    assert names.index("Schedule gate") > steps.index(refresh)  # runs before, and independent of, the gate
+
+
+def test_keepalive_always_re_enables_the_workflow_it_disabled(sync):
+    refresh = next(s for s in sync["jobs"]["sync"]["steps"] if s.get("name") == "Keep the schedule alive (refresh)")
+    run = refresh["run"]
+    assert run.index("trap ") < run.index("/disable")  # the safety net is armed before the disable
+    assert "/enable" in run.split("trap ")[1].split("\n")[0]
+
+
+def test_checkout_has_full_history_for_the_keepalive_check(sync):
+    checkout = next(s for s in sync["jobs"]["sync"]["steps"] if str(s.get("uses", "")).startswith("actions/checkout"))
+    assert checkout["with"]["fetch-depth"] == 0
