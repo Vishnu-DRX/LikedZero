@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from fakes import FakeSpotify, client_factory, make_track, uri
+from fakes import BASE_NOW, FakeSpotify, client_factory, make_track, uri
 from src import apply as apply_mod
 from src import sync
 
@@ -193,6 +193,14 @@ def test_newest_and_only_uris_combine(env, monkeypatch):
 
 def test_too_young_selected_song_is_left_alone(env, monkeypatch):
     tmp, cfg = env
+
+    class FrozenDatetime(datetime):
+        # make_track ages songs from the fixed BASE_NOW, so pin sync's clock there too.
+        @classmethod
+        def now(cls, tz=None):
+            return BASE_NOW
+
+    monkeypatch.setattr(sync, "datetime", FrozenDatetime)
     young = make_track(90, age_days=2)
     fs = use(monkeypatch, make_fs(2, extra_tracks=[young]))
     assert go(tmp, cfg, "--apply", "--newest", "1") == 0
