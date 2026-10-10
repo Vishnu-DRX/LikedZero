@@ -719,6 +719,19 @@ PARITY = [
                 "match": {"any_of": [{"artist_in_playlist": True}]}}]},
     {"rules": [{"name": "r", "target_playlist": "P",
                 "match": {"language_in": ["hindi"], "any_of": [{"artist_in": ["A"]}, {"artist_in": ["B"]}]}}]},
+    # ---- schedule (UI scheduling)
+    {"schedule": {"enabled": True, "timezone": "Asia/Kolkata", "time": "09:30", "days": ["mon", "fri"]}},
+    {"schedule": None}, {"schedule": []}, {"schedule": "daily"}, {"schedule": {"other": 1}},
+    {"schedule": {"enabled": "yes", "apply": 1}}, {"schedule": {"timezone": "Mars/Olympus"}},
+    {"schedule": {"timezone": "asia/kolkata"}}, {"schedule": {"timezone": ""}}, {"schedule": {"timezone": 5}},
+    {"schedule": {"timezone": "UTC"}}, {"schedule": {"timezone": "America/New_York"}},
+    {"schedule": {"time": "9:00"}}, {"schedule": {"time": "09:15"}}, {"schedule": {"time": "24:00"}},
+    {"schedule": {"time": 540}}, {"schedule": {"time": "00:00"}}, {"schedule": {"time": "23:30"}},
+    {"schedule": {"days": []}}, {"schedule": {"days": ["monday"]}}, {"schedule": {"days": ["mon", "mon"]}},
+    {"schedule": {"days": "mon"}}, {"schedule": {"days": ["sat", "sun"]}},
+    {"schedule": {"enabled": True, "apply": True}},
+    {"schedule": {"enabled": True, "apply": True}, "inbox_since": "2026-10-10"},
+    {"schedule": {"apply": True}, "inbox_since": "nope"},
 ]
 
 
@@ -1084,3 +1097,69 @@ def test_service_worker_registers(make_page, site):
     page.wait_for_function("window.__lzBuilder")
     scope = page.evaluate("navigator.serviceWorker.ready.then(r => r.scope)")
     assert scope == site
+
+
+# ------------------------------------------------------------------ schedule (run automatically, in the user's timezone)
+def test_schedule_is_off_by_default_and_not_written(builder_basic):
+    page = builder_basic
+    goto_step(page, 1, "Basics")
+    assert "schedule" not in preview_data(page)
+    assert page.locator("#g-sched-time").is_disabled()
+    assert "Not scheduled" in page.locator("#sched-summary").text_content()
+
+
+def test_schedule_defaults_to_the_browser_timezone(make_page, site):
+    page, _ = make_page(timezone_id="Asia/Kolkata")
+    page.goto(site + "builder/")
+    page.wait_for_function("window.__lzBuilder && window.__lzBuilder.ready")
+    start_blank(page)
+    goto_step(page, 1, "Basics")
+    assert page.locator("#g-sched-tz").input_value() in ("Asia/Kolkata", "Asia/Calcutta")
+    click_switch(page, "g-sched-enabled")
+    page.locator("#g-sched-time").select_option("09:00")
+    # 09:00 IST is 03:30 UTC, shown in plain words
+    assert "03:30 UTC" in page.locator("#sched-summary").text_content()
+    sched = preview_data(page)["schedule"]
+    assert sched["enabled"] is True and sched["time"] == "09:00" and sched["apply"] is False
+    assert sched["timezone"] in ("Asia/Kolkata", "Asia/Calcutta")
+    assert len(sched["days"]) == 7
+
+
+def test_schedule_output_passes_the_python_validator(builder_basic):
+    page = builder_basic
+    goto_step(page, 1, "Basics")
+    click_switch(page, "g-sched-enabled")
+    page.locator("#g-sched-tz").select_option("America/New_York")
+    page.locator("#g-sched-time").select_option("21:30")
+    for d in ("sat", "sun"):
+        page.locator(f"#g-sched-day-{d}").uncheck()
+    s = validated(preview(page)).schedule
+    assert (s.enabled, s.timezone, s.time, s.apply) == (True, "America/New_York", "21:30", False)
+    assert "sat" not in s.days and "mon" in s.days
+
+
+def test_live_scheduled_apply_needs_an_inbox_start_date(builder_basic):
+    page = builder_basic
+    goto_step(page, 1, "Basics")
+    click_switch(page, "g-sched-enabled")
+    click_switch(page, "g-sched-apply")
+    assert preview_data(page)["schedule"]["apply"] is True
+    assert "inbox_since" in page.locator("#err-g-sched-apply").text_content()
+    assert problem_count(page) >= 1
+    goto_step(page, 1, "Basics")
+    page.locator("#g-inbox-since").fill("2026-10-10")
+    assert page.locator("#err-g-sched-apply").text_content() == ""
+    assert validated(preview(page)).schedule.apply is True
+
+
+def test_schedule_round_trips_through_yaml_import(builder):
+    page = builder
+    goto_review(page)
+    edit = page.locator("#yaml-edit")
+    edit.fill('schedule:\n  enabled: true\n  timezone: Europe/London\n  time: "07:30"\n  days: [mon, tue]\n  apply: false\n')
+    edit.blur()
+    page.wait_for_function("document.getElementById('g-sched-tz').value === 'Europe/London'")  # the editor syncs after a debounce
+    goto_step(page, 1, "Basics")
+    assert page.locator("#g-sched-tz").input_value() == "Europe/London"
+    assert page.locator("#g-sched-time").input_value() == "07:30"
+    assert page.locator("#g-sched-day-mon").is_checked() and not page.locator("#g-sched-day-fri").is_checked()

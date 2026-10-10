@@ -29,8 +29,9 @@ def test_all_workflows_parse_and_have_jobs():
         assert data.get("name") and data.get("jobs"), path.name
 
 
-def test_sync_is_manual_only_until_schedule_is_confirmed(sync):
-    assert set(sync["on"]) == {"workflow_dispatch"}
+def test_sync_triggers_are_manual_and_a_30_minute_tick(sync):
+    assert set(sync["on"]) == {"workflow_dispatch", "schedule"}
+    assert sync["on"]["schedule"] == [{"cron": "*/30 * * * *"}]  # src/schedule.py's WINDOW assumes 30-minute ticks
 
 
 def test_sync_dry_run_input_defaults_to_true(sync):
@@ -67,19 +68,28 @@ def test_sync_live_run_requires_newest_selector_and_cap():
     assert "--allow-unselected" not in dispatch_branch
 
 
-def test_sync_schedule_branch_requires_the_apply_variable_and_uses_allow_unselected():
-    """decision 45/P1-2: wired but dormant -- there is no `schedule:` trigger yet (decision 38), so
-    IS_SCHEDULE is always false today; this just proves the logic is correct for when one is added."""
-    run = next(s["run"] for s in load("sync.yml")["jobs"]["sync"]["steps"] if s.get("name") == "Sync")
+def test_sync_schedule_branch_is_live_only_when_the_gate_says_apply_and_uses_allow_unselected(sync):
+    """A tick is a dry run unless config.yaml's schedule.apply (surfaced by the gate step) is true."""
+    steps = sync["jobs"]["sync"]["steps"]
+    sync_step = next(s for s in steps if s.get("name") == "Sync")
+    run = sync_step["run"]
     schedule_branch = run.split('if [ "${IS_SCHEDULE:-false}"')[1].split("elif")[0]
-    assert "LIKEDZERO_SCHEDULED_APPLY" in schedule_branch
+    assert 'SCHEDULE_APPLY:-false}" = "true"' in schedule_branch
     assert "--apply --allow-unselected" in schedule_branch
     assert "--newest" not in schedule_branch  # a schedule cannot supply one
+    assert sync_step["env"]["SCHEDULE_APPLY"] == "${{ steps.gate.outputs.apply }}"
+    assert "SCHEDULED_APPLY" not in (WF / "sync.yml").read_text(encoding="utf-8")  # the old repo variable is gone
 
 
-def test_sync_has_no_schedule_trigger_yet(sync):
-    """decision 38: no schedule is being enabled by this change -- only the (dormant) logic for one."""
-    assert "schedule" not in sync["on"]
+def test_sync_gate_precedes_and_guards_every_step_that_does_work(sync):
+    steps = sync["jobs"]["sync"]["steps"]
+    names = [s.get("name") for s in steps]
+    gate = names.index("Schedule gate")
+    assert steps[gate]["id"] == "gate" and "src.schedule" in steps[gate]["run"]
+    for step in steps[gate + 1:]:
+        assert "steps.gate.outputs.run == 'true'" in step["if"], step.get("name")
+    # non-scheduled events always pass the gate
+    assert "run=true" in steps[gate]["run"]
 
 
 def test_sync_has_no_unselected_input(sync):

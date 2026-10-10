@@ -71,7 +71,8 @@ def playwright_instance():
 @pytest.fixture(scope="session")
 def browser(playwright_instance):
     last = None
-    for kwargs in ({}, {"channel": "msedge"}, {"channel": "chrome"}):
+    local = [{"executable_path": os.environ["LIKEDZERO_CHROMIUM"]}] if os.environ.get("LIKEDZERO_CHROMIUM") else []
+    for kwargs in (*local, {}, {"channel": "msedge"}, {"channel": "chrome"}):
         try:
             b = playwright_instance.chromium.launch(**kwargs)
             break

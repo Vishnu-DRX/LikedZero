@@ -122,12 +122,75 @@
     return lead + describeUnless(rule) + ' go to ' + target + status + '.';
   }
 
+  // ---------------------------------------------------------------- schedule helpers
+  var SCHED_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  var SCHED_DAY_LABELS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+  function browserTimezone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) { return 'UTC'; }
+  }
+  function timezoneList(extra) {
+    var list = [];
+    try { if (Intl.supportedValuesOf) list = Intl.supportedValuesOf('timeZone').slice(); } catch (e) { list = []; }
+    if (!list.length) list = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Sao_Paulo',
+      'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Africa/Johannesburg', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Singapore',
+      'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland'];
+    ['UTC', extra].forEach(function (z) { if (z && list.indexOf(z) === -1) list.push(z); });
+    list.sort();
+    list.splice(list.indexOf('UTC'), 1);
+    list.unshift('UTC');
+    return list;
+  }
+  // Offset (minutes east of UTC) of `tz` at the instant `ms`, read back through Intl so daylight saving is honoured.
+  function tzOffsetMinutes(tz, ms) {
+    var parts = {};
+    new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' })
+      .formatToParts(new Date(ms)).forEach(function (p) { parts[p.type] = +p.value; });
+    return Math.round((Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) - Math.floor(ms / 1000) * 1000) / 60000);
+  }
+  // "09:30" in `tz` today -> the same moment as "HH:MM UTC" (+ " the day before/after" when it crosses midnight).
+  function localTimeAsUtc(time, tz) {
+    var hm = time.split(':'), h = +hm[0], m = +hm[1];
+    var now = new Date();
+    var guess = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, m);
+    var utcMs = guess - tzOffsetMinutes(tz, guess) * 60000;
+    utcMs = guess - tzOffsetMinutes(tz, utcMs) * 60000;
+    var d = new Date(utcMs);
+    var out = ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2) + ' UTC';
+    var dayShift = Math.floor(utcMs / 86400000) - Math.floor(guess / 86400000);
+    return out + (dayShift < 0 ? ' (the day before)' : dayShift > 0 ? ' (the day after)' : '');
+  }
+  function describeSchedule() {
+    if (!state.schedEnabled) return 'Not scheduled: LikedZero only runs when you start it.';
+    var days = state.schedDays.length === 7 ? 'every day' : state.schedDays.length ? 'on ' + SCHED_DAYS.filter(function (d) { return state.schedDays.indexOf(d) !== -1; }).map(function (d) { return SCHED_DAY_LABELS[d]; }).join(', ') : 'on no days';
+    var utc = '';
+    try { utc = ' That is ' + localTimeAsUtc(state.schedTime, state.schedTz) + ' today.'; } catch (e) { utc = ''; }
+    return 'Runs ' + days + ' at ' + state.schedTime + ' (' + state.schedTz + ').' + utc + ' ' +
+      (state.schedApply ? 'It really moves songs.' : 'Dry run only: nothing moves until you turn on moving songs.') +
+      ' GitHub may start it 5 to 20 minutes late.';
+  }
+  function buildScheduleControls() {
+    var timeSel = $('g-sched-time');
+    for (var i = 0; i < 48; i++) {
+      var hh = ('0' + Math.floor(i / 2)).slice(-2), mm = i % 2 ? '30' : '00', v = hh + ':' + mm;
+      var h12 = ((Math.floor(i / 2) + 11) % 12) + 1, ap = i < 24 ? 'AM' : 'PM';
+      timeSel.appendChild(h('option', { value: v, text: v + ' (' + h12 + ':' + mm + ' ' + ap + ')' }));
+    }
+    var tzSel = $('g-sched-tz');
+    timezoneList(state.schedTz).forEach(function (z) { tzSel.appendChild(h('option', { value: z, text: z })); });
+    var box = $('sched-days');
+    SCHED_DAYS.forEach(function (d) {
+      box.appendChild(h('label', { class: 'check-row' },
+        h('input', { type: 'checkbox', class: 'check', id: 'g-sched-day-' + d, value: d }), ' ' + SCHED_DAY_LABELS[d]));
+    });
+  }
+
   // ---------------------------------------------------------------- state
   var nextId = 1;
   function blankState() {
     return {
       defaultDays: '14', fallback: '', inboxSince: '', musicbrainz: true, englishDefault: false, includeTrackNames: false,
       aipEnabled: false, aipMinTracks: '3', aipMinDominance: '0.9', aipExclude: [],
+      schedEnabled: false, schedTz: browserTimezone(), schedTime: '09:00', schedDays: SCHED_DAYS.slice(), schedApply: false,
       langPlaylists: [], rules: [], revealAll: false
     };
   }
@@ -160,7 +223,7 @@
   function applySnapshot(snap) {
     var parsed = JSON.parse(snap);
     nextId = parsed.nextId;
-    state = parsed.state;
+    state = Object.assign(blankState(), parsed.state);
     restoringHistory = true;
     syncGlobalControls();
     renderLp();
@@ -209,6 +272,28 @@
     $('g-aip-min-tracks').value = state.aipMinTracks;
     $('g-aip-min-dominance').value = state.aipMinDominance;
     renderAipExclude();
+    $('g-sched-enabled').checked = state.schedEnabled;
+    $('g-sched-enabled').setAttribute('aria-checked', String(state.schedEnabled));
+    if (!$('g-sched-tz').querySelector('option[value="' + state.schedTz + '"]') && /^[A-Za-z0-9_+\-\/]+$/.test(state.schedTz)) {
+      $('g-sched-tz').appendChild(h('option', { value: state.schedTz, text: state.schedTz }));
+    }
+    $('g-sched-tz').value = state.schedTz;
+    $('g-sched-time').value = state.schedTime;
+    SCHED_DAYS.forEach(function (d) { $('g-sched-day-' + d).checked = state.schedDays.indexOf(d) !== -1; });
+    $('g-sched-apply').checked = state.schedApply;
+    $('g-sched-apply').setAttribute('aria-checked', String(state.schedApply));
+    renderScheduleState();
+  }
+
+  // Enables/disables the schedule inputs and rewrites the plain-English line; called from update() too.
+  function renderScheduleState() {
+    var on = state.schedEnabled;
+    ['g-sched-time', 'g-sched-tz', 'g-sched-apply'].forEach(function (id) { $(id).disabled = !on; });
+    SCHED_DAYS.forEach(function (d) { $('g-sched-day-' + d).disabled = !on; });
+    $('sched-summary').textContent = describeSchedule();
+    $('sched-apply-hint').textContent = state.inboxSince.trim() === ''
+      ? 'Off: scheduled runs are dry runs and nothing moves. To turn this on, set an inbox start date above first.'
+      : 'Off: scheduled runs are dry runs and nothing moves.';
   }
 
   function fid(rule, field) { return 'r' + rule.id + '-' + field.replace('.', '-'); }
@@ -290,6 +375,12 @@
     data.logging = { include_track_names: state.includeTrackNames };
     data.fallback_playlist = state.fallback === '' ? null : state.fallback;
     data.inbox_since = state.inboxSince.trim() === '' ? null : state.inboxSince.trim();
+    if (state.schedEnabled) {
+      data.schedule = {
+        enabled: true, timezone: state.schedTz, time: state.schedTime,
+        days: SCHED_DAYS.filter(function (d) { return state.schedDays.indexOf(d) !== -1; }), apply: state.schedApply,
+      };
+    }
     if (state.aipEnabled) {
       var aip = {};
       if (state.aipMinTracks.trim() !== '') aip.min_tracks = toInt(state.aipMinTracks);
@@ -330,6 +421,8 @@
     return {
       default_days_threshold: 'g-days', fallback_playlist: 'g-fallback', inbox_since: 'g-inbox-since',
       'enrichment.musicbrainz': 'g-mb', 'enrichment.english_default': 'g-en', 'logging.include_track_names': 'g-log',
+      'schedule.enabled': 'g-sched-enabled', 'schedule.timezone': 'g-sched-tz', 'schedule.time': 'g-sched-time',
+      'schedule.days': 'g-sched-days', 'schedule.apply': 'g-sched-apply',
       'artist_in_playlist.min_tracks': 'g-aip-min-tracks', 'artist_in_playlist.min_dominance': 'g-aip-min-dominance',
       'artist_in_playlist.exclude_playlists': 'aip-exclude-add'
     }[e.field] || null;
@@ -343,6 +436,8 @@
     }
     return {
       default_days_threshold: 'err-g-days', fallback_playlist: 'err-g-fallback', inbox_since: 'err-g-inbox-since',
+      'schedule.enabled': 'err-g-sched-enabled', 'schedule.timezone': 'err-g-sched-tz', 'schedule.time': 'err-g-sched-time',
+      'schedule.days': 'err-g-sched-days', 'schedule.apply': 'err-g-sched-apply',
       'artist_in_playlist.min_tracks': 'err-g-aip-min-tracks', 'artist_in_playlist.min_dominance': 'err-g-aip-min-dominance',
       'artist_in_playlist.exclude_playlists': 'err-g-aip-exclude'
     }[e.field] || null;
@@ -381,6 +476,7 @@
     });
     Object.keys(slots).forEach(function (id) { var n = $(id); if (n) n.textContent = slots[id].join(' '); });
 
+    renderScheduleState();
     current.errors = errors;
     current.visible = visible;
     current.yaml = dumpYaml(built.data);
@@ -989,6 +1085,14 @@
         ? ai.exclude_playlists.map(String).filter(function (n) { return n.toLowerCase().trim() !== 'vault_drx'; })
         : [];
     }
+    var sc = raw.schedule;
+    if (sc && typeof sc === 'object' && !Array.isArray(sc)) {
+      if (typeof sc.enabled === 'boolean') next.schedEnabled = sc.enabled;
+      if (typeof sc.timezone === 'string' && sc.timezone) next.schedTz = sc.timezone;
+      if (typeof sc.time === 'string' && /^([01]\d|2[0-3]):(00|30)$/.test(sc.time)) next.schedTime = sc.time;
+      if (Array.isArray(sc.days)) next.schedDays = sc.days.filter(function (d) { return SCHED_DAYS.indexOf(d) !== -1; });
+      if (typeof sc.apply === 'boolean') next.schedApply = sc.apply;
+    }
     var lp = raw.language_playlists;
     if (lp && typeof lp === 'object' && !Array.isArray(lp)) {
       Object.keys(lp).forEach(function (k) {
@@ -1286,8 +1390,27 @@
             renderGithubCommitForm(rr, tok);
           });
         },
-      })
+      }),
+      renderManualSave(rr)
     );
+  }
+
+  // Option 2: no token. GitHub cannot pre-fill the editor of an existing file from a link, so the flow is
+  // copy here -> open the edit page -> select all, paste, commit. (Schedule changes are config.yaml changes too.)
+  function renderManualSave(rr) {
+    var editLink = h('a', { class: 'btn btn-secondary', href: 'https://github.com/' + rr.owner + '/' + rr.repo + '/edit/main/config.yaml', target: '_blank', rel: 'noopener', text: 'Open config.yaml on GitHub' });
+    window.GithubPAT.fetchDefaultBranch(rr.owner, rr.repo).then(function (branch) { editLink.setAttribute('href', window.GithubPAT.manualLinks(rr.owner, rr.repo, branch).editConfig); });
+    return h('section', { class: 'manual-save', 'aria-labelledby': 'manual-save-h' },
+      h('h3', { id: 'manual-save-h', text: 'No token? Do it by hand on GitHub' }),
+      h('ol', { class: 'steps' },
+        h('li', null, 'Copy your configuration: ',
+          h('button', {
+            type: 'button', class: 'btn btn-secondary btn-sm', text: 'Copy config.yaml',
+            onclick: function () { copyText(current.yaml).then(function () { if (UI) UI.toast('config.yaml copied.', { type: 'success' }); }); },
+          })),
+        h('li', null, 'Open the file in GitHub’s editor: ', editLink),
+        h('li', { text: 'In the editor select everything, paste, then click Commit changes. You must be signed in to GitHub.' })),
+      h('p', { class: 'hint', text: 'GitHub cannot pre-fill the editor of an existing file from a link, so the paste is manual. Your schedule is part of config.yaml, so this saves it too.' }));
   }
 
   function githubGetFile(rr, token) {
@@ -1382,9 +1505,16 @@
   }
 
   // ---- "On GitHub" section of the Versions drawer: last 5 commits to config.yaml, lazy-loaded on open.
+  // Reading a public repo needs no token (a token only raises GitHub's rate limit), so `token` and `ref` are optional:
+  // no ref = the default branch. Only saving and Run now need a token.
+  function githubReadHeaders(token) {
+    var headers = { Accept: 'application/vnd.github+json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return headers;
+  }
   function githubFileAtRef(rr, token, ref) {
-    return fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/contents/config.yaml?ref=' + encodeURIComponent(ref), {
-      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+    return fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/contents/config.yaml' + (ref ? '?ref=' + encodeURIComponent(ref) : ''), {
+      headers: githubReadHeaders(token),
     }).then(function (r) {
       if (!r.ok) return r.json().then(function (b) { throw new Error('HTTP ' + r.status + (b && b.message ? ': ' + b.message : '')); });
       return r.json();
@@ -1405,22 +1535,19 @@
     var list = $('versions-github-list'), hint = $('versions-github-hint');
     if (!list || !hint) return;
     rr = rr || ownerRepoParts();
-    if (!rr.real) { hint.textContent = 'Only available once this site is published on GitHub Pages.'; list.innerHTML = ''; return; }
-    token = token || window.GithubPAT.get(rr.owner, rr.repo, GH_SCOPES);
-    if (!token) {
-      hint.innerHTML = '';
-      hint.appendChild(document.createTextNode('Connect via '));
-      var b = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Save to GitHub', onclick: function () { if (UI) UI.close('versions-drawer'); openGithubSave(); } });
-      hint.appendChild(b);
-      hint.appendChild(document.createTextNode(' to see commit history here.'));
-      list.innerHTML = '';
-      return;
-    }
-    hint.textContent = 'The last 5 commits to config.yaml on ' + rr.owner + '/' + rr.repo + '.';
+    if (!rr.real) { hint.textContent = 'Only available once this site is published on GitHub Pages.'; list.innerHTML = ''; $('gh-load-current').hidden = true; return; }
+    token = token || window.GithubPAT.get(rr.owner, rr.repo, GH_SCOPES); // optional: reading a public repo needs none
+    var loadBtn = $('gh-load-current');
+    loadBtn.hidden = false;
+    loadBtn.onclick = function () {
+      githubFileAtRef(rr, token, null).then(function (yaml) { restoreVersion({ yaml: yaml, savedAt: new Date().toISOString() }); })
+        .catch(function (e) { if (UI) UI.toast('Could not load config.yaml from GitHub: ' + (e && e.message ? e.message : 'network error'), { type: 'danger' }); });
+    };
+    hint.textContent = 'The last 5 commits to config.yaml on ' + rr.owner + '/' + rr.repo + '. Looking needs no token; only saving does.';
     list.innerHTML = '';
     list.appendChild(h('li', { class: 'hint', text: 'Loading…' }));
     fetch('https://api.github.com/repos/' + rr.owner + '/' + rr.repo + '/commits?path=config.yaml&per_page=5', {
-      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+      headers: githubReadHeaders(token),
     }).then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
       .then(function (commits) {
         list.innerHTML = '';
@@ -1451,7 +1578,7 @@
     try {
       var parsed = JSON.parse(raw);
       nextId = parsed.nextId;
-      state = parsed.state;
+      state = Object.assign(blankState(), parsed.state); // drafts saved before a field existed still load
       return true;
     } catch (e) { return false; }
   }
@@ -1520,6 +1647,25 @@
     $('g-en').addEventListener('change', function (e) { state.englishDefault = e.target.checked; update(); pushHistory(); });
     $('g-log').addEventListener('change', function (e) {
       state.includeTrackNames = e.target.checked;
+      e.target.setAttribute('aria-checked', String(e.target.checked));
+      update(); pushHistory();
+    });
+    $('g-sched-enabled').addEventListener('change', function (e) {
+      state.schedEnabled = e.target.checked;
+      e.target.setAttribute('aria-checked', String(e.target.checked));
+      update(); pushHistory();
+    });
+    $('g-sched-time').addEventListener('change', function (e) { state.schedTime = e.target.value; update(); pushHistory(); });
+    $('g-sched-tz').addEventListener('change', function (e) { state.schedTz = e.target.value; update(); pushHistory(); });
+    SCHED_DAYS.forEach(function (d) {
+      $('g-sched-day-' + d).addEventListener('change', function (e) {
+        state.schedDays = state.schedDays.filter(function (x) { return x !== d; });
+        if (e.target.checked) state.schedDays.push(d);
+        update(); pushHistory();
+      });
+    });
+    $('g-sched-apply').addEventListener('change', function (e) {
+      state.schedApply = e.target.checked;
       e.target.setAttribute('aria-checked', String(e.target.checked));
       update(); pushHistory();
     });
@@ -1629,6 +1775,7 @@
     if (storageBlocked) $('storage-banner').hidden = false;
 
     renderSchema();
+    buildScheduleControls();
     wire();
 
     var versions = loadVersions();

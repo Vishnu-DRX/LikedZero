@@ -108,6 +108,48 @@
                 <p class="hint" id="g-inbox-since-hint">Blank means every song is in scope (fine for manual runs; a scheduled run will require this to be set).</p>
                 <p class="err" id="err-g-inbox-since"></p>
               </div>
+              <div class="card" id="sched-panel">
+                <h3>Run automatically</h3>
+                <p class="hint">Pick when LikedZero checks your Liked Songs, in your own timezone. Without this it only runs when you start it.</p>
+                <div class="field check-row-field">
+                  <label class="switch">
+                    <input id="g-sched-enabled" type="checkbox" class="switch-input" role="switch" aria-checked="false" />
+                    <span class="switch-ui" aria-hidden="true"></span>
+                    <span class="switch-label">Run on a schedule</span>
+                  </label>
+                  <button class="help" data-tip="schedule.enabled: LikedZero's GitHub workflow wakes up every 30 minutes and only does something when it is your chosen time. GitHub can start it 5 to 20 minutes late." aria-label="Why does this matter?">?</button>
+                  <p class="err" id="err-g-sched-enabled"></p>
+                </div>
+                <div class="field">
+                  <label class="label" for="g-sched-time">Time of day</label>
+                  <select id="g-sched-time" class="select" aria-describedby="sched-summary err-g-sched-time"></select>
+                  <p class="err" id="err-g-sched-time"></p>
+                </div>
+                <div class="field">
+                  <label class="label" for="g-sched-tz">Timezone
+                    <button class="help" data-tip="schedule.timezone: the time above is wall-clock time in this zone. It follows daylight saving, so the UTC time behind it shifts twice a year. Your browser's timezone is filled in for you." aria-label="Why does this matter?">?</button>
+                  </label>
+                  <select id="g-sched-tz" class="select" aria-describedby="sched-summary err-g-sched-tz"></select>
+                  <p class="err" id="err-g-sched-tz"></p>
+                </div>
+                <fieldset class="field" id="g-sched-days" aria-describedby="err-g-sched-days">
+                  <legend class="label">Days</legend>
+                  <div class="sched-days" id="sched-days"></div>
+                  <p class="err" id="err-g-sched-days"></p>
+                </fieldset>
+                <div class="field check-row-field">
+                  <label class="switch">
+                    <input id="g-sched-apply" type="checkbox" class="switch-input" role="switch" aria-checked="false" />
+                    <span class="switch-ui" aria-hidden="true"></span>
+                    <span class="switch-label">Really move songs on schedule</span>
+                  </label>
+                  <button class="help" data-tip="schedule.apply: off means every scheduled run is a dry run, it only shows what it would do on the dashboard. Turn on once you trust the rules. Needs an inbox start date, so an automatic run can never touch songs you liked before it." aria-label="Why does this matter?">?</button>
+                  <p class="hint" id="sched-apply-hint">Off: scheduled runs are dry runs and nothing moves.</p>
+                  <p class="err" id="err-g-sched-apply"></p>
+                </div>
+                <p class="hint" id="sched-summary" role="status" data-testid="sched-summary"></p>
+              </div>
+
               <div class="wizard-nav"><span></span><button type="button" class="btn btn-primary" data-next>Next: Languages</button></div>
             </section>
 
@@ -271,6 +313,7 @@
           <p id="versions-empty" class="empty">No saved versions yet. Use "Save configuration" on the Review step.</p>
           <h3>On GitHub</h3>
           <p class="hint" id="versions-github-hint">The last 5 commits to <code>config.yaml</code> on your fork.</p>
+          <p><button type="button" class="btn btn-secondary btn-sm" id="gh-load-current" hidden>Load current config.yaml from GitHub</button></p>
           <ul id="versions-github-list" class="versions-list"></ul>
         </div>
       </div>

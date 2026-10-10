@@ -41,7 +41,16 @@
       '<div class="field"><label for="run-now-token">Fine-grained personal access token</label>' +
       '<input class="input" id="run-now-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" /></div>' +
       '<p class="small muted" id="run-now-connect-status" role="status"></p>' +
-      '<button type="button" class="btn btn-primary" id="run-now-connect-btn">Save &amp; verify</button>';
+      '<button type="button" class="btn btn-primary" id="run-now-connect-btn">Save &amp; verify</button>' +
+      '<section class="manual-run" aria-labelledby="manual-run-h">' +
+      '<h3 id="manual-run-h">No token? Start it on GitHub instead</h3>' +
+      '<ol class="steps">' +
+      '<li><a class="btn btn-secondary btn-sm" id="manual-run-link" href="https://github.com/' + esc(rn.owner) + '/' + esc(rn.repo) + '/actions/workflows/sync.yml" target="_blank" rel="noopener">Open the Sync workflow on GitHub</a></li>' +
+      '<li>Click <strong>Run workflow</strong> and type these inputs: <strong>Dry run</strong> ticked to only preview, or unticked for a live run; <strong>newest</strong> = how many of your newest liked songs to touch (required for a live run); leave max moves as it is.</li>' +
+      '<li>Click the green <strong>Run workflow</strong> button. You must be signed in to GitHub.</li>' +
+      '</ol>' +
+      '<p class="small muted">GitHub cannot pre-fill those inputs from a link, so you type them yourself.</p>' +
+      '</section>';
     document.getElementById('run-now-connect-btn').addEventListener('click', function () {
       var input = document.getElementById('run-now-token');
       var status = document.getElementById('run-now-connect-status');

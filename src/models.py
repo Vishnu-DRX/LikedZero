@@ -77,6 +77,20 @@ class Rule:
     # block an otherwise-matching rule; same match-key vocabulary as `match`, AND-combined among themselves.
 
 
+SCHEDULE_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
+@dataclass(frozen=True)
+class Schedule:
+    """`schedule:` in config.yaml. The workflow ticks every 30 minutes; src/schedule.py decides if a tick is due."""
+
+    enabled: bool = False
+    timezone: str = "UTC"  # IANA name; `time` is local wall-clock time in this zone
+    time: str = "09:00"  # "HH:MM", 24-hour, minutes 00 or 30 (the workflow's tick size)
+    days: tuple[str, ...] = SCHEDULE_DAYS
+    apply: bool = False  # False: scheduled runs are dry runs. True: they really move songs (needs inbox_since)
+
+
 @dataclass(frozen=True)
 class Config:
     default_days_threshold: int = 14
@@ -90,6 +104,7 @@ class Config:
     artist_in_playlist_min_tracks: int = 3  # artist_in_playlist.min_tracks
     artist_in_playlist_min_dominance: float = 0.9  # artist_in_playlist.min_dominance
     artist_in_playlist_exclude_playlists: tuple[str, ...] = ()  # artist_in_playlist.exclude_playlists (Vault_drx always added too)
+    schedule: Schedule = field(default_factory=Schedule)
 
 
 @dataclass(frozen=True)

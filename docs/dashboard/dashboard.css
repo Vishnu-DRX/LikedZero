@@ -173,3 +173,6 @@ details > summary { cursor: pointer; font-weight: var(--weight-medium); padding:
 /* narrow-screen safety: never let a badge, code chip or table cell force the page wider than the viewport */
 code, .cmd code { overflow-wrap: anywhere; word-break: break-word; }
 .stack td, .stack th, .grid > * { min-width: 0; }
+
+/* No-token ("by hand") alternative inside the connect dialogs */
+.manual-save, .manual-run { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }

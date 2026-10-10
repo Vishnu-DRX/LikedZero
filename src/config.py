@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from zoneinfo import ZoneInfo
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,7 @@ from typing import Any
 import yaml
 
 from .enrichment.languages import CANONICAL, normalize_language
-from .models import Config, Rule
+from .models import SCHEDULE_DAYS, Config, Rule, Schedule
 
 TOP_LEVEL_KEYS = {
     "default_days_threshold",
@@ -21,9 +22,11 @@ TOP_LEVEL_KEYS = {
     "logging",
     "inbox_since",
     "artist_in_playlist",
+    "schedule",
 }
 ENRICHMENT_KEYS = {"musicbrainz", "english_default"}
 LOGGING_KEYS = {"include_track_names"}
+SCHEDULE_KEYS = {"enabled", "timezone", "time", "days", "apply"}
 ARTIST_IN_PLAYLIST_KEYS = {"min_tracks", "min_dominance", "exclude_playlists"}
 RULE_KEYS = {
     "name",
@@ -209,6 +212,51 @@ def _validate_rule(raw: Any, index: int, errors: list[str]) -> Rule | None:
     )
 
 
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):(00|30)$")
+
+
+def _parse_schedule(raw: Any, inbox_since: date | None, errors: list[str]) -> Schedule:
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        errors.append("'schedule' must be a mapping")
+        return Schedule()
+    for key in raw:
+        if key not in SCHEDULE_KEYS:
+            errors.append(f"unknown key 'schedule.{key}'")
+    out: dict[str, Any] = {}
+    for key in ("enabled", "apply"):
+        if key in raw:
+            if not isinstance(raw[key], bool):
+                errors.append(f"'schedule.{key}' must be true or false")
+            else:
+                out[key] = raw[key]
+    if "timezone" in raw:
+        tz = raw["timezone"]
+        try:
+            if not isinstance(tz, str) or not tz or tz[0].islower():
+                raise ValueError(tz)
+            ZoneInfo(tz)
+            out["timezone"] = tz
+        except (ValueError, OSError, KeyError):  # ZoneInfoNotFoundError is a KeyError
+            errors.append("'schedule.timezone' must be a valid IANA timezone name such as Asia/Kolkata or UTC")
+    if "time" in raw:
+        t = raw["time"]
+        if not isinstance(t, str) or not _TIME_RE.match(t):
+            errors.append("'schedule.time' must be a quoted 24-hour time ending in :00 or :30, such as \"09:30\"")
+        else:
+            out["time"] = t
+    if "days" in raw:
+        d = raw["days"]
+        if not isinstance(d, list) or not d or not all(isinstance(x, str) and x in SCHEDULE_DAYS for x in d) or len(set(d)) != len(d):
+            errors.append("'schedule.days' must be a non-empty list of distinct days from: " + ", ".join(SCHEDULE_DAYS))
+        else:
+            out["days"] = tuple(d)
+    if out.get("apply") and inbox_since is None:
+        errors.append("'schedule.apply' requires 'inbox_since' to be set, so an unattended run can never reach your old library")
+    return Schedule(**out)
+
+
 def parse_config(data: Any) -> Config:
     """Validate an already-parsed YAML document. Raises ConfigError listing all problems."""
     if data is None:
@@ -331,6 +379,8 @@ def parse_config(data: Any) -> Config:
     # enforced independently, at the point of use, in enrichment/artist_playlist.py's excluded_playlist_names()
     # (so it holds even if a caller builds a Config directly, bypassing this parser).
 
+    schedule = _parse_schedule(data.get("schedule", {}), inbox_since, errors)
+
     raw_rules = data.get("rules", [])
     rules: list[Rule] = []
     if not isinstance(raw_rules, list):
@@ -361,6 +411,7 @@ def parse_config(data: Any) -> Config:
         artist_in_playlist_min_tracks=ai_min_tracks,
         artist_in_playlist_min_dominance=ai_min_dominance,
         artist_in_playlist_exclude_playlists=tuple(ai_exclude),
+        schedule=schedule,
     )
 
 
