@@ -234,9 +234,13 @@ def test_versions_drawer_and_current_config_load_without_any_token(make_page, si
     page.wait_for_selector('#versions-github-list li:has-text("Tune rules")')
     assert "Connect via" not in page.locator("#versions-drawer").inner_text()
     page.get_by_role("button", name="Load current config.yaml from GitHub").click()
-    confirm = page.get_by_role("button", name="Restore", exact=True)  # replacing an unsaved draft asks first
+    # Replacing an unsaved draft asks first. The question only appears after the (async) fetch, so wait for either
+    # the confirm dialog or the loaded value; scope to the dialog because the drawer's own rows also say "Restore".
+    page.wait_for_function(
+        "document.getElementById('g-days').value === '3' || document.querySelector('[role=alertdialog]')")
+    confirm = page.locator("[role=alertdialog]").get_by_role("button", name="Restore", exact=True)
     if confirm.count():
-        confirm.last.click()
+        confirm.click()
     page.wait_for_function("document.getElementById('g-days').value === '3'")
     assert seen and all(h is None for h in seen)
     assert page.evaluate("Object.keys(window.sessionStorage).filter(k => k.startsWith('likedzero.pat.')).length") == 0
