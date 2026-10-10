@@ -92,6 +92,7 @@ class FakeSpotify:
         self.ignore_removal: set[str] = set()
         self.contains_lies: set[str] = set()
         self.phantom_adds: set[str] = set()
+        self.ignore_position = False  # simulate Spotify silently ignoring `position` (appends instead)
         self.raise_on: dict[str, BaseException] = {}
         self.hooks: dict[str, Callable[..., None]] = {}
         self._counts: Counter[str] = Counter()
@@ -309,7 +310,7 @@ class FakeSpotify:
                 raise SpotifyError("POST failed (HTTP 404): playlist not found", 404)
             real = [u for u in chunk if u not in self.phantom_adds]
             items = self.items[playlist_id]
-            at = len(items) if position is None else min(position, len(items))
+            at = len(items) if position is None or self.ignore_position else min(position, len(items))
             items[at:at] = real
             for u in real:
                 self.catalog.setdefault(u, make_track(int(u.rsplit(":", 1)[-1]) if u.rsplit(":", 1)[-1].isdigit() else 0))
