@@ -12,6 +12,15 @@ default_days_threshold: 0
 # Hard floor: songs liked before this date are never evaluated, whatever selector a run uses. Required for
 # unattended runs (scheduled --allow-unselected).
 inbox_since: 2026-10-10
+# Runs by itself every morning at 08:00 India time (GitHub ticks every 30 minutes; src/schedule.py picks the
+# right one). apply: true makes it a LIVE run: due songs really move. Set it to false for a dry run only.
+# Each run is capped at 50 moves, never touches songs liked before inbox_since, and keeps a restore journal.
+schedule:
+  enabled: true
+  time: "08:00"
+  timezone: Asia/Kolkata
+  days: [mon, tue, wed, thu, fri, sat, sun]
+  apply: true
 enrichment:
   musicbrainz: false
   english_default: false
