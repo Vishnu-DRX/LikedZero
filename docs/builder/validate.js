@@ -3,9 +3,12 @@
 (function (root) {
   'use strict';
 
-  var TOP_LEVEL_KEYS = ['default_days_threshold', 'fallback_playlist', 'rules', 'language_playlists', 'enrichment', 'logging', 'inbox_since', 'artist_in_playlist'];
+  var TOP_LEVEL_KEYS = ['default_days_threshold', 'fallback_playlist', 'rules', 'language_playlists', 'enrichment', 'logging', 'inbox_since', 'artist_in_playlist', 'schedule'];
   var ENRICHMENT_KEYS = ['musicbrainz', 'english_default'];
   var LOGGING_KEYS = ['include_track_names'];
+  var SCHEDULE_KEYS = ['enabled', 'timezone', 'time', 'days', 'apply'];
+  var SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  var TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
   var ARTIST_IN_PLAYLIST_KEYS = ['min_tracks', 'min_dominance', 'exclude_playlists'];
   var RULE_KEYS = ['name', 'enabled', 'match', 'unless', 'target_playlist', 'days_threshold', 'create_missing_playlists', 'target_position'];
   var AUTO_TARGET = 'auto'; // design/proposals/artist_in_playlist.md: sentinel, valid only with match.artist_in_playlist
@@ -171,6 +174,14 @@
     return nonemptyStr(name) ? name : null;
   }
 
+  function validTimezone(tz) {
+    if (typeof tz !== 'string' || tz === '' || tz.charAt(0) !== tz.charAt(0).toUpperCase() || tz.charAt(0) === tz.charAt(0).toLowerCase()) {
+      // Python's ZoneInfo is case-sensitive and IANA names start with a capital; Intl is lenient, so check here.
+      return false;
+    }
+    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch (e) { return false; }
+  }
+
   // data: an already-parsed document (what yaml.safe_load would return). Returns {errors: [...]}.
   function validateConfig(data) {
     var errors = [];
@@ -194,10 +205,12 @@
     }
 
     var since = data.inbox_since;
+    var sinceSet = false;
     if (since !== undefined && since !== null) {
       var sinceOk = (since instanceof Date && !isNaN(since.getTime())) ||
         (nonemptyStr(since) && isValidIsoDate(since.trim()));
       if (!sinceOk) top('inbox_since', "'inbox_since' must be a date (YYYY-MM-DD) or null");
+      else sinceSet = true;
     }
 
     var lp = 'language_playlists' in data ? data.language_playlists : {};
@@ -268,6 +281,34 @@
       }
     }
 
+    var sched = 'schedule' in data ? data.schedule : {};
+    if (sched === null) sched = {};
+    if (!isMap(sched)) {
+      top('schedule', "'schedule' must be a mapping");
+    } else {
+      Object.keys(sched).forEach(function (key) {
+        if (!has(SCHEDULE_KEYS, key)) top('schedule', "unknown key 'schedule." + key + "'");
+      });
+      ['enabled', 'apply'].forEach(function (key) {
+        if (key in sched && typeof sched[key] !== 'boolean') top('schedule.' + key, "'schedule." + key + "' must be true or false");
+      });
+      if ('timezone' in sched && !validTimezone(sched.timezone)) {
+        top('schedule.timezone', "'schedule.timezone' must be a valid IANA timezone name such as Asia/Kolkata or UTC");
+      }
+      if ('time' in sched && !(typeof sched.time === 'string' && TIME_RE.test(sched.time))) {
+        top('schedule.time', "'schedule.time' must be a quoted 24-hour time ending in :00 or :30, such as \"09:30\"");
+      }
+      if ('days' in sched) {
+        var sd = sched.days;
+        var daysOk = Array.isArray(sd) && sd.length > 0 && sd.every(function (x) { return typeof x === 'string' && has(SCHEDULE_DAYS, x); }) &&
+          sd.filter(function (x, i) { return sd.indexOf(x) === i; }).length === sd.length;
+        if (!daysOk) top('schedule.days', "'schedule.days' must be a non-empty list of distinct days from: " + SCHEDULE_DAYS.join(', '));
+      }
+      if (sched.apply === true && !sinceSet) {
+        top('schedule.apply', "'schedule.apply' requires 'inbox_since' to be set, so an unattended run can never reach your old library");
+      }
+    }
+
     var rawRules = 'rules' in data ? data.rules : [];
     if (!Array.isArray(rawRules)) {
       top('rules', "'rules' must be a list");
@@ -297,6 +338,8 @@
     TRUE_ONLY_MATCH_KEYS: TRUE_ONLY_MATCH_KEYS,
     LOGGING_KEYS: LOGGING_KEYS,
     ARTIST_IN_PLAYLIST_KEYS: ARTIST_IN_PLAYLIST_KEYS,
+    SCHEDULE_DAYS: SCHEDULE_DAYS,
+    validTimezone: validTimezone,
     AUTO_TARGET: AUTO_TARGET
   };
 })(typeof window !== 'undefined' ? window : globalThis);

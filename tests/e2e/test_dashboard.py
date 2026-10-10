@@ -574,6 +574,16 @@ def test_run_now_connect_step_prefills_the_token_url(dash):
     expect(page.locator("#run-now-dialog")).to_be_hidden()
 
 
+def test_run_now_offers_a_no_token_way_with_the_exact_inputs_to_type(dash):
+    page = dash("overview", source="repo")
+    set_repo(page)
+    page.locator('[data-testid="run-now-btn"]').click()
+    link = page.locator("#manual-run-link")
+    assert link.get_attribute("href") == "https://github.com/octo/spot/actions/workflows/sync.yml"
+    text = page.locator(".manual-run").inner_text()
+    assert "Dry run" in text and "newest" in text and "cannot pre-fill" in text  # honest about the limit
+
+
 def test_run_now_connect_verify_and_dispatch(dash):
     page = dash("overview", source="repo")
     set_repo(page)

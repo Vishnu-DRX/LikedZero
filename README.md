@@ -2,7 +2,7 @@
 
 A rules-based, fork-and-run tool that treats Spotify **Liked Songs as an inbox**. After a configurable number of
 days, liked tracks are matched against your rules and **moved into playlists you already have**. It never
-creates playlists unless a rule explicitly allows it. There is no backend and no schedule by default — you
+creates playlists unless a rule explicitly allows it. There is no backend, and nothing runs on a schedule until you turn one on — you
 start every run yourself (locally, via the dashboard's **Run now** button, or via the Actions tab).
 
 ## Status
@@ -85,17 +85,17 @@ best-effort, and check the dashboard's **Signals** view for measured precision p
 
 ## Going unattended (schedules)
 
-There is no `schedule:` trigger in `.github/workflows/sync.yml` yet, by design (nothing runs unless you start
-it). Before ever enabling one:
+Open **Configure → Basics → Run automatically**, pick the time of day and days in your own timezone (your
+browser's timezone is filled in), and **Save to GitHub**. Nothing else to set up: the Sync workflow wakes every
+30 minutes and only does something at the time you chose, stored as `schedule:` in `config.yaml`.
 
-1. Set `inbox_since` in `config.yaml` (Configure surfaces this, and the Overview shows whether it is set). This
-   is the one guard that survives regardless of how a run is started — an unattended run cannot reach songs
-   liked before it, no matter what selector it uses.
-2. `--apply --allow-unselected` (what an unattended run needs, since a schedule can't supply `--newest`) is
-   refused by `src/sync.py` itself unless `inbox_since` is set — this is enforced twice, once in the workflow
-   and once in the tool, deliberately.
-3. Add a `schedule:` trigger to `sync.yml` and set the repository variable `LIKEDZERO_SCHEDULED_APPLY=true`.
-   Until you do both, `IS_SCHEDULE`/`LIKEDZERO_SCHEDULED_APPLY` logic already in the workflow stays dormant.
+- **Dry run first.** Scheduled runs only show what *would* move (look at the dashboard) until you also turn on
+  **Really move songs on schedule** (`schedule.apply: true`).
+- **`inbox_since` is required** for that switch (Configure and the tool both refuse otherwise). An unattended
+  run never touches a song liked before that date, and each run is capped by `--max-moves` (default 50).
+- **GitHub's limits:** a scheduled run can start 5 to 20 minutes late (a slot stays valid for 90 minutes, and
+  runs once), and GitHub pauses scheduled workflows in a repo with no activity for 60 days. Forks must enable
+  Actions on first visit, as GitHub disables them by default.
 
 ## How to read the dashboard
 

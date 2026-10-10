@@ -344,7 +344,7 @@ def run(args: argparse.Namespace) -> int:
             aborted=aborted,
         ),
         now,
-        schedule=artifacts.schedule_info(args.cron, now),
+        schedule=artifacts.schedule_info_from_config(config.schedule, now) or artifacts.schedule_info(args.cron, now),
     )
     print_summary(plan, out, applied=result, aborted=aborted)
     return exit_code

@@ -369,3 +369,19 @@ def schedule_info(cron: str | None, now: datetime) -> dict[str, Any] | None:
     names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     return {"cron": cron, "description": f"Every day at {when}" if dow is None else f"Every {names[dow]} at {when}",
             "next_run": iso(nxt)}
+
+
+def schedule_info_from_config(schedule: Any, now: datetime) -> dict[str, Any] | None:
+    """Overview description of config.yaml's `schedule:` (None when it is not enabled)."""
+    from . import schedule as sched  # local import: schedule.py imports config, which imports models only
+
+    if not schedule.enabled:
+        return None
+    nxt = sched.next_slot(schedule, now)
+    days = "every day" if len(schedule.days) == 7 else ", ".join(d.capitalize() for d in schedule.days)
+    mode = "moves songs" if schedule.apply else "dry run only"
+    return {
+        "cron": None,
+        "description": f"{days} at {schedule.time} ({schedule.timezone}), {mode}",
+        "next_run": iso(nxt) if nxt else None,
+    }

@@ -119,8 +119,32 @@
     });
   }
 
+  // ---- No-token ("by hand") links. A public repo's default branch is readable without a token. GitHub offers no
+  // way to pre-fill the editor of an EXISTING file from a link, nor the inputs of "Run workflow", so these only
+  // open the right page; the callers copy the content / show the exact inputs to type.
+  function fetchDefaultBranch(owner, repo) {
+    var known = getDefaultBranch(owner, repo);
+    if (known) return Promise.resolve(known);
+    return fetch('https://api.github.com/repos/' + owner + '/' + repo, { headers: { Accept: 'application/vnd.github+json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (b) {
+        var branch = (b && b.default_branch) || 'main';
+        if (b && b.default_branch) setDefaultBranch(owner, repo, branch);
+        return branch;
+      })
+      .catch(function () { return 'main'; });
+  }
+  function manualLinks(owner, repo, branch) {
+    var base = 'https://github.com/' + owner + '/' + repo;
+    return {
+      editConfig: base + '/edit/' + encodeURIComponent(branch || 'main') + '/config.yaml',
+      runSync: base + '/actions/workflows/sync.yml',
+    };
+  }
+
   window.GithubPAT = {
     get: get, set: set, clear: clear, tokenUrl: tokenUrl, verify: verify, dispatchWorkflow: dispatchWorkflow,
     getDefaultBranch: getDefaultBranch, setDefaultBranch: setDefaultBranch,
+    fetchDefaultBranch: fetchDefaultBranch, manualLinks: manualLinks,
   };
 })();

@@ -381,7 +381,7 @@
       var schedText = 'Not scheduled';
       if (typeof sched === 'string' && sched) schedText = sched;
       else if (sched && typeof sched === 'object') schedText = sched.next_run ? D.fmtTime(sched.next_run) : (sched.description || sched.cron || schedText);
-      html += card('Next scheduled run', esc(schedText), sched ? '' : 'Runs only happen when you start them.', ' data-card="next-run"');
+      html += card('Next scheduled run', esc(schedText), sched ? (sched && typeof sched === 'object' && sched.description ? esc(sched.description) : '') : 'Runs only happen when you start them.', ' data-card="next-run"');
       html += card('Liked songs', p ? esc(p.liked_total) : '—', (p ? 'Currently in the inbox' : '') + (prevRun ? delta(last.liked_after, prevRun.liked_after) : ''), ' data-card="liked"');
       html += pendingCard;
       html += movesCard;

@@ -207,3 +207,52 @@ def test_versions_drawer_shows_github_commits_labelled_separately(make_page, sit
     page.wait_for_selector('#versions-github-list li:has-text("Update config.yaml via Configure")')
     assert "Saved locally" in page.locator("#versions-drawer").inner_text()
     assert "On GitHub" in page.locator("#versions-drawer").inner_text()
+
+
+def test_versions_drawer_and_current_config_load_without_any_token(make_page, site):
+    """Looking at the repo's config and history never needs a token (a public repo is readable by anyone);
+    only saving does. No Authorization header may be sent, and no connect prompt may block the view."""
+    page, _ = make_page()
+    open_fork_builder(page)
+    start_blank(page)
+    seen = []
+    commits = [{"sha": "bbb222", "commit": {"message": "Tune rules", "author": {"date": "2026-10-01T10:00:00Z"}}}]
+    remote = "default_days_threshold: 3\nrules:\n  - name: FromRepo\n    target_playlist: Somewhere\n    match:\n      explicit: true\n"
+
+    def commits_route(route):
+        seen.append(route.request.headers.get("authorization"))
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(commits))
+
+    def contents_route(route):
+        seen.append(route.request.headers.get("authorization"))
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({"sha": "s1", "content": b64(remote)}))
+
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}/commits*", commits_route)
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}/contents/config.yaml*", contents_route)
+
+    page.get_by_role("button", name="Versions").click()
+    page.wait_for_selector('#versions-github-list li:has-text("Tune rules")')
+    assert "Connect via" not in page.locator("#versions-drawer").inner_text()
+    page.get_by_role("button", name="Load current config.yaml from GitHub").click()
+    confirm = page.get_by_role("button", name="Restore", exact=True)  # replacing an unsaved draft asks first
+    if confirm.count():
+        confirm.last.click()
+    page.wait_for_function("document.getElementById('g-days').value === '3'")
+    assert seen and all(h is None for h in seen)
+    assert page.evaluate("Object.keys(window.sessionStorage).filter(k => k.startsWith('likedzero.pat.')).length") == 0
+
+
+def test_save_dialog_offers_a_no_token_copy_and_edit_flow(make_page, site):
+    page, _ = make_page()
+    open_fork_builder(page)
+    draft_a_rule(page)
+    page.route(f"https://api.github.com/repos/{OWNER}/{REPO}", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"default_branch": "trunk"})))
+    page.get_by_role("button", name="Save to GitHub").click()
+    section = page.locator("#github-save-body .manual-save")
+    expect(section).to_be_visible()
+    expect(section.get_by_role("link", name="Open config.yaml on GitHub")).to_have_attribute(
+        "href", f"https://github.com/{OWNER}/{REPO}/edit/trunk/config.yaml")
+    assert "cannot pre-fill" in section.inner_text()  # honest about what a link can't do
+    section.get_by_role("button", name="Copy config.yaml").click()
+    expect(page.locator(".toast", has_text="config.yaml copied")).to_be_visible()
+    assert "Chill Vault" in page.evaluate("navigator.clipboard.readText()")

@@ -146,7 +146,7 @@ gh secret set SPOTIFY_REFRESH_TOKEN --body "$SPOTIFY_REFRESH_TOKEN"</code></pre>
       <span class="setup-step-num" aria-hidden="true"></span>
       <div class="card stack">
         <h2>Go live, later</h2>
-        <p>When the dry run looks right, live runs are still guarded: a <strong>newest N</strong> selector and a <strong>max-moves cap</strong> stop any single run from touching more than you expect. LikedZero only ever runs when you start it (manually, via Run now, or via Actions) — there is no schedule by default. If you later want one, set <code>inbox_since</code> in Configure first (required so an unattended run can never reach your old library), then ask in the repo's Setup guide/README for how to enable the `schedule:` trigger.</p>
+        <p>When the dry run looks right, live runs are still guarded: a <strong>newest N</strong> selector and a <strong>max-moves cap</strong> stop any single run from touching more than you expect. There is no schedule until you turn one on: in Configure, open <strong>Run automatically</strong>, pick a time in your own timezone and save. Scheduled runs are dry runs until you also switch on <strong>Really move songs on schedule</strong>, which needs an <code>inbox_since</code> date so an unattended run can never reach your old library.</p>
         <p>By default, committed run logs hide song titles (<code>logging.include_track_names: false</code>) — public logs carry counts and decisions only, with no song-identifying links (a bare Spotify URI resolves to a real song in one request, so those are stripped too). Turn it on in Configure if you want your own logs to show titles, or open the log files locally in the dashboard to see titles regardless of this setting.</p>
       </div>
     </li>
