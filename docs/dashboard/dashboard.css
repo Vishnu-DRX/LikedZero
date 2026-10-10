@@ -108,7 +108,10 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
   .stack td::before { content: attr(data-label); flex: none; max-width: 45%; text-align: left; color: var(--color-text-secondary); font-weight: var(--weight-medium); }
   .stack td.cell-main { display: block; text-align: left; font-size: var(--text-md); }
   .stack td.cell-main::before { display: none; }
-  .stack td > * { min-width: 0; }
+  /* Let long values (badges, signal lists) wrap inside the card instead of pushing it past the screen edge;
+     wider fallback fonts (e.g. DejaVu Sans on Linux) otherwise overflow 375 px by a few pixels. */
+  .stack td > * { min-width: 0; overflow-wrap: anywhere; }
+  .stack td .badge { white-space: normal; }
   .stack td.num { text-align: right; }
   .stack tr.row-bad, .stack tr.row-warn { border-left-width: 4px; }
   .stack tr.row-bad { border-left-color: var(--color-danger); }
