@@ -31,7 +31,7 @@ def test_all_workflows_parse_and_have_jobs():
 
 def test_sync_triggers_are_manual_and_a_30_minute_tick(sync):
     assert set(sync["on"]) == {"workflow_dispatch", "schedule"}
-    assert sync["on"]["schedule"] == [{"cron": "*/30 * * * *"}]  # src/schedule.py's WINDOW assumes 30-minute ticks
+    assert sync["on"]["schedule"] == [{"cron": "*/30 * * * *"}]  # src/schedule.py's catch-up window assumes frequent ticks
 
 
 def test_sync_dry_run_input_defaults_to_true(sync):

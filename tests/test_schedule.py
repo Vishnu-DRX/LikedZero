@@ -83,10 +83,12 @@ def test_due_exactly_at_the_slot_and_within_the_window():
     assert sch.is_due(sc, utc(2026, 10, 12, 4, 40), None)[0]  # a late (delayed) tick still counts
 
 
-def test_not_due_before_or_long_after_the_slot():
+def test_not_due_before_or_very_long_after_the_slot():
     sc = S()
     assert not sch.is_due(sc, utc(2026, 10, 12, 3, 29), utc(2026, 10, 11, 3, 31))[0]
-    assert not sch.is_due(sc, utc(2026, 10, 12, 5, 1), None)[0]  # 91 minutes late: the slot was missed
+    assert sch.is_due(sc, utc(2026, 10, 12, 5, 1), None)[0]  # GitHub dropped the early ticks: still catches up
+    assert sch.is_due(sc, utc(2026, 10, 12, 15, 29), None)[0]
+    assert not sch.is_due(sc, utc(2026, 10, 12, 15, 31), None)[0]  # 12 h 1 min late: the slot is given up
 
 
 def test_already_ran_since_the_slot_is_not_due_again():

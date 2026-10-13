@@ -93,8 +93,8 @@ browser's timezone is filled in), and **Save to GitHub**. Nothing else to set up
   **Really move songs on schedule** (`schedule.apply: true`).
 - **`inbox_since` is required** for that switch (Configure and the tool both refuse otherwise). An unattended
   run never touches a song liked before that date, and each run is capped by `--max-moves` (default 50).
-- **GitHub's limits:** a scheduled run can start 5 to 20 minutes late (a slot stays valid for 90 minutes, and
-  runs once), and GitHub pauses scheduled workflows in a repo with no activity for 60 days. The workflow
+- **GitHub's limits:** a scheduled run can start 5 to 20 minutes late (a slot stays valid for 12 hours, so a late or dropped
+  tick still catches up, and runs once), and GitHub pauses scheduled workflows in a repo with no activity for 60 days. The workflow
   refreshes itself daily once your last own commit is 30+ days old, but GitHub does not document what counts
   as activity, so if scheduled runs ever stop, press **Enable workflow** in the Actions tab (saving your config
   also counts). Forks must enable Actions on first visit, as GitHub disables them by default.

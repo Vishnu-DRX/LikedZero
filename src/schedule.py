@@ -21,9 +21,10 @@ from zoneinfo import ZoneInfo
 from .config import ConfigError, load_config
 from .models import SCHEDULE_DAYS, Schedule
 
-# GitHub delays scheduled runs under load (often 5-20 minutes, sometimes more). Ticks are 30 minutes apart, so a
-# slot stays claimable for three ticks; the "already ran since the slot" check keeps it to exactly one run.
-WINDOW = timedelta(minutes=90)
+# GitHub delays scheduled runs under load (often 5-20 minutes) and sometimes drops ticks for hours (the 11 and 12 Oct
+# 2026 slots were missed that way). A slot therefore stays claimable for 12 hours so a late tick still catches up;
+# the "already ran since the slot" check keeps it to exactly one run per slot.
+WINDOW = timedelta(hours=12)
 
 
 def latest_slot(schedule: Schedule, now: datetime) -> datetime | None:
