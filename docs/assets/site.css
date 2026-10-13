@@ -85,6 +85,13 @@
 .setup-step-num::before { content: counter(step); }
 .setup-check { display: flex; gap: var(--space-2); align-items: flex-start; }
 .setup-check .icon { color: var(--color-accent-text); flex: none; margin-top: 2px; }
+/* Phone: the three-step list already says what the flow diagram shows, and the diagram's labels shrink to
+   unreadable; copy buttons sit under the command instead of covering the end of it. */
+@media (max-width: 560px) {
+  .flow-figure { display: none; }
+  .code[data-copyable] pre, .code:has(.code-copy) pre { padding-right: var(--space-4); }
+  .code-copy { position: static; display: flex; width: max-content; margin: 0 var(--space-2) var(--space-2) auto; }
+}
 @media (max-width: 560px) { .code pre { white-space: pre-wrap; overflow-wrap: anywhere; } .setup-step { grid-template-columns: minmax(0, 1fr); } .setup-step > .card { padding: var(--space-4); } .setup-step-num { display: none; } }
 
 /* 404 */

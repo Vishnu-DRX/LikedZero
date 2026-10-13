@@ -339,18 +339,18 @@
       else if (last.verdict === 'error' || last.verdict === 'mismatch') health = badge('bad', 'Needs attention');
       else if (last.errors || last.warnings || mismatches) health = badge('warn', 'Healthy, with warnings');
       else health = badge('ok', 'Healthy');
-      html += '<p class="callout" data-testid="health"><strong>Overall:</strong> ' + health + '</p>';
+      var healthHtml = '<p class="callout" data-testid="health"><strong>Overall:</strong> ' + health + '</p>', sinceHtml = '', runHtml = '';
       // decision 45/P1-2: inbox_since is the one guard that would stop a future schedule from reaching the
       // whole legacy library, so its absence is worth surfacing here even though nothing runs on a schedule
       // yet (decision 38).
       if (p && p.inbox_since) {
-        html += '<p class="small muted" data-testid="inbox-since">Inbox since <strong>' + esc(D.fmtDate(p.inbox_since)) + '</strong> — songs liked before that are never evaluated.</p>';
+        sinceHtml = '<p class="small muted" data-testid="inbox-since">Inbox since <strong>' + esc(D.fmtDate(p.inbox_since)) + '</strong> — songs liked before that are never evaluated.</p>';
       } else if (p) {
-        html += '<p class="small" data-testid="inbox-since">' + badge('neutral', 'No inbox start date') + ' Every liked song is in scope for manual runs. Set <code>inbox_since</code> in Configure before ever enabling a schedule.</p>';
+        sinceHtml = '<p class="small" data-testid="inbox-since">' + badge('neutral', 'No inbox start date') + ' Every liked song is in scope for manual runs. Set <code>inbox_since</code> in Configure before ever enabling a schedule.</p>';
       }
       if (ctx.source === 'repo') {
-        html += '<p><button type="button" class="btn btn-primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
-          '<span class="small muted">Dispatches the Sync workflow on GitHub with your own token; nothing runs from this page itself.</span></p>';
+        runHtml = '<p class="run-now-row"><button type="button" class="btn btn-primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
+          '<span class="small muted">Starts the Sync workflow on GitHub with your own token.</span></p>';
       }
 
       // decision 34: KPI cards show a delta vs. the previous run, where one is meaningful (needs 2+ runs).
@@ -375,7 +375,21 @@
       var safetyTip = 'After every real run, LikedZero checks that the number of Liked Songs before minus what it removed equals what is left after. "Reconcile OK" means that checked out; a mismatch means a song may need restoring.';
       var safetyCard = card('Safety verdict', safety, safetySub + ' <a href="#/runs">See run details</a>', ' data-card="safety"', safetyTip);
 
-      html += '<div class="grid">';
+      var nextHtml = '';
+      if (p) {
+        var c = p.counts, targets = {};
+        p.songs.forEach(function (s) { if (s.decision === 'will_move') targets[s.target_playlist] = 1; });
+        var n = Object.keys(targets).length;
+        var next = c.will_move
+          ? 'The next run would move ' + plural(c.will_move, 'song') + ' into ' + plural(n, 'playlist') + '. ' + plural(c.too_young, 'song') + ' still too young, ' + c.blocked + ' blocked, ' + c.target_problem + ' with a target problem, ' + c.no_match + ' matching nothing.'
+          : 'The next run would move nothing. ' + plural(c.too_young, 'song') + ' still too young, ' + c.blocked + ' blocked, ' + c.target_problem + ' with a target problem, ' + c.no_match + ' matching nothing.';
+        if (p.mode !== 'apply') next += ' This snapshot is a dry run: nothing has been written to Spotify.';
+        if (p.what_if) next += ' (What-if: disabled rules counted as enabled.)';
+        nextHtml += '<p class="callout" data-testid="next">' + '<strong>What will happen next:</strong> ' + esc(next) + '</p>';
+        nextHtml += '<h3 class="small chips-title">Inbox by decision</h3><ul class="chips" data-testid="decision-counts">' +
+          DECISION_ORDER.map(function (d) { return '<li>' + '<a class="' + badgeClass(DECISIONS[d][0]) + '" href="#/inbox?decision=' + d + '" style="text-decoration:none">' + esc(DECISIONS[d][1]) + ': ' + c[d] + '</a></li>'; }).join('') + '</ul>';
+      }
+      html += healthHtml + nextHtml + runHtml + '<div class="grid">';
       html += lastRunCard;
       var sched = ok(ctx.files.runs) && ctx.files.runs.data.schedule || (p && p.schedule);
       var schedText = 'Not scheduled';
@@ -388,21 +402,7 @@
       html += card('Errors and warnings', last ? esc(last.errors) + ' / ' + esc(last.warnings) : '—', 'Last run. Past 7 days: ' + esc(errWeek) + ' errors, ' + esc(warnWeek) + ' warnings' + (prevRun ? delta(last.errors + last.warnings, prevRun.errors + prevRun.warnings, true) : ''), ' data-card="errors"');
       html += safetyCard;
       html += '</div>';
-
-      if (p) {
-        var c = p.counts, targets = {};
-        p.songs.forEach(function (s) { if (s.decision === 'will_move') targets[s.target_playlist] = 1; });
-        var n = Object.keys(targets).length;
-        var next = c.will_move
-          ? 'The next run would move ' + plural(c.will_move, 'song') + ' into ' + plural(n, 'playlist') + '. ' + plural(c.too_young, 'song') + ' still too young, ' + c.blocked + ' blocked, ' + c.target_problem + ' with a target problem, ' + c.no_match + ' matching nothing.'
-          : 'The next run would move nothing. ' + plural(c.too_young, 'song') + ' still too young, ' + c.blocked + ' blocked, ' + c.target_problem + ' with a target problem, ' + c.no_match + ' matching nothing.';
-        if (p.mode !== 'apply') next += ' This snapshot is a dry run: nothing has been written to Spotify.';
-        if (p.what_if) next += ' (What-if: disabled rules counted as enabled.)';
-        html += '<p class="callout" data-testid="next">' + '<strong>What will happen next:</strong> ' + esc(next) + '</p>';
-        html += '<h3 class="small" style="margin:0 0 8px">Inbox by decision</h3><ul class="chips" data-testid="decision-counts">' +
-          DECISION_ORDER.map(function (d) { return '<li>' + '<a class="' + badgeClass(DECISIONS[d][0]) + '" href="#/inbox?decision=' + d + '" style="text-decoration:none">' + esc(DECISIONS[d][1]) + ': ' + c[d] + '</a></li>'; }).join('') + '</ul>';
-      }
-      return html;
+      return html + sinceHtml;
     }
   };
 
@@ -483,12 +483,12 @@
           shown.forEach(function (r) {
             var s = r.s, l = s.language || {};
             h += '<tr data-decision="' + esc(s.decision) + '"><td class="cell-main"><button type="button" class="link-btn" data-explain="' + r.i + '" aria-haspopup="dialog">' + titleOrHidden(s.title, hidden) + '</button><div class="small muted">' + (hidden ? '' : esc((s.artists || []).join(', '))) + '</div></td>' +
-              '<td class="num" data-label="Age (days)">' + esc(num(s.age_days)) + '</td>' +
+              '<td class="num cell-extra" data-label="Age (days)">' + esc(num(s.age_days)) + '</td>' +
               '<td data-label="Decision">' + decisionBadge(s.decision) + '</td>' +
-              '<td data-label="Rule">' + (s.rule ? esc(s.rule) : '<span class="muted">—</span>') + '</td>' +
+              '<td class="cell-extra" data-label="Rule">' + (s.rule ? esc(s.rule) : '<span class="muted">—</span>') + '</td>' +
               '<td data-label="Target">' + (s.target_playlist ? esc(s.target_playlist) + '<div class="small muted">' + esc(posText(s.target_position)) + (s.target_status && s.target_status !== 'resolved' ? ' &middot; ' + esc(s.target_status.replace('_', ' ')) : '') + '</div>' : '<span class="muted">—</span>') + '</td>' +
               '<td data-label="Eligible on">' + (s.decision === 'will_move' ? 'Ready now' : (s.eligible_on ? esc(D.fmtDate(s.eligible_on)) : '<span class="muted">—</span>')) + '</td>' +
-              '<td data-label="Language">' + (l.value ? esc(l.value) + ' ' + tierBadge(l.source) : '<span class="muted">unknown</span>') + (l.withheld ? ' ' + badge('warn', 'Withheld') : '') + '</td></tr>';
+              '<td class="cell-extra" data-label="Language">' + (l.value ? esc(l.value) + ' ' + tierBadge(l.source) : '<span class="muted">unknown</span>') + (l.withheld ? ' ' + badge('warn', 'Withheld') : '') + '</td></tr>';
           });
           h += '</tbody></table></div>';
           if (rows.length > shown.length) h += '<p><button type="button" class="btn btn-secondary" data-more="1">Show ' + Math.min(100, rows.length - shown.length) + ' more</button></p>';
@@ -592,10 +592,10 @@
           (r.unless && Object.keys(r.unless).length ? '<div class="small" data-testid="unless-summary">unless ' + Object.keys(r.unless).map(function (k) { return matchDictLine(k, r.unless[k]); }).join(' &amp; ') + '</div>' : '') +
           '<div class="small muted">waits ' + esc(r.threshold_days) + ' days</div></td>' +
           '<td data-label="Target">' + esc(r.target_playlist) + '<div class="small muted">' + esc(posText(r.target_position)) + '</div>' + targetBadge(r.target_status) + '</td>' +
-          '<td class="num" data-label="Would match">' + esc(r.would_match) + '</td>' +
+          '<td class="num cell-extra" data-label="Would match">' + esc(r.would_match) + '</td>' +
           '<td class="num" data-label="Wins now"><a href="#/inbox?rule=' + encodeURIComponent(r.name) + '">' + esc(r.wins) + '</a></td>' +
-          '<td class="num" data-label="Last run">' + num(lastWins) + '</td>' +
-          '<td class="num" data-label="30 days">' + num(thirty) + '</td>' +
+          '<td class="num cell-extra" data-label="Last run">' + num(lastWins) + '</td>' +
+          '<td class="num cell-extra" data-label="30 days">' + num(thirty) + '</td>' +
           '<td data-label="Last matched">' + (lastMatched ? esc(D.fmtDate(lastMatched.time)) : '<span class="muted">' + (runs.length ? 'never' : '—') + '</span>') + '</td></tr>';
       });
       html += '</tbody></table></div>';
@@ -619,7 +619,7 @@
         var cls = x.status === 'resolved' ? '' : (x.status === 'ambiguous' ? 'row-warn' : 'row-bad');
         html += '<tr class="' + cls + '" data-status="' + esc(x.status) + '"><td class="cell-main"><strong>' + esc(x.name) + '</strong></td><td data-label="Status">' + targetBadge(x.status) + '</td>' +
           '<td class="num" data-label="Size">' + num(x.size) + '</td><td class="num" data-label="Planned in">' + esc(x.planned_in) + '</td>' +
-          '<td class="num" data-label="Moves out"><span data-tip="Playlists are never a source for the sorter in this design, so this is structurally always 0.">0</span></td>' +
+          '<td class="num cell-extra" data-label="Moves out"><span data-tip="Playlists are never a source for the sorter in this design, so this is structurally always 0.">0</span></td>' +
           '<td data-label="Rules">' + (x.rules || []).map(esc).join(', ') + '</td></tr>';
       });
       html += '</tbody></table></div>';
@@ -754,10 +754,10 @@
         var cls = r.verdict === 'error' || r.verdict === 'mismatch' ? 'row-bad' : (r.warnings ? 'row-warn' : '');
         h += '<tr class="' + cls + '" data-run="' + esc(r.run_id) + '" data-verdict="' + esc(r.verdict) + '"><td class="check-cell" data-label="Compare"><input type="checkbox" class="check" data-pick="' + esc(r.run_id) + '" aria-label="Select run ' + esc(D.fmtDate(r.time)) + ' for comparison"' + (st.sel.indexOf(r.run_id) >= 0 ? ' checked' : '') + ' /></td>' +
           '<td class="cell-main"><strong>' + esc(D.fmtTime(r.time)) + '</strong>' + (r.what_if ? ' ' + badge('warn', 'What-if') : '') + '</td>' +
-          '<td data-label="Mode">' + esc(r.mode === 'apply' ? 'Apply' : 'Dry run') + '</td><td data-label="Verdict">' + verdictBadge(r.verdict) + '</td>' +
-          '<td class="num" data-label="Planned">' + esc(r.planned_moves) + '</td><td class="num" data-label="Moved">' + esc(r.moved) + '</td><td class="num" data-label="Too young">' + esc(r.too_young) + '</td><td class="num" data-label="Blocked">' + esc(r.blocked) + '</td>' +
+          '<td class="cell-extra" data-label="Mode">' + esc(r.mode === 'apply' ? 'Apply' : 'Dry run') + '</td><td data-label="Verdict">' + verdictBadge(r.verdict) + '</td>' +
+          '<td class="num" data-label="Planned">' + esc(r.planned_moves) + '</td><td class="num" data-label="Moved">' + esc(r.moved) + '</td><td class="num cell-extra" data-label="Too young">' + esc(r.too_young) + '</td><td class="num cell-extra" data-label="Blocked">' + esc(r.blocked) + '</td>' +
           '<td class="num" data-label="Errors">' + esc(r.errors) + '</td><td class="num" data-label="Warnings">' + esc(r.warnings) + '</td>' +
-          '<td class="num" data-label="Liked">' + esc(r.liked_before) + ' &rarr; ' + esc(r.liked_after) + '</td><td class="num" data-label="Duration">' + esc(r.duration_seconds) + ' s</td>' +
+          '<td class="num" data-label="Liked">' + esc(r.liked_before) + ' &rarr; ' + esc(r.liked_after) + '</td><td class="num cell-extra" data-label="Duration">' + esc(r.duration_seconds) + ' s</td>' +
           '<td data-label="Details"><a href="#/runs/' + encodeURIComponent(r.run_id) + '" aria-label="Details for run ' + esc(D.fmtTime(r.time)) + '">Details</a></td></tr>';
       });
       return h + '</tbody></table></div>';

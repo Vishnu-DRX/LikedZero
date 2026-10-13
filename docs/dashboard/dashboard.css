@@ -12,15 +12,16 @@
 main.wrap { padding-block: var(--space-5) var(--space-7); min-width: 0; }
 body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist name must not force horizontal scroll */
 
-.page-title { padding: var(--space-5) 0 var(--space-2); }
+.page-title { padding: var(--space-4) 0 var(--space-2); }
 .page-title h1 { font-size: var(--text-2xl); }
-.page-title p { color: var(--color-text-secondary); margin: var(--space-1) 0 0; }
+.page-title p { color: var(--color-text-secondary); margin: var(--space-1) 0 0; font-size: var(--text-sm); }
 
 .num { text-align: right; white-space: nowrap; } /* extends assets/components.css's .num (tabular-nums) */
 
 /* decision 31: a persistent, unmissable label of the active data source (not just the dropdown's own value). */
-.source-current { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text); background: var(--color-elevated); display: inline-block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); margin: 0 0 var(--space-2); }
+.source-current { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text); background: var(--color-elevated); display: inline-block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); margin: 0; }
 
+.source-bar[hidden] { display: none; }
 .source-bar { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: flex-end; padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin: var(--space-3) 0; }
 .source-bar .grow { flex: 1 1 18rem; }
 .source-note { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0; flex-basis: 100%; }
@@ -31,8 +32,10 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 .files-drop.is-drag { border-color: var(--color-accent); background: var(--color-hover); }
 .files-drop input[type="file"] { pointer-events: none; }
 
-/* Top toolbar row above the source bar (currently just the Glossary button). */
-.mode-bar { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-2) 0 var(--space-4); flex-wrap: wrap; }
+/* One slim row above the tabs: which source is showing, a button that unfolds the source picker, the glossary. */
+.dash-bar { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.dash-bar .btn { white-space: nowrap; }
+.dash-bar .source-current { margin-right: auto; }
 
 /* min-height reserves the tab bar's real height (matches the touch target) before JS populates <ul id="tabs">,
    so the initial empty bar doesn't grow once data.js/views.js fill it in -- avoids a layout shift on first load.
@@ -48,10 +51,11 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 .tabs a:hover { color: var(--color-text); background: var(--color-hover); }
 .tabs a[aria-current="page"] { color: var(--color-text); border-bottom-color: var(--color-accent); }
 
+.view-head { margin-top: var(--space-5); }
 .view-head h2 { font-size: var(--text-xl); }
 .view-head h2:focus { outline: none; }
 .question { color: var(--color-text-secondary); margin: var(--space-1) 0 var(--space-2); }
-.stamp { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); }
+.stamp { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-4); display: flex; flex-wrap: wrap; gap: 0 var(--space-4); }
 .stamp .lbl { color: var(--color-text-secondary); }
 .stamp time { color: var(--color-text); }
 
@@ -68,6 +72,10 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 .metric-label { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-1); }
 .metric-value { font-size: var(--text-2xl); font-weight: var(--weight-bold); line-height: var(--leading-tight); margin: 0 0 var(--space-1); }
 .metric-sub { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0; }
+.chips-title { margin: 0 0 var(--space-2); }
+.chips-title + .chips { margin-bottom: var(--space-5); }
+.run-now-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: 0 0 var(--space-4); }
+[data-card="last-run"] .metric-value, [data-card="next-run"] .metric-value { font-size: var(--text-lg); }
 .callout { border-left: 4px solid var(--color-accent); background: var(--color-elevated); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin: 0 0 var(--space-4); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .check-cell { min-width: var(--touch-target); text-align: center; }
@@ -101,11 +109,41 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
 .result-count { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-2); }
 
 @media (max-width: 47.99rem) {
-  /* all six tabs visible at phone width instead of a half-cut scrolling strip */
-  .tabs ul { gap: 0; }
-  .tabs a { flex: 1 1 auto; justify-content: center; padding: 0 var(--space-2); font-size: var(--text-sm); }
-  @media (max-width: 30rem) { .tabs a { padding: 0 6px; font-size: 0.8125rem; } }
-  @media (max-width: 24rem) { .tabs a { padding: 0 3px; font-size: 0.75rem; } }
+  /* Phone: the six tabs become a 3 x 2 grid of comfortably sized touch targets (no sideways scrolling, no tiny
+     text). The strip stops being sticky here, because two rows of tabs would eat a quarter of the screen. */
+  .page-title { padding-top: var(--space-3); }
+  .dash-bar .btn { padding-inline: var(--space-3); }
+  .source-current { padding-inline: var(--space-2); }
+  .page-title h1 { font-size: var(--text-xl); }
+  .tabs { position: static; border-bottom: 0; margin-top: 0; min-height: 0; }
+  .tabs ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); overflow: visible; }
+  .tabs a { justify-content: center; padding: 0 var(--space-2); font-size: var(--text-sm); border: 1px solid var(--color-border); border-radius: var(--radius-pill); }
+  .tabs a[aria-current="page"] { background: var(--color-elevated); border-color: var(--color-accent); }
+  .view-head { margin-top: var(--space-4); }
+  .src-prefix { display: none; }
+  .view-head h2 { font-size: var(--text-lg); }
+  .stamp { flex-direction: column; }
+  .stamp > .lbl { display: none; }
+  /* Overview KPI cards: two per row, tighter, smaller numbers */
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+  .grid > .card { padding: var(--space-3); }
+  .metric-value { font-size: var(--text-xl); }
+  .metric-sub { font-size: var(--text-xs); }
+  .callout { padding: var(--space-3); }
+  /* Cards that carry less-important numbers fold them away on a phone; the full row is still in the Explain
+     drawer / run details, and everything is shown on larger screens. */
+  .stack td.cell-extra { display: none; }
+  /* Inbox cards: song, plain-words status, where it goes. Labels only where they add meaning. */
+  [data-testid="inbox-table"] td[data-label="Decision"],
+  [data-testid="inbox-table"] td[data-label="Target"] { padding-left: 0; min-height: 0; }
+  [data-testid="inbox-table"] td[data-label="Decision"]::before { display: none; }
+  [data-testid="inbox-table"] td[data-label="Target"]::before { content: "To"; width: auto; position: static; margin-right: var(--space-2); }
+  [data-testid="inbox-table"] td[data-label="Eligible on"] { padding-left: 0; }
+  [data-testid="inbox-table"] td[data-label="Eligible on"]::before { content: "Eligible"; width: auto; position: static; margin-right: var(--space-2); }
+  [data-testid="inbox-table"] tr[data-decision="will_move"] td[data-label="Eligible on"] { display: none; }
+  /* Filter row: search on its own line, the two selects side by side */
+  .toolbar .field { flex: 1 1 8rem; }
+  .toolbar .grow { flex-basis: 100%; }
   .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
   .stack tr { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); }
