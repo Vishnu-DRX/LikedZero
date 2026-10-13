@@ -17,6 +17,8 @@
   var filesInput = document.getElementById('files-input');
   var filesStatus = document.getElementById('files-status');
   var glossaryBody = document.getElementById('glossary-body');
+  var sourceBar = document.getElementById('source-bar');
+  var sourceToggle = document.getElementById('source-toggle');
 
   var data = null;          // {source, base, files}
   var state = {};           // per-view UI state that survives re-render
@@ -85,6 +87,11 @@
     if (!names.length) return 'No files chosen yet.';
     return 'Loaded: ' + names.join(', ') + '.';
   }
+  function setSourceBarOpen(open) {
+    sourceBar.hidden = !open;
+    sourceToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  sourceToggle.addEventListener('click', function () { setSourceBarOpen(sourceBar.hidden); });
   function syncBar(source) {
     srcSel.value = source;
     var isRepo = source === 'repo';
@@ -97,7 +104,10 @@
     repoHint.textContent = hintText(source) + (isRepo && !D.repoBase() ? ' Enter the raw URL of your logs folder, for example https://raw.githubusercontent.com/OWNER/REPO/main/logs/' : '');
     // decision 31: a persistent, unmissable label of which source is showing (not just the dropdown's own value,
     // which can scroll out of view or be easy to skim past).
-    sourceCurrent.textContent = 'Showing: ' + D.SOURCE_LABELS[source];
+    sourceCurrent.innerHTML = '<span class="src-prefix">Showing: </span>' + esc(D.SOURCE_LABELS[source]);
+    // The picker stays folded away until it is needed: opened by the "Change source" button, or automatically
+    // when the chosen source still wants input (a repo URL not set yet, local files not chosen yet).
+    if ((isRepo && !D.repoBase()) || (isFiles && !D.localFileNames().length)) setSourceBarOpen(true);
     window.__dash.source = source;
   }
 

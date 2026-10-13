@@ -479,6 +479,10 @@ def test_source_switch_repo_fixtures_files(dash, site):
         serve_data(page, "https://raw.githubusercontent.com/**")
 
     page = dash("overview", setup=setup)
+    # the source picker is folded away until asked for
+    expect(page.locator("#source-bar")).to_be_hidden()
+    page.locator("#source-toggle").click()
+    expect(page.locator("#source-bar")).to_be_visible()
     sel = page.locator("#source-select")
     expect(sel).to_have_value("fixtures")
     assert "Demo data" in page.locator("#repo-hint").inner_text()
@@ -550,6 +554,8 @@ def test_storage_blocked_does_not_break_the_page(make_page, site):
 # ------------------------------------------------------------------ run now (decision 39)
 def set_repo(page, owner_repo="octo/spot"):
     serve_data(page, "https://raw.githubusercontent.com/**")
+    if page.locator("#source-bar").is_hidden():
+        page.locator("#source-toggle").click()
     page.locator("#repo-url").fill(f"https://raw.githubusercontent.com/{owner_repo}/main/logs")
     page.get_by_role("button", name="Save URL").click()
     page.wait_for_selector('[data-testid="run-now-btn"]')

@@ -33,13 +33,13 @@
         <p>Read-only. Nothing here can change your Spotify library.</p>
       </div>
 
-      <div class="mode-bar">
-        <button type="button" class="btn btn-secondary btn-sm" id="glossary-btn" data-open="glossary-drawer">Glossary</button>
+      <div class="dash-bar">
+        <p class="source-current" id="source-current" data-testid="source-current" role="status"></p>
+        <button type="button" class="btn btn-secondary btn-sm" id="source-toggle" aria-expanded="false" aria-controls="source-bar">Change source</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="glossary-btn" data-open="glossary-drawer">Glossary</button>
       </div>
 
-      <p class="source-current" id="source-current" data-testid="source-current" role="status"></p>
-
-      <form class="source-bar" id="source-bar" aria-label="Data source" onsubmit="return false">
+      <form class="source-bar" id="source-bar" aria-label="Data source" onsubmit="return false" hidden>
         <div class="field">
           <label for="source-select">Data source</label>
           <select id="source-select" class="select">
