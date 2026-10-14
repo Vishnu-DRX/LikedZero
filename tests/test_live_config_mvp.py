@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 from src.config import load_config
@@ -33,3 +34,25 @@ def test_song_liked_before_inbox_since_is_never_planned():
     old = datetime.combine(config.inbox_since, datetime.min.time(), tzinfo=timezone.utc) - timedelta(days=1)
     _, plan = _plan(30, liked_on=old)
     assert plan.moves == []
+
+
+def test_two_songs_keep_liked_songs_order_at_top_of_simulation_archives():
+    """Liked Songs shows newest first: song-1 above song-2. After the real planner + apply, the top of the
+    playlist is song-1, song-2, then whatever was already there (not reversed)."""
+    from src.apply import apply_moves
+    from tests.fakes import JournalRecorder, build_world
+
+    now = datetime.now(timezone.utc)
+    fs, (song1, song2) = build_world(2, ("SIM0000000000000000001",))
+    song1 = replace(song1, added_at=now - timedelta(minutes=5))  # newest = top of Liked Songs
+    song2 = replace(song2, added_at=now - timedelta(minutes=10))
+    fs.set_liked([song1, song2])
+    existing = [make_track(100 + i) for i in range(1, 4)]
+    fs.add_playlist("SIM0000000000000000001", items=existing)
+    config = load_config("config.yaml")
+    pl = [Playlist("SIM0000000000000000001", "The Simulation Archives", "me", True, False)]
+    plan = build_plan([song2, song1], {}, config, now, pl)  # input order must not matter
+    res = apply_moves(fs, plan.moves, liked_uris_before=set(fs.liked), write_journal=JournalRecorder(fs), max_moves=50,
+                      sleep=lambda s: None)
+    assert res.ok
+    assert fs.playlist_uris("SIM0000000000000000001") == [song1.uri, song2.uri] + [t.uri for t in existing]
