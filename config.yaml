@@ -1,10 +1,8 @@
 # LikedZero live config.
-# MVP mode (2026-10-10): every liked song waits default_days_threshold days, then moves to the TOP of
-# "The Simulation Archives" (the catch-all rule at the bottom). All other rules below are kept but switched off,
-# and the artist auto-router stays off by decision. To bring a rule back: set enabled: true and move it above
-# the catch-all (first match wins). language_playlists/musicbrainz are off because the catch-all needs no
-# language or genre signal; turn them back on (and restore the map below) before re-enabling language rules:
-#   language_playlists: {"Dil": hindi, "The Simulation Archives": english, "NewAgeMadrasMail": malayalam, "nani mo wakaranai": japanese}
+# 2026-10-15: language and artist rules are back ON (they were off in the 2026-10-10 MVP mode, when everything went to
+# the catch-all). First match wins, so they sit above the catch-all and only what they leave over falls through to
+# "The Simulation Archives" (top). The artist auto-router ("Route to artist's home playlist (draft)") stays off by decision.
+# Language rules need language_playlists + enrichment.musicbrainz below; turn those off and they match nothing.
 #
 # default_days_threshold: 0 is the TEST value (a liked song is eligible immediately). Raise it to your real N
 # (e.g. 14) once the first live run is verified. The unit is whole days; 0 is the minimum.
@@ -21,8 +19,14 @@ schedule:
   timezone: Asia/Kolkata
   days: [mon, tue, wed, thu, fri, sat, sun]
   apply: true
+# Playlist name -> language. Songs by artists already in these playlists are recognised as that language.
+language_playlists:
+  "Dil": hindi
+  "The Simulation Archives": english
+  "NewAgeMadrasMail": malayalam
+  "nani mo wakaranai": japanese
 enrichment:
-  musicbrainz: false
+  musicbrainz: true
   english_default: false
 # Master decisions 11/decision 54: min_tracks 3 / min_dominance 0.9 is the measured, recommended default
 # (design/reports/measurement-round-2.md Task 1: 95.8% precision, 47.7% recall of the qualifying subset).
@@ -34,12 +38,12 @@ artist_in_playlist:
   exclude_playlists: ["Vault_drx"]
 rules:
   - name: "Hindi -> Dil"
-    enabled: false
+    enabled: true
     match:
       language_in: [hindi]
     target_playlist: "Dil"
   - name: "Malayalam -> NewAgeMadrasMail"
-    enabled: false
+    enabled: true
     match:
       language_in: [malayalam]
     target_playlist: "NewAgeMadrasMail"
@@ -48,32 +52,32 @@ rules:
   # artist's tracks, confirmed live. Ordered before the drafts below since these are
   # high-confidence, narrow rules and should be tried first.
   - name: "Anavae -> Anavae binge list"
-    enabled: false
+    enabled: true
     match:
       artist_in: ["Anavae"]
     target_playlist: "Anavae binge list"
   - name: "Linkin Park -> Dead Dreams' Disco"
-    enabled: false
+    enabled: true
     match:
       artist_in: ["Linkin Park"]
     target_playlist: "Dead Dreams' Disco"
   - name: "Queen -> Her Highness"
-    enabled: false
+    enabled: true
     match:
       artist_in: ["Queen"]
     target_playlist: "Her Highness"
   - name: "Twenty One Pilots -> Riffs in the air"
-    enabled: false
+    enabled: true
     match:
       artist_in: ["Twenty One Pilots"]
     target_playlist: "Riffs in the air"
   - name: "Klasey Jones -> The Klasey Universe"
-    enabled: false
+    enabled: true
     match:
       artist_in: ["Klasey Jones"]
     target_playlist: "The Klasey Universe"
   - name: "The Midnight -> Midnight Mixer"
-    enabled: false
+    enabled: true
     match:
       artist_in: ["The Midnight"]
     target_playlist: "Midnight Mixer"
@@ -86,12 +90,12 @@ rules:
       artist_in_playlist: true
     target_playlist: auto
   - name: "Japanese -> nani mo wakaranai"
-    enabled: false
+    enabled: true
     match:
       language_in: [japanese]
     target_playlist: "nani mo wakaranai"
   - name: "English -> The Simulation Archives"
-    enabled: false
+    enabled: true
     match:
       language_in: [english]
     target_playlist: "The Simulation Archives"

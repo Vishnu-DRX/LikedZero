@@ -1,4 +1,5 @@
-"""The shipped config.yaml (MVP mode): a freshly liked song goes to the TOP of The Simulation Archives. Offline."""
+"""The shipped config.yaml: language and artist rules run first, and a freshly liked song nothing else claims goes to
+the TOP of The Simulation Archives (the catch-all). Offline."""
 
 from __future__ import annotations
 
@@ -22,7 +23,11 @@ def _plan(added_days_ago: float, liked_on: datetime | None = None):
 
 def test_new_song_goes_to_top_of_simulation_archives():
     config, plan = _plan(0.01)
-    assert [r.name for r in config.rules if r.enabled] == ["Catch-all -> The Simulation Archives"]
+    enabled = [r.name for r in config.rules if r.enabled]
+    assert enabled[-1] == "Catch-all -> The Simulation Archives"  # last, so it only catches what nothing else claimed
+    assert "Hindi -> Dil" in enabled and "Queen -> Her Highness" in enabled
+    assert "Route to artist's home playlist (draft)" not in enabled  # the auto-router stays off by decision
+    assert config.musicbrainz and config.language_playlists["Dil"] == "hindi"
     assert len(plan.moves) == 1
     m = plan.moves[0]
     assert m["playlist"] == "The Simulation Archives" and m["target_position"] == "top"
