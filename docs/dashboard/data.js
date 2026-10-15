@@ -202,14 +202,32 @@
     return isNaN(Date.parse(g)) ? null : g;
   }
 
+  // Times are stored and fetched as UTC ISO strings, but shown in the viewer's own (browser) timezone, e.g.
+  // "2026-10-15 08:03 GMT+5:30". Date-only values (inbox_since, "2026-10-10") are calendar dates, not instants,
+  // so they are shown as written and never shifted by the timezone.
+  function localParts(d) {
+    var out = {};
+    try {
+      new Intl.DateTimeFormat('en-CA', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+        hourCycle: 'h23', timeZoneName: 'short'
+      }).formatToParts(d).forEach(function (p) { out[p.type] = p.value; });
+    } catch (e) { return null; }
+    return out;
+  }
   function fmtTime(iso) {
     var d = new Date(iso);
     if (isNaN(d)) return String(iso || '');
-    return d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    var p = localParts(d);
+    if (!p) return d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ' ' + p.timeZoneName;
   }
   function fmtDate(iso) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return String(iso);
     var d = new Date(iso);
-    return isNaN(d) ? String(iso || '') : d.toISOString().slice(0, 10);
+    if (isNaN(d)) return String(iso || '');
+    var p = localParts(d);
+    return p ? p.year + '-' + p.month + '-' + p.day : d.toISOString().slice(0, 10);
   }
   function rel(iso) {
     var diff = now() - Date.parse(iso);

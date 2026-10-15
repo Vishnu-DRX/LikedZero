@@ -37,6 +37,7 @@ def dash(make_page, site):
     """Open a dashboard view over fixtures (service worker blocked so routes always apply)."""
 
     def _open(view="overview", qs="", width=1280, height=900, setup=None, source="fixtures", **ctx):
+        ctx.setdefault("timezone_id", "UTC")  # the dashboard shows times in the browser's timezone; pin it
         page, context = make_page(width=width, height=height, service_workers="block", **ctx)
         if setup:
             setup(page)
@@ -93,6 +94,15 @@ def test_overview_answers_is_it_healthy(dash):
     page.wait_for_selector('#view-root[data-view="inbox"]')
     expect(page.locator("#inbox-decision")).to_have_value("blocked")
     expect(page.locator("#inbox-results tbody tr")).to_have_count(c["blocked"])
+
+
+def test_overview_shows_times_in_browser_timezone(dash):
+    """Stored times are UTC; the dashboard renders them in the viewer's timezone (06:00 UTC -> 11:30 in Kolkata)."""
+    page = dash("overview", timezone_id="Asia/Kolkata")
+    assert "2026-09-21 11:30" in text(page, '[data-card="last-run"]')
+    assert "UTC" not in text(page, '[data-card="last-run"]')
+    # the instant is unchanged: the <time datetime> attribute stays UTC
+    assert page.locator('[data-card="last-run"] time').get_attribute("datetime").startswith("2026-09-21T06:00")
 
 
 def test_overview_reads_schedule_field(dash):
