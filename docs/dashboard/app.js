@@ -111,7 +111,7 @@
     window.__dash.source = source;
   }
 
-  // A skeleton shaped like the Overview view (the default route): one lead line, a 7-card KPI grid, two more lines
+  // A skeleton shaped like the Overview view (the default route): one lead line, a 5-card KPI grid, two more lines
   // below. Reserving roughly the real content's shape and height here — rather than a single line of text — is
   // what keeps the swap to real content from shifting the footer/page down once data.js's fetch resolves (CLS).
   function skeletonCard() {
@@ -119,7 +119,7 @@
   }
   function loadingSkeleton() {
     var cards = '';
-    for (var i = 0; i < 7; i++) cards += skeletonCard();
+    for (var i = 0; i < 5; i++) cards += skeletonCard();
     return '<p class="sr-only" role="status">Loading data…</p><div aria-hidden="true">' +
       '<span class="skeleton-line short"></span>' +
       '<div class="grid">' + cards + '</div>' +
@@ -196,11 +196,9 @@
     ['Eligible', 'A song has waited long enough (its rule’s threshold) and can move on the next run.'],
     ['Shadowed rule', 'A rule that songs would match, but an earlier rule in the list always takes them first, so this one never wins.'],
     ['Dead rule', 'A rule that no song in the current inbox matches at all.'],
-    ['Signal tier', 'How a song’s language was worked out: your own playlists, the title’s script, a weaker hint, or a country default — in that order of trust.'],
-    ['Confidence', 'How sure LikedZero is about a signal such as language, shown as a percentage.'],
-    ['Precision', 'Of the songs a signal or rule sent somewhere, the share that were actually right.'],
-    ['Recall', 'Of all the songs that truly belong somewhere, the share that were actually found and routed there.'],
-    ['Reconcile', 'The safety check after a real run: before minus removed should equal after. A mismatch means something needs attention.'],
+    ['Where a language comes from', 'How a song’s language was worked out: your own playlists, the title’s script, a weaker hint, or a country default — in that order of trust.'],
+    ['Confidence', 'How sure LikedZero is about a song’s language or genre, shown as a percentage.'],
+    ['Reconcile', 'The safety check after a real run: the songs in Liked Songs before, minus the ones moved, should equal what is left. A mismatch means a song may need restoring.'],
     ['Journal', 'The record of every song removed from Liked Songs during a run, kept so it can be restored.'],
     ['What-if', 'A preview mode that treats disabled rules as if they were enabled, so you can see what they would do before switching them on.']
   ];
@@ -221,9 +219,11 @@
     var song = p && p.songs[index];
     if (!song) return;
     var titlesHidden = !!p.titles_hidden;
-    var heading = titlesHidden ? 'Title hidden — open local files to see titles' : song.title;
+    var noName = titlesHidden || song.title == null;
+    var heading = noName ? 'Song ' + (index + 1) + ' of ' + p.songs.length + ' (title hidden)' : song.title;
+    var subline = noName ? (song.added_at ? 'Liked ' + D.fmtTime(song.added_at) : '') : (song.artists || []).join(', ');
     drawerRoot.innerHTML = '<aside class="drawer" id="drawer" role="dialog" aria-labelledby="drawer-title">' +
-      '<div class="dialog-head"><h2 id="drawer-title">' + esc(heading) + '<span class="sub">' + (titlesHidden ? '' : esc((song.artists || []).join(', '))) + '</span></h2>' +
+      '<div class="dialog-head"><h2 id="drawer-title">' + esc(heading) + '<span class="sub">' + esc(subline) + '</span></h2>' +
       '<button type="button" class="btn btn-icon" data-close aria-label="Close explanation">✕</button></div>' +
       '<div class="dialog-body" data-testid="explain-body">' + VW.explainHtml(song, p) + '</div></aside>';
     UI.open(drawerRoot, { trigger: trigger || null });

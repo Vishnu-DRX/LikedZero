@@ -16,7 +16,10 @@ unless `titles_hidden` is set (see below).
 `{version, generated_at, schedule:{cron, description, next_run}|null, runs:[{run_id, time, mode ("dry_run"|"apply"), what_if, planned_moves, moved, too_young, no_match,
 blocked, target_problems, errors, warnings, liked_before, liked_after, duration_seconds, verdict ("dry_run"|"ok"|"mismatch"|"error"),
 rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, log:"YYYY-MM-DD.json"}]}`
-`schedule` is written by the workflow from its cron (decision 34); null/absent = "Not scheduled" on the Overview.
+`schedule` is written by `src.sync` from `config.yaml`'s `schedule:` block (or the legacy cron variable). The Overview
+shows a "Next run" card only when it holds a time or description; absent = unknown (no card, no claim), `null` = sync
+found no enabled schedule (no card; the "what happens next" sentence says no automatic runs are set up).
+`moves_by_playlist` is what the run moved (a dry run: would move), used for the one-line run summary.
 
 ## `YYYY-MM-DD.json` — per-run log (fetched on demand from `runs[].log`)
 `{date, run_id, mode, dry_run, what_if, evaluated, moved:[{track, artist, uri, playlist, playlist_id, rule, matched, age_days,
@@ -31,7 +34,10 @@ everything, and the real journal for `--restore` survives separately in the git-
 Apply runs (Phase 4) add `reconcile:{expected_after, actual_after, ok}`, `restore_command` (string), `batches:[{playlist_id, size, committed}]`.
 
 ## `latest-plan.json` — inbox snapshot
-`{version, generated_at, run_id, mode, what_if, inbox_kind ("legacy_library"|"fresh_inbox"), config_hash, liked_total,
+`{version, generated_at, run_id, mode, what_if, inbox_kind ("legacy_library"|"fresh_inbox": src.sync writes "fresh_inbox" when
+`inbox_since` is set, else "legacy_library"; the dashboard shows its "whole library is in scope" banner only for
+"legacy_library" WITHOUT an `inbox_since`, so older plan files still labelled legacy stay quiet),
+config_hash, liked_total,
 default_days_threshold, english_default, inbox_since:"YYYY-MM-DD"|null (decision 45/P1-2: songs liked before this
 are never evaluated by any selector; shown on Overview, required before --allow-unselected), counts:{will_move,too_young,no_match,target_problem,blocked},
 rules:[{name, enabled, target_playlist, target_position ("top"|"bottom"), threshold_days, conditions:{key:value},
@@ -61,20 +67,15 @@ explain:{trace:[{rule, enabled, threshold_days, conditions:[{key,wanted,actual,p
   "skipped_disabled"|"skipped_empty")}],
   decided_by|null, age_days}}]}`
 Rule `status`: `dead` = no song would match it; `shadowed` = songs would match but an earlier rule always wins; `disabled`.
+`mode` matters: after a real run (`"apply"`) this file is the inbox as it was when that run STARTED (before the moves),
+so the dashboard takes "songs waiting now" from that run's `liked_after` in `runs.json`, not from `liked_total`/`counts`.
 `what_if:true` means disabled rules were treated as enabled (preview) — show a clear banner. Rule `target_status`
 `"dynamic"` is specific to an `artist_in_playlist` rule's `target_playlist: "auto"` -- there is nothing to
 resolve at the rule level, only per song.
 
-## `enrichment-coverage.json` (counts only)
-`{date, tracks, unique_primary_artists, genre_coverage_pct_of_artists, language_coverage_pct_whole_library,
-language_coverage_pct_target_language_tracks, target_language_tracks, target_language_tracks_resolved,
-language_source_counts:{playlist,script,hint,country_default,none}, language_distribution:{lang:n}, genre_source_counts, musicbrainz:{requests,retries_after_503_or_429,errors}}`
-
-## `signal-precision.json` (counts only) — per-signal accuracy from backtest ground truth
-`{version, generated_at, min_precision:0.9, min_samples:10, by_signal:{ "<signal>": { "<language>": {truth, predicted, correct, precision|null, recall|null} } },
-qualified:{ "<language>": ["playlist","script",...] }}` where signals are `playlist` (leave-one-out), `script`, `hint`, `country_default`.
-
-`backtest.json` / `backtest-detail.json` / `backtest-detail.md` are still real outputs of `python -m src.backtest`
-(precision/recall per playlist, confusions, top misroutes — see that module's own docstring), but Master decisions
-16 removed the dashboard's Backtest view, so they are no longer part of this data contract and the dashboard never
-reads them.
+## Not read by the dashboard
+`enrichment-coverage.json` (`python -m src.enrich --report`), `signal-precision.json` and `backtest.json` /
+`backtest-detail.json` / `backtest-detail.md` (`python -m src.backtest`) are still real command-line outputs, but the
+dashboard has no Signals or Backtest view any more, so they are not part of this contract and the dashboard never
+reads them. (`src.sync` itself still reads `logs/signal-precision.json` to decide which weak language signals may
+drive a rule.)

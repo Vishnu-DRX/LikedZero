@@ -87,20 +87,19 @@ def test_runs_and_logs_match_contract():
             assert log["reconcile"]["ok"] == (r["verdict"] == "ok")
 
 
-def test_counts_only_files_match_contract():
-    cov = load("enrichment-coverage.json")
-    assert set(cov) >= {"date", "tracks", "unique_primary_artists", "genre_coverage_pct_of_artists", "language_coverage_pct_whole_library",
-                        "language_coverage_pct_target_language_tracks", "target_language_tracks", "target_language_tracks_resolved",
-                        "language_source_counts", "language_distribution", "genre_source_counts", "musicbrainz"}
-    assert set(cov["language_source_counts"]) == {"playlist", "script", "hint", "country_default", "none"}
-    sp = load("signal-precision.json")
-    assert set(sp) == {"version", "generated_at", "min_precision", "min_samples", "by_signal", "qualified"}
-    assert set(sp["by_signal"]) == {"playlist", "script", "hint", "country_default"}
-    for langs in sp["by_signal"].values():
-        for st in langs.values():
-            assert set(st) == {"truth", "predicted", "correct", "precision", "recall"}
-    # Master decisions 16 removed the dashboard's Backtest view, so backtest.json/backtest-detail.json are no
-    # longer part of the dashboard fixture set (they remain real `python -m src.backtest` outputs, covered by
-    # tests/test_backtest.py, just not read by the dashboard any more).
-    assert not (FIX / "backtest.json").exists()
-    assert not (FIX / "backtest-detail.json").exists()
+def test_fixture_set_holds_only_files_the_dashboard_reads():
+    """The Signals and Backtest views are gone, so their data files are no longer part of the fixture set (the
+    commands that write them, `python -m src.enrich --report` and `python -m src.backtest`, are unchanged)."""
+    names = {p.name for p in FIX.glob("*.json")}
+    assert {"latest-plan.json", "runs.json"} <= names
+    for gone in ("enrichment-coverage.json", "signal-precision.json", "backtest.json", "backtest-detail.json"):
+        assert gone not in names
+
+
+def test_runs_index_says_which_playlists_each_run_moved_songs_to():
+    for r in load("runs.json")["runs"]:
+        log = load(r["log"])
+        counted = {}
+        for m in log["moved"]:
+            counted[m["playlist"]] = counted.get(m["playlist"], 0) + 1
+        assert r["moves_by_playlist"] == counted, r["log"]

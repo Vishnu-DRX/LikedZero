@@ -78,20 +78,17 @@
           <li><a href="#/rules">Rules</a></li>
           <li><a href="#/playlists">Playlists</a></li>
           <li><a href="#/runs">Runs</a></li>
-          <li><a href="#/signals">Signals</a></li>
         </ul>
       </nav>
 
       <div id="view-root" tabindex="-1" aria-busy="true">
         <p class="sr-only" role="status">Loading data…</p>
         <!-- Master decisions 16: every view always renders its full content now (no Simple/Detailed variant),
-             so this zero-JS first-paint skeleton is sized for Overview's real 7-card KPI grid to avoid a CLS
+             so this zero-JS first-paint skeleton is sized for Overview's real 5-card KPI grid to avoid a CLS
              jump. -->
         <div aria-hidden="true">
           <span class="skeleton-line short"></span>
           <div class="grid">
-            <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
-            <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
             <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
             <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
             <div class="card"><span class="skeleton-line short"></span><span class="skeleton-line" style="height:1.75rem;width:60%"></span><span class="skeleton-line"></span></div>
