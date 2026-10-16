@@ -1,6 +1,6 @@
 /* Dashboard-only styles. Loaded AFTER ../assets/tokens.css + ../assets/components.css + ../assets/site.css
    (decision 65): this file holds only what is genuinely specific to the dashboard -- the data-source bar, the
-   view-routing tab strip, the "data freshness" stamp, signal bar charts, the explain-trace list, and small
+   view-routing tab strip, the "data freshness" stamp, the confidence bar, the explain-trace list, the run page's "what moved where" lists, and small
    dashboard-only additions layered on top of shared components (the run-now/glossary drawer widths).
    Everything the shared stylesheets already provide (buttons, cards, badges, banners, tooltips, popovers,
    tables, form controls, the overlay/dialog/drawer shell, the site header/footer) is reused as-is, not
@@ -69,7 +69,7 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 .card { margin: 0 0 var(--space-4); min-width: 0; }
 .card h3 { font-size: var(--text-lg); margin: 0 0 var(--space-2); }
 .card h4 { font-size: var(--text-md); margin: var(--space-4) 0 var(--space-2); }
-.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); margin: 0 0 var(--space-4); }
+.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr)); margin: 0 0 var(--space-4); }
 .grid > .card { margin: 0; }
 .metric-label { font-size: var(--text-sm); color: var(--color-text-secondary); margin: 0 0 var(--space-1); }
 .metric-value { font-size: var(--text-2xl); font-weight: var(--weight-bold); line-height: var(--leading-tight); margin: 0 0 var(--space-1); }
@@ -164,12 +164,9 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
   .stack tbody tr:hover { background: var(--color-surface); }
 }
 
-/* ------------------------------------------------------------ bars (signals; no shared equivalent) */
+/* ------------------------------------------------------------ confidence bar (Explain drawer; no shared equivalent) */
 .bar { position: relative; height: 10px; border-radius: var(--radius-pill); background: var(--color-hover); overflow: hidden; min-width: 4rem; }
 .bar > span { position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); background: var(--color-accent); border-radius: var(--radius-pill); }
-.bar.info > span { background: var(--color-info); }
-.bar.warn > span { background: var(--color-warning); }
-.bar-row { display: grid; grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; margin: 0 0 var(--space-2); font-size: var(--text-sm); }
 
 /* ------------------------------------------------------------ detail blocks (no shared equivalent) */
 dl.kv { display: grid; grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr); gap: var(--space-1) var(--space-4); margin: 0 0 var(--space-3); font-size: var(--text-sm); }
@@ -183,7 +180,7 @@ details > summary { cursor: pointer; font-weight: var(--weight-medium); padding:
 .delta-down { color: var(--color-danger-text); }
 
 /* ------------------------------------------------------------ run-now/glossary drawer width (extends .drawer) */
-/* The Explain drawer's content (sentence-first narrative + technical trace + signals) needs more room than
+/* The Explain drawer's content (sentence-first narrative + technical trace + language and genre) needs more room than
    Configure's Versions/Schema drawers, so it keeps the wider 36rem it always had; everything else about the
    drawer (position, backdrop, slide-in, focus trap) is the shared .overlay/.overlay-side/.drawer component. */
 #drawer-root .drawer { width: min(100%, 36rem); }
@@ -208,8 +205,6 @@ details > summary { cursor: pointer; font-weight: var(--weight-medium); padding:
 .conf .bar { flex: 0 1 8rem; }
 
 @media (max-width: 47.99rem) {
-  .bar-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .bar-row .bar { grid-column: 1 / -1; grid-row: 2; }
   dl.kv { grid-template-columns: minmax(0, 1fr); }
   dl.kv dt { margin-top: var(--space-2); }
 }
@@ -220,3 +215,25 @@ code, .cmd code { overflow-wrap: anywhere; word-break: break-word; }
 
 /* No-token ("by hand") alternative inside the connect dialogs */
 .manual-save, .manual-run { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+
+/* ------------------------------------------------------------ song titles are never cut off */
+/* A title or artist always wraps onto as many lines as it needs, on a phone too: no ellipsis, no line clamp, no
+   fixed height. (There is deliberately no text-overflow / -webkit-line-clamp anywhere in the dashboard.) */
+.link-btn { display: inline; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.cell-main, .cell-main * { text-overflow: clip; }
+#drawer-title { overflow-wrap: anywhere; white-space: normal; }
+#drawer-title .sub { display: block; margin-top: var(--space-1); font-size: var(--text-sm); font-weight: var(--weight-regular); color: var(--color-text-secondary); }
+
+/* ------------------------------------------------------------ run list + run page: what moved where */
+.run-summary { margin-top: var(--space-1); color: var(--color-text-secondary); }
+.moved-group { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin: 0 0 var(--space-3); background: var(--color-surface); }
+.moved-group h5 { margin: 0 0 var(--space-1); font-size: var(--text-md); overflow-wrap: anywhere; }
+.moved-group p { margin: 0 0 var(--space-2); }
+.moved-list { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+.moved-song { overflow-wrap: anywhere; }
+.stay-list { margin: 0 0 var(--space-3); padding-left: var(--space-5); }
+.stay-list ul { margin: var(--space-1) 0 var(--space-2); padding-left: var(--space-5); }
+details.tech { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-4); margin-top: var(--space-4); background: var(--color-surface); }
+details.tech[open] { padding-bottom: var(--space-3); }
+[data-banner="inbox-snapshot"], [data-banner="run-mismatch"] { margin-bottom: var(--space-3); }
+.nowrap { white-space: nowrap; }

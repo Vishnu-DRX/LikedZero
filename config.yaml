@@ -20,6 +20,10 @@ schedule:
   timezone: Asia/Kolkata
   days: [mon, tue, wed, thu, fri, sat, sun]
   apply: true
+# Committed run logs include song titles and artists (chosen by the owner on 2026-10-16; the repo is public, so
+# these appear in git history). Set to false to go back to counts and decisions only.
+logging:
+  include_track_names: true
 # Playlist name -> language. Songs by artists already in these playlists are recognised as that language.
 language_playlists:
   "Dil": hindi

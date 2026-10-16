@@ -72,7 +72,7 @@ def test_repo_mode_reads_from_the_viewers_own_fork(make_page, site):
     requests = []
     page.on("request", lambda r: requests.append(r.url))
     page.goto(f"{ORIGIN}{BASE_PATH}dashboard/?source=repo")
-    page.wait_for_selector('#view-root[data-state="ready"] [data-card="pending"]')
+    page.wait_for_selector('#view-root[data-state="ready"] [data-card="liked"]')
     assert any(u == f"https://raw.githubusercontent.com/{OWNER}/{REPO}/main/logs/latest-plan.json" for u in requests)
     assert any(u == f"https://raw.githubusercontent.com/{OWNER}/{REPO}/main/logs/runs.json" for u in requests)
     assert page.locator("#repo-url").input_value() == f"https://raw.githubusercontent.com/{OWNER}/{REPO}/main/logs/"

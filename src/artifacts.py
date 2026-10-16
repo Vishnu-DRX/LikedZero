@@ -170,6 +170,12 @@ def _song(
     }
 
 
+def inbox_kind_for(config: Config) -> str:
+    """"fresh_inbox" when config.inbox_since fences off older songs (the live-inbox mode); "legacy_library" when
+    there is no start date, i.e. the whole old Liked Songs library is in scope."""
+    return "fresh_inbox" if config.inbox_since else "legacy_library"
+
+
 def build_latest_plan(
     tracks: Sequence[Track],
     enrichments: Mapping[str, Enrichment],

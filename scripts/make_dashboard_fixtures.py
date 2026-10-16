@@ -2,17 +2,20 @@
 
 Writes docs/dashboard/fixtures/*.json. The plan / run entries / runs index are produced by the REAL builders in
 ``src.artifacts`` from fabricated tracks, playlists and config (obviously fake artists and titles); the rest
-(per-run logs, coverage, precision) is hand-built to the shapes in docs/dashboard/DATA.md.
+(per-run logs) is hand-built to the shapes in docs/dashboard/DATA.md. PRECISION below is only an input to the
+plan builder (it decides which weak language signals are withheld); it is not written out as a fixture.
 Everything uses fixed timestamps, so regenerating is byte-for-byte reproducible (tests rely on it).
 
-Master decisions 16 removed the dashboard's Backtest view, so this script no longer writes backtest.json /
-backtest-detail.json fixtures -- those are still real outputs of `python -m src.backtest` (see
-tests/test_backtest.py), just no longer read by the dashboard.
+Master decisions 16 removed the dashboard's Backtest view, and the Signals view is gone too, so this script no
+longer writes backtest.json / backtest-detail.json / enrichment-coverage.json / signal-precision.json fixtures --
+those are still real outputs of `python -m src.backtest` / `python -m src.enrich --report` (see
+tests/test_backtest.py), just not read by the dashboard.
 """
 
 from __future__ import annotations
 
 import sys
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -239,7 +242,10 @@ def build_runs(out: Path, plan: dict) -> dict:
                           what_if=spec["what_if"],
                           timing=timing_fields(when, when + timedelta(seconds=spec["secs"]), scheduled_for=t.get("scheduled"),
                                                workflow_started_at=t.get("fired"), trigger=t.get("trigger")))
-        atomic_write_json(out / log_file, _run_log(spec, entry, plan))
+        log = _run_log(spec, entry, plan)
+        # same rule as src/sync.py: the playlists the run's moved (or, for a dry run, planned) songs go to
+        entry["moves_by_playlist"] = dict(Counter(m["playlist"] for m in log["moved"]))
+        atomic_write_json(out / log_file, log)
         # decision 34: the Overview reads a top-level `schedule` field from runs.json (built by
         # src.artifacts.schedule_info from the workflow's LIKEDZERO_CRON). The demo fixtures show a fixed
         # example schedule so "Next scheduled run" has something real to display in Demo mode.
@@ -303,21 +309,6 @@ def _run_log(spec: dict, entry: dict, plan: dict) -> dict:
     return log
 
 
-# ----------------------------------------------------------------------------- coverage / backtest
-def coverage() -> dict:
-    return {
-        "date": "2026-09-21", "tracks": len(_S), "unique_primary_artists": 24,
-        "genre_coverage_pct_of_artists": 79.2, "genre_note": "fixture data",
-        "language_coverage_pct_whole_library": 82.6, "language_coverage_pct_target_language_tracks": 100.0,
-        "target_language_tracks": 15, "target_language_tracks_resolved": 15,
-        "language_source_counts": {"playlist": 6, "script": 6, "hint": 5, "country_default": 13, "none": 12},
-        "language_distribution": {"english": 13, "hindi": 4, "malayalam": 4, "tamil": 2, "spanish": 2, "bengali": 1,
-                                  "telugu": 1, "japanese": 1, "korean": 1},
-        "genre_source_counts": {"musicbrainz": 32, "none": 12},
-        "musicbrainz": {"requests": 18, "retries_after_503_or_429": 1, "errors": 0},
-    }
-
-
 # ----------------------------------------------------------------------------- entry point
 def generate(out: Path | str = DEFAULT_OUT) -> list[str]:
     out = Path(out)
@@ -325,8 +316,6 @@ def generate(out: Path | str = DEFAULT_OUT) -> list[str]:
     plan = build_plan()
     atomic_write_json(out / "latest-plan.json", plan)
     build_runs(out, plan)
-    atomic_write_json(out / "enrichment-coverage.json", coverage())
-    atomic_write_json(out / "signal-precision.json", PRECISION)
     return sorted(p.name for p in out.glob("*.json"))
 
 

@@ -6,20 +6,13 @@
 
   var FILES = {
     plan: 'latest-plan.json',
-    runs: 'runs.json',
-    coverage: 'enrichment-coverage.json',
-    precision: 'signal-precision.json'
+    runs: 'runs.json'
   };
   var COMMANDS = {
     plan: 'python -m src.sync',
-    runs: 'python -m src.sync',
-    coverage: 'python -m src.enrich --report',
-    precision: 'python -m src.backtest'
+    runs: 'python -m src.sync'
   };
-  var LABELS = {
-    plan: 'Inbox snapshot', runs: 'Run history', coverage: 'Enrichment coverage',
-    precision: 'Signal precision'
-  };
+  var LABELS = { plan: 'Inbox snapshot', runs: 'Run history' };
   // decision 31: three sources only. 'repo' reads the fork's committed logs; 'fixtures' is the bundled demo data;
   // 'files' is "Open local files" — a drag-and-drop/file-picker source, parsed entirely client-side, never uploaded.
   // The old 'local' source (python -m src.dashboard's /data/ reverse proxy) is no longer offered in the UI.

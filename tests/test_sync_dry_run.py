@@ -563,3 +563,25 @@ def test_titles_never_hides_even_on_a_local_run(env, monkeypatch):
     tmp, cfg = env
     assert run(tmp, cfg, "--titles", "never") == 0
     assert read_log(tmp)["titles_hidden"] is True
+
+
+# ------------------------------------------------------------------ inbox_kind (live inbox vs legacy library)
+def _plan_json(tmp):
+    return json.loads((tmp / "logs" / "latest-plan.json").read_text(encoding="utf-8"))
+
+
+def test_plan_is_a_fresh_inbox_when_config_sets_inbox_since(env):
+    """The dashboard's "old archive" banner is for the no-start-date case only: with `inbox_since` set the run is
+    a live inbox, so the snapshot must say so (it used to default to "legacy_library" for every real run)."""
+    tmp, cfg = env
+    cfg.write_text("inbox_since: 2000-01-01\n" + CONFIG, encoding="utf-8")
+    assert run(tmp, cfg) == 0
+    plan = _plan_json(tmp)
+    assert plan["inbox_kind"] == "fresh_inbox" and plan["inbox_since"] == "2000-01-01"
+
+
+def test_plan_is_a_legacy_library_without_inbox_since(env):
+    tmp, cfg = env
+    assert run(tmp, cfg) == 0
+    plan = _plan_json(tmp)
+    assert plan["inbox_kind"] == "legacy_library" and plan["inbox_since"] is None

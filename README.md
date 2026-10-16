@@ -73,7 +73,7 @@ can download/copy it and commit it yourself. Supported match keys:
 
 Spotify no longer provides genres or a language field. Genre and language come from MusicBrainz, the title's
 script, and language learned from your own playlists (`language_playlists` in config); expect them to be
-best-effort, and check the dashboard's **Signals** view for measured precision per source.
+best-effort. `python -m src.backtest` measures how far each source can be trusted.
 
 ## Try it (read-only)
 
@@ -112,17 +112,17 @@ label above the source picker:
 The source picker remembers your last choice. Every view shows when its data was made; a yellow banner appears
 if it is more than 2 days old. Every view always renders its full content — there is no reduced Simple mode.
 
-- **Overview** asks "is it healthy?": last run and its verdict, whether an inbox start date (`inbox_since`) is set, next scheduled run (or "Not scheduled"), liked songs, how many are pending, moves this week, errors and warnings, the safety verdict, and one sentence on what the next run would do. A **Run now** button dispatches the Sync workflow directly from here (via a token you create and control).
-- **Inbox** asks "what is waiting, and why?": every liked song with its decision. Search, filter and sort it, then click a title to open the **Explain** drawer: each rule in order with passed and failed conditions, and the language and genre signals behind the decision.
+- **Overview** asks "is it healthy?" with five cards, each answering one question: *Last run* (did it go well, and were there any problems), *Next run* (when it runs next; shown only when your run history carries a schedule), *Waiting in Liked Songs* (how many songs are waiting right now), *Moved this week* (songs moved by real runs in the last 7 days) and *Last real run* (every song accounted for, or a song that may need restoring). One sentence above them says what happens next. After a real run the inbox file is the list as it was when that run started, so the Overview takes the "waiting now" number from the run's own result instead. A **Run now** button dispatches the Sync workflow directly from here (via a token you create and control).
+- **Inbox** asks "what is waiting, and why?": every liked song with its decision. Search, filter and sort it, then click a title to open the **Explain** drawer: a plain sentence on what happened, the rule-by-rule trace, and where the language and genre came from. Titles and artists always wrap in full, never cut off, on a phone too. After a real run a note at the top says the list is the inbox as it was when that run started.
 - **Rules** asks "what does each rule do?": how many songs each rule matches and wins, when it last matched, and flags for problem rules.
 - **Playlists** asks "can every target be written to?": found, missing, not writable or ambiguous, its size and how many songs the next run adds.
-- **Runs** is the history, with a detail page per run — including the reconcile result, restore command and journal of removals for apply runs — and a side-by-side comparison of two runs.
-- **Signals** asks "how far can each language signal be trusted?": coverage, and precision per signal and language.
+- **Runs** is the history. Each row has a one-line summary ("Moved 4 songs: 3 to Playlist A, 1 to Playlist B"). A run's page leads with what moved where and by which rule, then what was left behind and any problems; the technical part (safety check, restore command, journal of removals) sits in a collapsed section underneath. Where the logs hide titles it shows "Song 1 of 4 (title hidden)" and when each was liked. You can also compare two runs side by side.
 
-The dashboard no longer has separate Safety or Backtest tabs: the reconcile/restore/journal detail they showed
-lives in each apply run's detail page under **Runs**, and `python -m src.backtest` (precision/recall per
-playlist, confusions, worst misroutes) is still a standalone command-line tool — its safety guarantees and
-measurements are unchanged, only the dedicated dashboard tabs for them were removed.
+The dashboard has no separate Safety, Backtest or Signals tabs. The reconcile/restore/journal detail lives in each
+real run's page under **Runs**. `python -m src.backtest` (precision/recall per playlist, confusions, worst
+misroutes, and per-source language precision in `logs/signal-precision.json`) and `python -m src.enrich --report`
+(coverage) are still standalone command-line tools with unchanged measurements. For a single song, the Explain
+drawer shows its language and genre and where they came from.
 
 Colours are never the only clue; every badge has a word. Green (ok) means fine, blue (info) means neutral
 information such as a dry run or a song that is too young, amber (warning) means look at this, red means a
@@ -135,8 +135,8 @@ at 90% precision or better ("qualified").
 Terms: **Dead** rule: no song matches it. **Shadowed** rule: songs match, but an earlier rule always takes them
 first. **Blocked** song: a rule would have matched, but only through a language signal that is not qualified.
 **Withheld** signal: the language was found but hidden from the rules for that reason. **What-if**: a preview
-in which disabled rules count as enabled; it is not what a normal run does. **Legacy library**: the data comes
-from your old Liked Songs archive, not a live inbox.
+in which disabled rules count as enabled; it is not what a normal run does. **Old library banner**: shown only when no
+inbox start date (`inbox_since`) is set, meaning every song already in Liked Songs is in scope.
 
 ## Safety guarantees
 

@@ -1,7 +1,7 @@
 // LikedZero service worker: cache-first for the app shell so the builder works offline.
 // Bump CACHE_VERSION whenever any cached file changes. All URLs are relative to this file
 // (works under the /LikedZero/ GitHub Pages base path).
-const CACHE_VERSION = 'v17';
+const CACHE_VERSION = 'v19';
 const CACHE_NAME = 'likedzero-shell-' + CACHE_VERSION;
 const SHELL = [
   './',
@@ -48,10 +48,8 @@ const SHELL = [
   'dashboard/fixtures/2026-09-19.json',
   'dashboard/fixtures/2026-09-20.json',
   'dashboard/fixtures/2026-09-21.json',
-  'dashboard/fixtures/enrichment-coverage.json',
   'dashboard/fixtures/latest-plan.json',
   'dashboard/fixtures/runs.json',
-  'dashboard/fixtures/signal-precision.json',
 ];
 
 self.addEventListener('install', (event) => {
