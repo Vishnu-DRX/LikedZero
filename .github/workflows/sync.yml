@@ -8,7 +8,7 @@ name: Sync
 # `inbox_since` (decision 45/P1-2); the tool refuses an unattended --apply without it as a second line of
 # defence, the planner never evaluates a song liked before it, and --max-moves (default 50) still caps the run.
 # Manual runs are unchanged: a live one needs dry_run unticked AND the `newest` input.
-# Limits: GitHub can delay a scheduled run by 5-20+ minutes (a slot stays claimable for 90 minutes), and
+# Limits: GitHub can delay a scheduled run by 5-20+ minutes (a slot stays claimable for 12 hours, see src/schedule.py), and
 # disables scheduled workflows in a repo with no activity for 60 days. The "Keep the schedule alive" steps below
 # fight that: once the last commit by a person is 30+ days old, one tick a day disables and re-enables this
 # workflow through the API (needs `actions: write`). That is best-effort -- GitHub does not document what counts as
@@ -96,7 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${IS_SCHEDULE:-false}" != "true" ]; then
-            { echo "run=true"; echo "apply=false"; } >> "$GITHUB_OUTPUT"
+            { echo "run=true"; echo "apply=false"; echo "slot="; } >> "$GITHUB_OUTPUT"
           else
             python -m src.schedule --config config.yaml --runs logs/runs.json
           fi
@@ -125,6 +125,10 @@ jobs:
           # so logging.include_track_names is honoured only for output that is actually about to be published.
           LIKEDZERO_COMMITTED_RUN: "1"
           SCHEDULE_APPLY: ${{ steps.gate.outputs.apply }}
+          # Recorded in the run log next to the real start/finish time so a late GitHub tick is visible.
+          LIKEDZERO_SCHEDULED_FOR: ${{ steps.gate.outputs.slot }}
+          LIKEDZERO_WORKFLOW_STARTED_AT: ${{ github.run_started_at }}
+          LIKEDZERO_TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
           args=(--config config.yaml --max-moves "${MAX_MOVES:-50}")

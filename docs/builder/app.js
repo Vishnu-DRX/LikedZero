@@ -166,7 +166,7 @@
     try { utc = ' That is ' + localTimeAsUtc(state.schedTime, state.schedTz) + ' today.'; } catch (e) { utc = ''; }
     return 'Runs ' + days + ' at ' + state.schedTime + ' (' + state.schedTz + ').' + utc + ' ' +
       (state.schedApply ? 'It really moves songs.' : 'Dry run only: nothing moves until you turn on moving songs.') +
-      ' GitHub may start it 5 to 20 minutes late.';
+      ' GitHub often starts it late, sometimes by hours; the dashboard Runs view shows when it really started.';
   }
   function buildScheduleControls() {
     var timeSel = $('g-sched-time');

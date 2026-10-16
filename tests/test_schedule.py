@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -142,7 +143,7 @@ def test_main_writes_github_output(tmp_path, monkeypatch):
     out = tmp_path / "out.txt"
     monkeypatch.setenv("GITHUB_OUTPUT", str(out))
     assert sch.main(["--config", str(cfg), "--runs", str(tmp_path / "runs.json")]) == 0
-    assert out.read_text().split() == ["run=false", "apply=false"]
+    assert out.read_text().split() == ["run=false", "apply=false", "slot="]  # nothing claimed, so no slot
 
 
 def test_main_skips_instead_of_failing_on_a_broken_or_missing_config(tmp_path, monkeypatch, capsys):
@@ -153,7 +154,7 @@ def test_main_skips_instead_of_failing_on_a_broken_or_missing_config(tmp_path, m
     bad.write_text("schedule: 3\n", encoding="utf-8")
     assert sch.main(["--config", str(bad)]) == 0
     assert "::warning::" in capsys.readouterr().out
-    assert out.read_text().split() == ["run=false", "apply=false"] * 2
+    assert out.read_text().split() == ["run=false", "apply=false", "slot="] * 2
 
 
 def test_due_main_sets_apply_only_when_configured(tmp_path, monkeypatch):
@@ -167,7 +168,8 @@ def test_due_main_sets_apply_only_when_configured(tmp_path, monkeypatch):
     out = tmp_path / "out.txt"
     monkeypatch.setenv("GITHUB_OUTPUT", str(out))
     assert sch.main(["--config", str(cfg), "--runs", str(tmp_path / "runs.json")]) == 0
-    assert out.read_text().split() == ["run=true", "apply=true"]
+    lines = out.read_text().split()
+    assert lines[:2] == ["run=true", "apply=true"] and lines[2].startswith("slot=20")  # the claimed slot, UTC ISO
 
 
 def test_overview_description_from_config():
@@ -179,3 +181,46 @@ def test_overview_description_from_config():
     assert info["next_run"] == "2026-10-12T03:30:00Z" or info["next_run"].startswith("2026-10-12T03:30")
     assert schedule_info_from_config(S(apply=True), now)["description"].endswith("moves songs")
     assert schedule_info_from_config(S(enabled=False), now) is None
+
+
+# --------------------------------------------------------------------------- 04:00 IST slot (22:30 UTC the evening before)
+
+def FOUR(**kw) -> Schedule:
+    return S(time="04:00", **kw)
+
+
+def test_four_am_ist_slot_is_22_30_utc_the_previous_day():
+    sc = FOUR()
+    assert sch.latest_slot(sc, utc(2026, 10, 16, 22, 30)) == utc(2026, 10, 16, 22, 30)
+    assert sch.latest_slot(sc, utc(2026, 10, 16, 22, 29)) == utc(2026, 10, 15, 22, 30)
+    assert sch.next_slot(sc, utc(2026, 10, 16, 7, 7)) == utc(2026, 10, 16, 22, 30)  # 17 Oct 04:00 IST
+
+
+def test_four_am_slot_is_due_across_the_utc_day_boundary_and_runs_once():
+    sc = FOUR()
+    assert not sch.is_due(sc, utc(2026, 10, 16, 22, 0), utc(2026, 10, 16, 6, 15))[0]  # 03:30 IST: slot not reached
+    assert sch.is_due(sc, utc(2026, 10, 16, 22, 30), utc(2026, 10, 16, 6, 15))[0]
+    # GitHub fires late, after midnight UTC (the IST date is still the 17th): the same slot, still claimable
+    assert sch.is_due(sc, utc(2026, 10, 17, 3, 0), utc(2026, 10, 16, 6, 15))[0]
+    assert not sch.is_due(sc, utc(2026, 10, 17, 3, 30), utc(2026, 10, 16, 22, 41))[0]  # already ran for that slot
+    # the 12 h catch-up ends at 16:00 IST (10:30 UTC) and is gone before the next slot
+    assert sch.is_due(sc, utc(2026, 10, 17, 10, 30), None)[0]
+    assert not sch.is_due(sc, utc(2026, 10, 17, 10, 31), None)[0]
+
+
+def test_switching_from_8am_to_4am_does_not_double_run_today():
+    # 16 Oct 2026: the 08:00 IST slot only ran at 06:15 UTC (11:45 IST). After the change, today's 04:00 IST slot
+    # (22:30 UTC on the 15th) is still inside the window, but the 06:15 UTC run is already after it.
+    sc = FOUR()
+    assert not sch.is_due(sc, utc(2026, 10, 16, 7, 30), utc(2026, 10, 16, 6, 15))[0]
+    assert not sch.is_due(sc, utc(2026, 10, 16, 10, 0), utc(2026, 10, 16, 6, 15))[0]
+
+
+def test_floor_date_and_move_cap_are_unchanged_by_the_new_slot():
+    from src.config import load_config
+
+    cfg = load_config(Path(__file__).resolve().parents[1] / "config.yaml")
+    assert cfg.schedule.time == "04:00" and cfg.schedule.timezone == "Asia/Kolkata" and cfg.schedule.apply
+    assert str(cfg.inbox_since) == "2026-10-10"
+    from src.sync import DEFAULT_MAX_MOVES
+    assert DEFAULT_MAX_MOVES == 50

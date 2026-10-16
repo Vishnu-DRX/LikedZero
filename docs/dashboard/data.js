@@ -229,6 +229,37 @@
     var p = localParts(d);
     return p ? p.year + '-' + p.month + '-' + p.day : d.toISOString().slice(0, 10);
   }
+  // Run timing is always shown in BOTH India time and UTC (decision: the 04:00 IST schedule makes a late GitHub tick
+  // visible), independent of the viewer's own timezone: "17 Oct 04:07:12 IST".
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];  // not Intl: locales differ ("Sept")
+  var ZONES = { IST: 'Asia/Kolkata', UTC: 'UTC' };
+  function fmtZone(iso, zone, withSeconds, noYear) {
+    var d = new Date(iso);
+    if (!iso || isNaN(d)) return '';
+    var o = {};
+    try {
+      var opts = { timeZone: ZONES[zone], day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+      if (withSeconds) opts.second = '2-digit';
+      new Intl.DateTimeFormat('en-GB', opts).formatToParts(d).forEach(function (p) { o[p.type] = p.value; });
+    } catch (e) { return d.toISOString().slice(0, withSeconds ? 19 : 16).replace('T', ' ') + ' UTC'; }
+    return o.day + ' ' + MONTHS[parseInt(o.month, 10) - 1] + (noYear ? '' : ' ' + o.year) + ' ' + o.hour + ':' + o.minute + (withSeconds ? ':' + o.second : '') + ' ' + zone;
+  }
+  // "17 Oct 2026 04:07:12 IST · 16 Oct 2026 22:37:12 UTC"
+  function fmtIstUtc(iso, withSeconds, noYear) {
+    var a = fmtZone(iso, 'IST', withSeconds, noYear);
+    return a ? a + ' · ' + fmtZone(iso, 'UTC', withSeconds, noYear) : '';
+  }
+  // Whole minutes between two instants (b - a), or null when either is missing.
+  function minutesBetween(a, b) {
+    var x = Date.parse(a), y = Date.parse(b);
+    return isNaN(x) || isNaN(y) ? null : Math.round((y - x) / 60000);
+  }
+  function lateText(min) {
+    if (min == null) return '';
+    if (min < 2) return 'on time';
+    if (min < 90) return min + ' min late';
+    return Math.floor(min / 60) + ' h ' + (min % 60) + ' min late';
+  }
   function rel(iso) {
     var diff = now() - Date.parse(iso);
     if (isNaN(diff)) return '';
@@ -259,6 +290,7 @@
     normalizeRepoBase: normalizeRepoBase, validRepoBase: validRepoBase, baseFor: baseFor,
     now: now, loadAll: loadAll, fetchLog: fetchLog, clearLogCache: clearLogCache,
     readLocalFiles: readLocalFiles, clearLocalFiles: clearLocalFiles, localFileNames: localFileNames,
-    stampOf: stampOf, fmtTime: fmtTime, fmtDate: fmtDate, rel: rel, isStale: isStale
+    stampOf: stampOf, fmtTime: fmtTime, fmtDate: fmtDate, fmtZone: fmtZone, fmtIstUtc: fmtIstUtc,
+    minutesBetween: minutesBetween, lateText: lateText, rel: rel, isStale: isStale
   };
 })();

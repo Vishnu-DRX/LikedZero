@@ -407,5 +407,10 @@
  "http_audit": {
   "GET api.spotify.com": 28
  },
- "runtime_seconds": 42.5
+ "runtime_seconds": 42.5,
+ "started_at": "2026-09-21T06:00:00+00:00",
+ "finished_at": "2026-09-21T06:00:42+00:00",
+ "scheduled_for": "2026-09-20T22:30:00+00:00",
+ "workflow_started_at": "2026-09-21T05:44:09+00:00",
+ "trigger": "schedule"
 }

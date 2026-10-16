@@ -362,8 +362,12 @@
         return ' &middot; <span class="' + (good ? 'delta-up' : 'delta-down') + '">' + (d > 0 ? '+' : '') + d + ' since the previous run</span>';
       }
       var prevRun = runs[1];
+      var lastT = last ? runTiming(last, null) : null;
+      var lastTimingSub = lastT && lastT.scheduled
+        ? '<br><span data-timing="overview">Due ' + esc(D.fmtZone(lastT.scheduled, 'IST')) + '; started ' + esc(D.fmtZone(lastT.started, 'IST')) + ' (' + esc(D.lateText(lastT.lateStarted)) + ')</span>'
+        : '';
       var lastRunCard = last
-        ? card('Last run', verdictBadge(last.verdict), esc(last.mode === 'apply' ? 'Apply run' : 'Dry run') + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(last.duration_seconds) + ' s', ' data-card="last-run"')
+        ? card('Last run', verdictBadge(last.verdict), esc(last.mode === 'apply' ? 'Apply run' : 'Dry run') + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(last.duration_seconds) + ' s' + lastTimingSub, ' data-card="last-run"')
         : card('Last run', '<span class="muted">None</span>', 'No run has been recorded.', ' data-card="last-run"');
       var pendingCard = card('Pending', p ? esc(p.counts.will_move + p.counts.too_young) : '—', p ? esc(p.counts.will_move) + ' ready to move, ' + esc(p.counts.too_young) + ' too young' : '', ' data-card="pending"', 'Songs still in Liked Songs that a rule has matched: either ready to move on the next run, or matched but not old enough yet.');
       var movesCard = card('Moves this week', last ? esc(movesWeek) : '—', 'Songs actually moved by apply runs in the last 7 days' + (prevRun ? delta(last.moved, prevRun.moved) : ''), ' data-card="moves"', 'A real run (not a dry run) actually moved these songs out of Liked Songs into a playlist.');
@@ -660,9 +664,49 @@
     return n;
   }
 
+  // Run timing: the schedule slot, when GitHub fired the run, and when the sync really started and finished. Runs
+  // recorded before this existed only have `time` (the start) and `duration_seconds`.
+  function runTiming(run, log) {
+    var l = (log && log.status === 'ok' && log.data) || {};
+    var started = run.started_at || l.started_at || run.time;
+    var finished = run.finished_at || l.finished_at ||
+      (started && run.duration_seconds != null ? new Date(Date.parse(started) + run.duration_seconds * 1000).toISOString() : null);
+    var scheduled = run.scheduled_for || l.scheduled_for || null;
+    var fired = run.workflow_started_at || l.workflow_started_at || null;
+    var trigger = run.trigger || l.trigger || null;
+    return {
+      scheduled: scheduled, fired: fired, started: started, finished: finished, trigger: trigger,
+      lateFired: scheduled && fired ? D.minutesBetween(scheduled, fired) : null,
+      lateStarted: scheduled ? D.minutesBetween(scheduled, started) : null
+    };
+  }
+  function triggerLabel(t) {
+    return t === 'schedule' ? 'Schedule' : (t === 'workflow_dispatch' ? 'Started by hand (Run workflow)' : (t ? t : 'Unknown (older run or local)'));
+  }
+  function timingLines(t) {
+    var h = '';
+    h += '<div class="small muted" data-timing="scheduled">' + (t.scheduled
+      ? 'Scheduled: ' + esc(D.fmtIstUtc(t.scheduled, false, true))
+      : (t.trigger === 'schedule' ? 'Scheduled: not recorded' : 'Not a scheduled run')) + '</div>';
+    h += '<div class="small muted" data-timing="started">Started: ' + esc(D.fmtIstUtc(t.started, false, true)) +
+      (t.lateStarted != null ? ' <strong>(' + esc(D.lateText(t.lateStarted)) + ')</strong>' : '') + '</div>';
+    if (t.finished) h += '<div class="small muted" data-timing="finished">Finished: ' + esc(D.fmtIstUtc(t.finished, false, true)) + '</div>';
+    return h;
+  }
+
+  function timingRows(run, log) {
+    var t = runTiming(run, log);
+    function row(label, iso, extra) { return '<dt>' + label + '</dt><dd data-timing-row="' + label + '">' + (iso ? esc(D.fmtIstUtc(iso, true)) + (extra || '') : '<span class="muted">not recorded</span>') + '</dd>'; }
+    return row('Scheduled for', t.scheduled) +
+      row('GitHub fired the run', t.fired, t.lateFired != null ? ' <strong>(' + esc(D.lateText(t.lateFired)) + ')</strong>' : '') +
+      row('Sync started', t.started, t.lateStarted != null ? ' <strong>(' + esc(D.lateText(t.lateStarted)) + ' vs the slot)</strong>' : '') +
+      row('Sync finished', t.finished) +
+      '<dt>Triggered by</dt><dd>' + esc(triggerLabel(t.trigger)) + '</dd>';
+  }
+
   function runDetail(run, log) {
     var h = '<p><a href="#/runs">&larr; All runs</a></p><div class="card" data-testid="run-detail"><h3>Run ' + esc(run.run_id) + ' ' + verdictBadge(run.verdict) + '</h3><dl class="kv">' +
-      '<dt>Time</dt><dd>' + esc(D.fmtTime(run.time)) + '</dd><dt>Mode</dt><dd>' + esc(run.mode) + (run.what_if ? ' (what-if)' : '') + '</dd>' +
+      timingRows(run, log) + '<dt>Mode</dt><dd>' + esc(run.mode) + (run.what_if ? ' (what-if)' : '') + '</dd>' +
       '<dt>Planned / moved</dt><dd>' + esc(run.planned_moves) + ' / ' + esc(run.moved) + '</dd>' +
       '<dt>Liked songs</dt><dd>' + esc(run.liked_before) + ' before, ' + esc(run.liked_after) + ' after</dd>' +
       '<dt>Duration</dt><dd>' + esc(run.duration_seconds) + ' s</dd></dl>';
@@ -753,7 +797,7 @@
       runs.forEach(function (r) {
         var cls = r.verdict === 'error' || r.verdict === 'mismatch' ? 'row-bad' : (r.warnings ? 'row-warn' : '');
         h += '<tr class="' + cls + '" data-run="' + esc(r.run_id) + '" data-verdict="' + esc(r.verdict) + '"><td class="check-cell" data-label="Compare"><input type="checkbox" class="check" data-pick="' + esc(r.run_id) + '" aria-label="Select run ' + esc(D.fmtDate(r.time)) + ' for comparison"' + (st.sel.indexOf(r.run_id) >= 0 ? ' checked' : '') + ' /></td>' +
-          '<td class="cell-main"><strong>' + esc(D.fmtTime(r.time)) + '</strong>' + (r.what_if ? ' ' + badge('warn', 'What-if') : '') + '</td>' +
+          '<td class="cell-main"><strong>' + esc(D.fmtTime(r.time)) + '</strong>' + (r.what_if ? ' ' + badge('warn', 'What-if') : '') + timingLines(runTiming(r, null)) + '</td>' +
           '<td class="cell-extra" data-label="Mode">' + esc(r.mode === 'apply' ? 'Apply' : 'Dry run') + '</td><td data-label="Verdict">' + verdictBadge(r.verdict) + '</td>' +
           '<td class="num" data-label="Planned">' + esc(r.planned_moves) + '</td><td class="num" data-label="Moved">' + esc(r.moved) + '</td><td class="num cell-extra" data-label="Too young">' + esc(r.too_young) + '</td><td class="num cell-extra" data-label="Blocked">' + esc(r.blocked) + '</td>' +
           '<td class="num" data-label="Errors">' + esc(r.errors) + '</td><td class="num" data-label="Warnings">' + esc(r.warnings) + '</td>' +

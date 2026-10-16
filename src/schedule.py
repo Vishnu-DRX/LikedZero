@@ -6,7 +6,9 @@ when the most recent scheduled slot is at most WINDOW old and no run has been re
 
     python -m src.schedule --config config.yaml --runs logs/runs.json
 
-prints ``run=true|false`` and ``apply=true|false`` lines (also appended to $GITHUB_OUTPUT when set).
+prints ``run=true|false``, ``apply=true|false`` and ``slot=<UTC ISO time of the slot being claimed>`` lines (also
+appended to $GITHUB_OUTPUT when set). The slot is recorded in the run log next to the time the run actually started,
+so a late GitHub tick shows up as a visible delay.
 """
 
 from __future__ import annotations
@@ -58,6 +60,7 @@ def next_slot(schedule: Schedule, now: datetime) -> datetime | None:
 
 
 def is_due(schedule: Schedule, now: datetime, last_run: datetime | None) -> tuple[bool, str]:
+    """Is a tick at ``now`` due? Never more than once per slot, and a slot stays claimable for WINDOW."""
     if not schedule.enabled:
         return False, "schedule is not enabled in config.yaml"
     slot = latest_slot(schedule, now)
@@ -89,12 +92,17 @@ def main(argv: list[str] | None = None) -> int:
     except (ConfigError, OSError) as exc:
         # A tick that fails would email the owner every 30 minutes; skip with a visible annotation instead. Real
         # runs (manual, or a tick that is due) still validate the config loudly in the workflow's own check step.
-        schedule = Schedule()
+        schedule, now = Schedule(), datetime.now(timezone.utc)
         due, reason = False, f"config.yaml unusable, skipping this tick: {str(exc).splitlines()[0]}"
         print(f"::warning::{reason}")
     else:
-        due, reason = is_due(schedule, datetime.now(timezone.utc), last_run_time(Path(args.runs)))
-    lines = [f"run={'true' if due else 'false'}", f"apply={'true' if due and schedule.apply else 'false'}"]
+        now = datetime.now(timezone.utc)
+        due, reason = is_due(schedule, now, last_run_time(Path(args.runs)))
+    slot = latest_slot(schedule, now) if due else None
+    lines = [
+        f"run={'true' if due else 'false'}", f"apply={'true' if due and schedule.apply else 'false'}",
+        f"slot={slot.isoformat(timespec='seconds') if slot else ''}",
+    ]
     print(reason)
     print("\n".join(lines))
     out = os.environ.get("GITHUB_OUTPUT")

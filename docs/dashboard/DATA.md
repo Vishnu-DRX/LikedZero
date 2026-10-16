@@ -14,8 +14,14 @@ unless `titles_hidden` is set (see below).
 
 ## `runs.json` — rolling index (newest first, max 90)
 `{version, generated_at, schedule:{cron, description, next_run}|null, runs:[{run_id, time, mode ("dry_run"|"apply"), what_if, planned_moves, moved, too_young, no_match,
-blocked, target_problems, errors, warnings, liked_before, liked_after, duration_seconds, verdict ("dry_run"|"ok"|"mismatch"|"error"),
+blocked, target_problems, errors, warnings, liked_before, liked_after, duration_seconds,
+started_at, finished_at, scheduled_for|null, workflow_started_at|null, trigger ("schedule"|"workflow_dispatch"|null), verdict ("dry_run"|"ok"|"mismatch"|"error"),
 rule_counts:{rule_name: wins}, moves_by_playlist:{playlist_name: n}, log:"YYYY-MM-DD.json"}]}`
+Timing (all UTC ISO; the dashboard shows each in IST and UTC): `time` = `started_at` = when `src.sync` started,
+`finished_at` = when it wrote the log, `scheduled_for` = the schedule slot the run claimed (null for manual/local runs),
+`workflow_started_at` = when GitHub fired the workflow run (`github.run_started_at`), so `scheduled_for` to
+`workflow_started_at` is GitHub's own delay. Runs recorded before this existed lack these keys; the dashboard falls back to `time` + `duration_seconds`.
+The per-run log carries the same five timing keys at top level.
 `schedule` is written by the workflow from its cron (decision 34); null/absent = "Not scheduled" on the Overview.
 
 ## `YYYY-MM-DD.json` — per-run log (fetched on demand from `runs[].log`)

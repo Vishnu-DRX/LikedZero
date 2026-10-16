@@ -1,6 +1,6 @@
 {
  "date": "2026-09-19",
- "run_id": "2026-09-19T06:00:00Z",
+ "run_id": "2026-09-19T22:41:12Z",
  "mode": "dry_run",
  "dry_run": true,
  "what_if": false,
@@ -141,5 +141,10 @@
  "http_audit": {
   "GET api.spotify.com": 28
  },
- "runtime_seconds": 44.8
+ "runtime_seconds": 44.8,
+ "started_at": "2026-09-19T22:41:12+00:00",
+ "finished_at": "2026-09-19T22:41:56+00:00",
+ "scheduled_for": "2026-09-19T22:30:00+00:00",
+ "workflow_started_at": "2026-09-19T22:40:55+00:00",
+ "trigger": "schedule"
 }

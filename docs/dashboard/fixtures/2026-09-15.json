@@ -197,6 +197,11 @@
   "DELETE api.spotify.com": 3
  },
  "runtime_seconds": 88.4,
+ "started_at": "2026-09-15T06:00:00+00:00",
+ "finished_at": "2026-09-15T06:01:28+00:00",
+ "scheduled_for": "2026-09-14T22:30:00+00:00",
+ "workflow_started_at": "2026-09-15T05:59:41+00:00",
+ "trigger": "schedule",
  "reconcile": {
   "expected_after": 46,
   "actual_after": 46,
