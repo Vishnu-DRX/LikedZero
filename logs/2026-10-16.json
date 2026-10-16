@@ -1,0 +1,183 @@
+{
+ "date": "2026-10-16",
+ "dry_run": false,
+ "evaluated": 4,
+ "moved": [
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.4,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-15T21:48:09+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "Dil",
+   "playlist_id": "0mLacgDt7f4ZK3LR7ZayhP",
+   "rule": "Hindi -> Dil",
+   "matched": {
+    "language_in": "hindi"
+   },
+   "age_days": 0.4,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-15T19:32:54+00:00",
+   "target_position": "bottom"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.4,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-15T19:32:40+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": null,
+   "artist": null,
+   "uri": null,
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.4,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-15T19:32:27+00:00",
+   "target_position": "top"
+  }
+ ],
+ "skipped_no_match": 0,
+ "skipped_too_young": [],
+ "skipped_playlist_missing": [],
+ "errors": [],
+ "warnings": [],
+ "journal": [
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2026-10-15T21:48:09+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2026-10-15T19:32:54+00:00",
+   "target_playlist_id": "0mLacgDt7f4ZK3LR7ZayhP",
+   "already_in_target": false
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2026-10-15T19:32:40+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": null,
+   "name": null,
+   "artists": null,
+   "original_added_at": "2026-10-15T19:32:27+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  }
+ ],
+ "http_audit": {
+  "POST accounts.spotify.com": 1,
+  "GET api.spotify.com": 25,
+  "POST api.spotify.com": 2,
+  "DELETE api.spotify.com": 1
+ },
+ "runtime_seconds": 12.0,
+ "run_id": "20261016T061519Z",
+ "mode": "apply",
+ "what_if": false,
+ "liked_before": 4,
+ "liked_after": 0,
+ "verdict": "ok",
+ "rule_counts": {
+  "Hindi -> Dil": 1,
+  "Malayalam -> NewAgeMadrasMail": 0,
+  "Anavae -> Anavae binge list": 0,
+  "Linkin Park -> Dead Dreams' Disco": 0,
+  "Queen -> Her Highness": 0,
+  "Twenty One Pilots -> Riffs in the air": 0,
+  "Klasey Jones -> The Klasey Universe": 0,
+  "The Midnight -> Midnight Mixer": 0,
+  "Route to artist's home playlist (draft)": 0,
+  "Japanese -> nani mo wakaranai": 0,
+  "English -> The Simulation Archives": 0,
+  "Catch-all -> The Simulation Archives": 3
+ },
+ "config_hash": "2fcb98445d2d",
+ "plan_counts": {
+  "will_move": 4,
+  "too_young": 0,
+  "no_match": 0,
+  "target_problem": 0,
+  "blocked": 0
+ },
+ "batches": [
+  {
+   "kind": "add_to_playlist",
+   "target": "79yR6353WPZ4marOYReGJ2",
+   "size": 3,
+   "committed": true,
+   "error": null
+  },
+  {
+   "kind": "add_to_playlist",
+   "target": "0mLacgDt7f4ZK3LR7ZayhP",
+   "size": 1,
+   "committed": true,
+   "error": null
+  },
+  {
+   "kind": "remove_from_liked",
+   "target": "liked",
+   "size": 4,
+   "committed": true,
+   "error": null
+  }
+ ],
+ "reconcile": {
+  "liked_before": 4,
+  "removed": 4,
+  "expected_after": 0,
+  "actual_after": 0,
+  "new_likes_during_run": 0,
+  "lost": 0,
+  "resurrected": 0,
+  "gone_from_target": 0,
+  "ok": true
+ },
+ "moved_uris": [],
+ "still_liked": [],
+ "restore_command": "python -m src.sync --restore logs/restore-journal.json --apply",
+ "titles_hidden": true
+}
