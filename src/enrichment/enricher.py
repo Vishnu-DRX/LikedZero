@@ -101,6 +101,10 @@ class Enricher:
         if entry:
             hint = language_hint(entry.get("genres") or [], entry.get("country"))
             out["hint"] = hint[0] if hint else None
+            # Han-only text (kanji, no kana) reads "chinese" by script but is just as often Japanese. When the
+            # MusicBrainz hint says Japanese (j-pop tag, JP artist), trust it over the ambiguous script.
+            if out["script"] == "chinese" and out["hint"] == "japanese":
+                out["script"] = "japanese"
             if self._english_by_country(track, entry):
                 out["country_default"] = "english"
         return out

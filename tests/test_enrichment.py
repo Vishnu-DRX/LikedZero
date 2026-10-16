@@ -556,3 +556,17 @@ def test_language_map_has_votes(tmp_path):
     m.add(track(tid="b", artist_id="x"), "tamil")  # split vote: no winner, but a target-language artist
     assert m.has_votes(track(tid="new", artist_id="x")) and m.artist_language("x") is None
     assert not m.has_votes(track(tid="q", artist_id="other"))
+
+
+def test_han_only_title_with_japanese_hint_is_japanese_not_chinese(tmp_path):
+    c = EnrichmentCache(tmp_path / "c.json")
+    c.put_artist("sp1", {"genres": ["j-pop"], "country": "JP"})
+    r = Enricher(c, None, LanguageMap()).resolve(track(name="夜に駆ける"))
+    assert (r.language, r.language_source) == ("japanese", "script")
+
+
+def test_han_only_title_without_japanese_hint_stays_chinese(tmp_path):
+    c = EnrichmentCache(tmp_path / "c.json")
+    c.put_artist("sp1", {"genres": ["mandopop"], "country": "TW"})
+    assert Enricher(c, None, LanguageMap()).resolve(track(name="小幸运")).language == "chinese"
+    assert Enricher(EnrichmentCache(tmp_path / "d.json"), None, LanguageMap()).resolve(track(name="小幸运")).language == "chinese"
