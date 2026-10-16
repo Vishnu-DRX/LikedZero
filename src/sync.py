@@ -262,6 +262,7 @@ def run(args: argparse.Namespace) -> int:
     snapshot = artifacts.build_latest_plan(
         tracks, raw_enrichments, config, now, playlists, precision=precision, run_id=run_id, mode=mode,
         what_if=args.what_if_enable_all, cfg_hash=artifacts.config_hash(cfg_text),
+        inbox_kind=artifacts.inbox_kind_for(config),
     )
     rule_counts = {r["name"]: r["wins"] for r in snapshot["rules"]}
     logs_dir.mkdir(parents=True, exist_ok=True)

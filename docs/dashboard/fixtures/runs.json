@@ -35,7 +35,14 @@
     "Old jazz": 2,
     "English pop": 7
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Chill": 4,
+    "Fake English": 6,
+    "Fake Hindi Hits": 3,
+    "Fake Rock": 4,
+    "Fake Malayalam Mix": 3,
+    "Fake Latino": 1
+   },
    "log": "2026-09-21.json"
   },
   {
@@ -60,7 +67,13 @@
     "English pop": 5,
     "Hindi hits": 3
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Rock": 2,
+    "Fake English": 6,
+    "Fake Chill": 2,
+    "Fake Hindi Hits": 2,
+    "Fake Latino": 2
+   },
    "log": "2026-09-20.json"
   },
   {
@@ -84,7 +97,13 @@
     "Hindi hits": 2,
     "English pop": 3
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Rock": 1,
+    "Fake English": 1,
+    "Fake Chill": 1,
+    "Fake Hindi Hits": 1,
+    "Fake Latino": 1
+   },
    "log": "2026-09-19.json"
   },
   {
@@ -130,7 +149,12 @@
     "Lo-fi study": 1,
     "Rock legends": 1
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Rock": 1,
+    "Fake English": 1,
+    "Fake Chill": 1,
+    "Fake Hindi Hits": 1
+   },
    "log": "2026-09-17.json"
   },
   {
@@ -154,7 +178,11 @@
     "Lo-fi study": 1,
     "Spanish nights": 2
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Rock": 1,
+    "Fake English": 1,
+    "Fake Chill": 1
+   },
    "log": "2026-09-16.json"
   },
   {
@@ -179,7 +207,13 @@
     "English pop": 3,
     "Hindi hits": 1
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Rock": 1,
+    "Fake English": 2,
+    "Fake Chill": 1,
+    "Fake Hindi Hits": 1,
+    "Fake Latino": 1
+   },
    "log": "2026-09-15.json"
   },
   {
@@ -203,7 +237,13 @@
     "Lo-fi study": 3,
     "English pop": 4
    },
-   "moves_by_playlist": {},
+   "moves_by_playlist": {
+    "Fake Rock": 1,
+    "Fake English": 3,
+    "Fake Chill": 1,
+    "Fake Hindi Hits": 1,
+    "Fake Latino": 1
+   },
    "log": "2026-09-14.json"
   }
  ]

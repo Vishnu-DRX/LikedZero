@@ -21,7 +21,7 @@ pytestmark = pytest.mark.e2e
 ROOT = Path(__file__).resolve().parents[2]
 FIX = ROOT / "docs" / "dashboard" / "fixtures"
 SHOTS = ROOT / "docs" / "screenshots"
-VIEWS = ["overview", "inbox", "rules", "playlists", "runs", "signals"]
+VIEWS = ["overview", "inbox", "rules", "playlists", "runs"]
 
 
 def fx(name):
@@ -74,17 +74,22 @@ def test_overview_answers_is_it_healthy(dash):
     assert "Is it healthy?" in text(page, ".question")
     last = RUNS[0]
     card = text(page, '[data-card="last-run"]')
-    assert "Dry run" in card and "2026-09-21 06:00 UTC" in card
+    assert "Dry run" in card and "2026-09-21 06:00 UTC" in card and "2 warnings" in card
     assert "2026-09-22 03:00 UTC" in text(page, '[data-card="next-run"]')  # from the demo fixture's schedule (decision 34)
-    assert str(PLAN["liked_total"]) in text(page, '[data-card="liked"]')
-    pending = text(page, '[data-card="pending"]')
-    assert str(c["will_move"] + c["too_young"]) in pending and f"{c['will_move']} ready to move" in pending
+    waiting = text(page, '[data-card="liked"]')
+    assert str(PLAN["liked_total"]) in waiting and f"{c['will_move']} ready to move" in waiting
     week_moves = sum(r["moved"] for r in RUNS if r["mode"] == "apply")
     assert re.search(rf"\b{week_moves}\b", text(page, '[data-card="moves"]'))
-    assert f"{last['errors']} / {last['warnings']}" in text(page, '[data-card="errors"]')
-    assert "Mismatch" in text(page, '[data-card="safety"]')  # the latest apply run failed reconcile
+    assert "A song may need restoring" in text(page, '[data-card="safety"]')  # the latest real run failed its count check
     nxt = text(page, '[data-testid="next"]')
     assert f"move {c['will_move']} songs" in nxt and "nothing has been written" in nxt
+    assert "next automatic run is 2026-09-22 03:00 UTC" in nxt
+    # no jargon or noise cards any more
+    for gone in ("pending", "errors"):
+        expect(page.locator(f'[data-card="{gone}"]')).to_have_count(0)
+    body = text(page, "#view-root")
+    for jargon in ("Reconcile OK", "since the previous run", "Safety verdict", "Not scheduled"):
+        assert jargon not in body, jargon
     assert "Data freshness" in text(page, '[data-testid="freshness"]')
     assert "2026-08-01" in text(page, '[data-testid="inbox-since"]')  # decision 45/P1-2
     expect(page.locator('[data-banner="stale"]')).to_have_count(0)
@@ -205,7 +210,7 @@ def test_explain_withheld_signal_and_trace(dash):
     assert "has not been measured" in dlg.inner_text()
 
 
-def test_explain_matched_shadowed_and_signals(dash):
+def test_explain_matched_shadowed_and_language_section(dash):
     page = dash("inbox")
     _, dlg = open_explain(page, "Fake Anthem (Live)")
     open_technical_trace(dlg)
@@ -219,6 +224,10 @@ def test_explain_matched_shadowed_and_signals(dash):
     _, dlg = open_explain(page, "Nilavu Placeholder")
     assert dlg.locator('li[data-result="matched_too_young"]').count() == 1
     assert "Playlist" in dlg.locator('[data-testid="lang-signal"]').inner_text() and "97%" in dlg.inner_text()
+    # the per-song section is plain "Language and genre" (the Signals tab is gone, so is its jargon heading)
+    headings = dlg.locator("h3").all_inner_texts()
+    assert "Language and genre" in headings and "Signals" not in headings
+    assert "How it was found: learned from your own playlists" in dlg.inner_text()
 
 
 def test_explain_drawer_keyboard_focus_and_escape(dash):
@@ -299,9 +308,12 @@ def test_runs_history_detail_and_diff(dash):
     page.locator(f'tr[data-run="{mism["run_id"]}"] a', has_text="Details").click()
     page.wait_for_selector('[data-testid="run-detail"]')
     body = page.locator("#view-root").inner_text()
+    # a failed safety check opens the technical details by itself and says so at the top
+    expect(page.locator('[data-banner="run-mismatch"]')).to_be_visible()
+    assert page.locator('[data-testid="run-technical"]').get_attribute("open") is not None
     assert "Mismatch" in body and "expected 42" in body and "found 43" in body
     assert "python -m src.sync --restore logs/2026-09-17.json" in body
-    assert "Journal (4 removals recorded)" in body or "Journal" in body
+    assert "Journal (4 removals recorded)" in body
     assert "Spotify write calls" in body
     # run with an error
     err = next(r for r in RUNS if r["verdict"] == "error")
@@ -329,11 +341,15 @@ def test_run_detail_shows_reconcile_ok_and_restore_for_a_clean_apply_run(dash):
     page = dash("runs")
     ok_run = next(r for r in RUNS if r["mode"] == "apply" and r["verdict"] == "ok")
     goto_view(page, f"runs/{ok_run['run_id']}")
+    # clean run: the technical part (reconcile, restore, journal) stays collapsed until asked for
+    tech = page.locator('[data-testid="run-technical"]')
+    assert tech.get_attribute("open") is None
+    expect(page.locator('[data-banner="run-mismatch"]')).to_have_count(0)
+    tech.locator("summary").first.click()
     body = page.locator("#view-root").inner_text()
-    assert "OK" in body and "Mismatch" not in body
+    assert "Reconcile OK" in body and "Mismatch" not in body
     assert "python -m src.sync --restore logs/2026-09-15.json" in body
-    assert "Journal" in body
-    page.locator("details", has_text="Journal").locator("summary").click()
+    tech.locator("details", has_text="Journal").locator("summary").click()
     assert page.locator('[data-testid="journal"] tbody tr').count() >= 1
 
 
@@ -341,24 +357,6 @@ def test_runs_unknown_run_is_a_clear_message(dash):
     page = dash("runs")
     goto_view(page, "runs/nope")
     assert "Run not found" in page.locator("#view-root").inner_text()
-
-
-# ------------------------------------------------------------------ signals
-def test_signals_coverage_and_precision_badges(dash):
-    page = dash("signals")
-    cov = fx("enrichment-coverage.json")
-    t = text(page, '[data-testid="coverage"]')
-    assert str(cov["tracks"]) in t and f"{cov['genre_coverage_pct_of_artists']}%" in t and f"{cov['language_coverage_pct_whole_library']}%" in t
-    cell = lambda sig, lang: page.locator(f'td[data-signal="{sig}"][data-lang="{lang}"]')
-    assert cell("hint", "tamil").get_attribute("data-qualified") == "no" and "Not qualified" in cell("hint", "tamil").inner_text()
-    assert "57.1%" in cell("hint", "tamil").inner_text() and "8 of 14" in cell("hint", "tamil").inner_text()
-    assert cell("hint", "spanish").get_attribute("data-qualified") == "yes" and "Qualified" in cell("hint", "spanish").inner_text()
-    assert cell("country_default", "english").get_attribute("data-qualified") == "yes"
-    assert cell("country_default", "hindi").get_attribute("data-qualified") == "no"
-    assert cell("playlist", "malayalam").get_attribute("data-qualified") == "yes"
-    assert "not measured" in cell("playlist", "bengali").inner_text()
-    assert "Where languages came from" in page.locator("#view-root").inner_text()
-    assert "90%" in page.locator("#view-root").inner_text()
 
 
 # ------------------------------------------------------------------ banners
@@ -372,7 +370,7 @@ def test_stale_banner_when_generated_at_is_old(dash):
     assert "more than 2 days old" in banner.inner_text() and "Inbox snapshot" in banner.inner_text()
     goto_view(page, "inbox")
     expect(page.locator('[data-banner="stale"]')).to_be_visible()
-    goto_view(page, "signals")  # signals does not use the plan file, so it is not stale
+    goto_view(page, "runs")  # the run history is a different file, and it is fresh
     expect(page.locator('[data-banner="stale"]')).to_have_count(0)
 
 
@@ -381,19 +379,38 @@ def test_now_parameter_makes_everything_stale(dash):
     expect(page.locator('[data-banner="stale"]')).to_be_visible()
 
 
-def test_what_if_and_legacy_banners_on_every_view(dash):
+def test_what_if_banner_on_every_view(dash):
     def setup(page):
-        patch_json(page, "latest-plan.json", lambda d: d.update(what_if=True, inbox_kind="legacy_library"))
+        patch_json(page, "latest-plan.json", lambda d: d.update(what_if=True))
 
     page = dash("overview", setup=setup)
     for view in VIEWS:
         goto_view(page, view)
-        legacy = page.locator('[data-banner="legacy"]')
-        expect(legacy).to_be_visible()
-        assert "This is the old archive, not a live inbox" in legacy.inner_text()
         wi = page.locator('[data-banner="what-if"]')
         expect(wi).to_be_visible()
         assert "Disabled rules were treated as enabled" in wi.inner_text()
+
+
+def test_old_archive_banner_only_without_an_inbox_start_date(dash):
+    """The "whole library is in scope" banner is for a plan with NO inbox_since. A plan that still carries the old
+    "legacy_library" label but has a start date (every plan written before sync set the label from the config)
+    is a live inbox and must not show it."""
+    def legacy_no_since(d):
+        d.update(inbox_kind="legacy_library", inbox_since=None)
+
+    page = dash("overview", setup=lambda p: patch_json(p, "latest-plan.json", legacy_no_since))
+    for view in VIEWS:
+        goto_view(page, view)
+        legacy = page.locator('[data-banner="legacy"]')
+        expect(legacy).to_be_visible()
+        assert "whole Liked Songs library is in scope" in legacy.inner_text()
+        assert "old archive" not in legacy.inner_text()
+
+    page = dash("overview", setup=lambda p: patch_json(
+        p, "latest-plan.json", lambda d: d.update(inbox_kind="legacy_library", inbox_since="2026-10-10")))
+    for view in VIEWS:
+        goto_view(page, view)
+        expect(page.locator('[data-banner="legacy"]')).to_have_count(0)
 
 
 # ------------------------------------------------------------------ empty + error states
@@ -405,7 +422,6 @@ def test_empty_states_name_the_command(dash):
         "rules": ["python -m src.sync"],
         "playlists": ["python -m src.sync"],
         "runs": ["python -m src.sync"],
-        "signals": ["python -m src.enrich --report", "python -m src.backtest"],
     }
     for view, cmds in expected.items():
         goto_view(page, view)
@@ -419,13 +435,16 @@ def test_empty_states_name_the_command(dash):
 
 
 def test_partial_data_shows_what_exists(dash):
+    """With the run history missing, the Inbox still works from the plan file (and says which file is missing
+    where it is needed)."""
     def setup(page):
-        page.route("**/dashboard/fixtures/enrichment-coverage.json", lambda r: r.fulfill(status=404, body="x"))
+        page.route("**/dashboard/fixtures/runs.json", lambda r: r.fulfill(status=404, body="x"))
 
-    page = dash("signals", setup=setup)
-    expect(page.locator('[data-empty="coverage"]')).to_be_visible()
-    assert "python -m src.enrich --report" in text(page, '[data-empty="coverage"]')
-    expect(page.locator('[data-testid="precision-table"]')).to_be_visible()
+    page = dash("runs", setup=setup)
+    expect(page.locator('[data-empty="runs"]')).to_be_visible()
+    assert "python -m src.sync" in text(page, '[data-empty="runs"]')
+    goto_view(page, "inbox")
+    expect(page.locator("#inbox-results tbody tr")).to_have_count(len(PLAN["songs"]))
 
 
 def test_error_state_and_retry(dash):
@@ -721,13 +740,14 @@ def test_no_mode_toggle_and_full_overview_for_a_fresh_viewer(make_page, site):
     expect(page.locator("#mode-toggle")).to_have_count(0)
     expect(page.locator("#mode-callout")).to_have_count(0)
     expect(page.locator("#mode-callout-dismiss")).to_have_count(0)
-    # every view always renders its full content now: all 7 KPI cards, not a reduced variant.
-    for present in ("last-run", "next-run", "liked", "pending", "moves", "errors", "safety"):
+    # every view always renders its full content now: the five KPI cards, each answering one question.
+    for present in ("last-run", "next-run", "liked", "moves", "safety"):
         expect(page.locator(f'[data-card="{present}"]')).to_be_visible()
-    for card_name in ("pending", "moves", "safety"):
+    expect(page.locator("#view-root .card[data-card]")).to_have_count(5)
+    for card_name in ("liked", "moves", "safety"):
         expect(page.locator(f'[data-card="{card_name}"] .help')).to_be_visible()
     nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
-    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Signals"]
+    assert nav_labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs"]
 
 
 def test_inbox_always_shows_the_full_toolbar(dash):
@@ -805,7 +825,7 @@ def test_tabs_keyboard_routing_and_aria(dash):
     page = dash("overview")
     nav = page.get_by_role("navigation", name="Dashboard views")
     labels = nav.get_by_role("link").all_inner_texts()
-    assert labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs", "Signals"]
+    assert labels == ["Overview", "Inbox", "Rules", "Playlists", "Runs"]
     assert nav.locator('[aria-current="page"]').inner_text() == "Overview"
     nav.get_by_role("link", name="Rules").focus()
     page.keyboard.press("Enter")
@@ -1080,7 +1100,7 @@ def test_rules_view_shows_any_of_summary(dash):
 
 # ------------------------------------------------------------------------------------------- phone widths: nothing clipped
 @pytest.mark.parametrize("width", [360, 390, 430])
-@pytest.mark.parametrize("view", ["overview", "inbox", "rules", "playlists", "runs", "signals"])
+@pytest.mark.parametrize("view", VIEWS)
 def test_phone_width_nothing_clipped_and_tabs_fit(dash, width, view):
     """`body { overflow-x: clip }` hides sideways overflow from scrollWidth, so measure the real boxes: every visible
     element must sit inside the viewport, the page text must keep a side gutter, and all six tabs must be visible
@@ -1102,3 +1122,234 @@ def test_phone_width_nothing_clipped_and_tabs_fit(dash, width, view):
     assert not res["out"], f"{view} at {width}px: boxes outside the viewport: {res['out'][:5]}"
     assert res["edge"] >= 12, f"{view} at {width}px: text only {res['edge']}px from the screen edge"
     assert res["tabsScroll"] <= 0, f"{view} at {width}px: tab strip scrolls sideways by {res['tabsScroll']}px"
+
+
+# ------------------------------------------------------------------------------------------- dashboard feedback round
+# What the live dashboard actually looks like after a real run on a public fork: the plan file is the inbox as it was
+# when the run STARTED (mode "apply"), song titles are hidden, an inbox start date is set, and the plan still carries
+# the old "legacy_library" label. These helpers rebuild that shape from the fabricated fixtures.
+REAL_MOVES = [  # (playlist, rule)
+    ("Fake English", "English pop"), ("Fake English", "English pop"), ("Fake Hindi Hits", "Hindi hits"), ("Fake English", "English pop"),
+]
+
+
+def real_like_plan(d):
+    songs = d["songs"][:4]
+    for s, (pl, rule) in zip(songs, REAL_MOVES):
+        s.update(title=None, artists=[], uri=None, decision="will_move", rule=rule, target_playlist=pl, target_status="resolved",
+                 target_position="top", eligible_on=s["added_at"])
+    d.update(songs=songs, liked_total=4, mode="apply", titles_hidden=True, inbox_kind="legacy_library", inbox_since="2026-08-01",
+             counts={"will_move": 4, "too_young": 0, "no_match": 0, "target_problem": 0, "blocked": 0})
+    return d
+
+
+def real_like_runs(d):
+    r = d["runs"][0]
+    r.update(mode="apply", verdict="ok", what_if=False, planned_moves=4, moved=4, too_young=0, no_match=0, blocked=0, target_problems=0,
+             errors=0, warnings=0, liked_before=4, liked_after=0, moves_by_playlist={"Fake English": 3, "Fake Hindi Hits": 1})
+    return d
+
+
+def real_like_log(d):
+    moved = d["moved"][:4]
+    for m, (pl, rule) in zip(moved, REAL_MOVES):
+        m.update(track=None, artist=None, uri=None, playlist=pl, rule=rule, target_position="top")
+    d.update(moved=moved, mode="apply", dry_run=False, what_if=False, titles_hidden=True, verdict="ok", skipped_too_young=[],
+             skipped_playlist_missing=[], skipped_no_match=0, errors=[], warnings=[], liked_before=4, liked_after=0,
+             journal=[dict(uri=None, name=None, artists=None, original_added_at=m["original_added_at"], target_playlist_id=m["playlist_id"]) for m in moved],
+             reconcile={"expected_after": 0, "actual_after": 0, "ok": True}, restore_command="python -m src.sync --restore logs/restore-journal.json --apply")
+    return d
+
+
+def use_real_like_data(page):
+    patch_json(page, "latest-plan.json", real_like_plan)
+    patch_json(page, "runs.json", real_like_runs)
+    patch_json(page, "2026-09-21.json", real_like_log)
+
+
+def test_after_a_live_run_the_overview_does_not_call_the_moved_songs_pending(dash):
+    page = dash("overview", setup=use_real_like_data)
+    # the plan file says 4 songs "will move", but that was BEFORE the run: nothing is waiting now
+    assert text(page, '[data-card="liked"] .metric-value') == "0"
+    assert "Counted at the end of the last run" in text(page, '[data-card="liked"]')
+    nxt = text(page, '[data-testid="next"]')
+    assert nxt.startswith("What happens next: Nothing is waiting. The last run moved 4 songs into 2 playlists.")
+    assert "next automatic run is 2026-09-22 03:00 UTC" in nxt
+    assert "would move" not in nxt and "nothing has been written" not in nxt
+    assert "Inbox when the last run started" in text(page, "#view-root")
+    expect(page.locator('[data-card="pending"]')).to_have_count(0)
+    # the stale "legacy" label is ignored because an inbox start date is set
+    expect(page.locator('[data-banner="legacy"]')).to_have_count(0)
+    assert "2026-08-01" in text(page, '[data-testid="inbox-since"]')
+
+
+def test_after_a_live_run_the_inbox_says_it_is_the_inbox_when_the_run_started(dash):
+    page = dash("inbox", setup=use_real_like_data)
+    notice = page.locator('[data-banner="inbox-snapshot"]')
+    expect(notice).to_be_visible()
+    t = notice.inner_text()
+    assert "as it was when the last run started" in t and "2026-09-21 06:00 UTC" in t and "Right now 0 songs are waiting" in t
+    expect(page.locator('[data-banner="legacy"]')).to_have_count(0)
+    rows = page.locator("#inbox-results tbody tr")
+    expect(rows).to_have_count(4)
+    first = rows.first.inner_text()
+    assert "Song 1 of 4 (title hidden)" in first and "Due to move" in first and "Will move" not in first
+    assert "Title hidden — open local files" not in page.locator("#view-root").inner_text()
+    # the dry-run demo has no such notice
+    page2 = dash("inbox")
+    expect(page2.locator('[data-banner="inbox-snapshot"]')).to_have_count(0)
+
+
+def test_runs_list_has_a_one_line_plain_summary_per_run(dash):
+    page = dash("runs", setup=use_real_like_data)
+    latest = page.locator('[data-testid="runs-table"] tbody tr').first
+    assert latest.locator('[data-testid="run-summary-line"]').inner_text() == "Moved 4 songs: 3 to Fake English, 1 to Fake Hindi Hits."
+    dry = page.locator('[data-testid="runs-table"] tbody tr[data-verdict="dry_run"]').first
+    assert dry.locator('[data-testid="run-summary-line"]').inner_text().startswith(("Dry run: would move", "Dry run: nothing would move", "What-if preview"))
+    # no internal identifiers on the list
+    assert "20260" not in text(page, '[data-testid="runs-table"]').replace("2026-0", "")
+
+
+def test_run_page_leads_with_what_moved_where_by_which_rule_and_hides_titles_gracefully(dash):
+    page = dash("runs", setup=use_real_like_data)
+    run_id = RUNS[0]["run_id"]
+    goto_view(page, f"runs/{run_id}")
+    summary = page.locator('[data-testid="run-summary"]')
+    assert summary.inner_text() == "Moved 4 songs: 3 to Fake English, 1 to Fake Hindi Hits."
+    groups = page.locator(".moved-group")
+    expect(groups).to_have_count(2)
+    eng = page.locator('.moved-group[data-playlist="Fake English"]')
+    assert "3 songs" in eng.inner_text() and "Rule: English pop" in eng.inner_text() and "top of the playlist" in eng.inner_text()
+    lines = eng.locator("li.moved-song").all_inner_texts()
+    assert len(lines) == 3 and all("title hidden" in x and "liked 2026-" in x for x in lines)
+    assert "Song 1 of 4 (title hidden)" in lines[0]
+    hindi = page.locator('.moved-group[data-playlist="Fake Hindi Hits"]')
+    assert "1 song" in hindi.inner_text() and "Rule: Hindi hits" in hindi.inner_text()
+    assert "Song titles are hidden" in text(page, '[data-testid="titles-hidden-note"]')
+    # the summary comes BEFORE the technical part, which is collapsed
+    tech = page.locator('[data-testid="run-technical"]')
+    assert tech.get_attribute("open") is None
+    assert page.locator('[data-testid="moved-summary"]').bounding_box()["y"] < tech.bounding_box()["y"]
+    assert page.locator('[data-testid="run-detail"]').bounding_box()["y"] < page.locator('[data-testid="moved-summary"]').bounding_box()["y"]
+    assert "Reconcile" not in text(page, "#view-root").split("Technical details")[0]
+
+
+def test_run_page_with_titles_names_song_playlist_and_rule(dash):
+    page = dash("runs")
+    ok_run = next(r for r in RUNS if r["mode"] == "apply" and r["verdict"] == "ok")
+    goto_view(page, f"runs/{ok_run['run_id']}")
+    log = fx(ok_run["log"])
+    for m in log["moved"]:
+        grp = page.locator(f'.moved-group[data-playlist="{m["playlist"]}"]')
+        assert m["track"] in grp.inner_text() and m["artist"] in grp.inner_text()
+        assert m["rule"] in grp.inner_text()
+    assert "title hidden" not in page.locator('[data-testid="moved-summary"]').inner_text()
+    # a dry run is worded as a plan, not as something that happened
+    dry = next(r for r in RUNS if r["mode"] == "dry_run" and r["planned_moves"] and not r["what_if"] and not r["errors"])
+    goto_view(page, f"runs/{dry['run_id']}")
+    assert "What would move where" in text(page, '[data-testid="moved-summary"]') or "What would move where" in text(page, "#view-root")
+    assert text(page, '[data-testid="run-summary"]').startswith("Dry run: would move")
+
+
+def test_signals_tab_is_gone(dash):
+    page = dash("overview")
+    nav_labels = page.get_by_role("navigation", name="Dashboard views").get_by_role("link").all_inner_texts()
+    assert "Signals" not in nav_labels
+    page.evaluate("location.hash = '#/signals'")  # an old bookmark falls back to the Overview
+    page.wait_for_selector('#view-root[data-state="ready"][data-view="overview"]')
+    expect(page.locator("#view-title")).to_have_text("Overview")
+    page.get_by_role("button", name="Glossary").click()
+    glossary = page.locator("#glossary-body").inner_text()
+    assert "Signal tier" not in glossary and "Precision" not in glossary
+    assert page.locator("a[href='#/signals']").count() == 0
+
+
+def test_overview_is_honest_about_the_schedule(dash):
+    # no schedule information at all: no "Next run" card and no claim either way
+    page = dash("overview", setup=lambda p: patch_json(p, "runs.json", lambda d: d.pop("schedule")))
+    expect(page.locator('[data-card="next-run"]')).to_have_count(0)
+    body = text(page, "#view-root")
+    assert "Not scheduled" not in body and "No automatic runs" not in body and "automatic run is" not in body
+    # explicit null (written by sync when config.yaml has no enabled schedule): say so plainly, still no card
+    page = dash("overview", setup=lambda p: patch_json(p, "runs.json", lambda d: d.update(schedule=None)))
+    expect(page.locator('[data-card="next-run"]')).to_have_count(0)
+    assert "No automatic runs are set up" in text(page, '[data-testid="next"]')
+    # a real schedule: description + time in the browser's time zone
+    page = dash("overview", timezone_id="Asia/Kolkata", setup=lambda p: patch_json(
+        p, "runs.json", lambda d: d.update(schedule={"cron": None, "description": "every day at 08:00 (Asia/Kolkata), moves songs", "next_run": "2026-09-22T02:30:00+00:00"})))
+    card = text(page, '[data-card="next-run"]')
+    assert "2026-09-22 08:00" in card and "Every day at 08:00 (Asia/Kolkata), moves songs" in card
+
+
+LONG_TITLE = "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa and a very long title that keeps going well past one line of a phone (Extended Remastered Deluxe Edition) [feat. Somebody With A Long Name]"
+LONG_ARTIST = "The Extremely Long Named Artist Collective Ensemble Of Many Players, Another Very Long Featured Artist Name"
+
+NO_CLIPPING_JS = """() => {
+  const bad = [];
+  document.querySelectorAll('main *, #drawer-root *').forEach(e => {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName)) return;  // form fields are not song titles
+    const cs = getComputedStyle(e);
+    if (cs.textOverflow === 'ellipsis') bad.push('ellipsis: ' + e.tagName + '.' + e.className);
+    const clamp = cs.webkitLineClamp;
+    if (clamp && clamp !== 'none') bad.push('line-clamp: ' + e.tagName + '.' + e.className);
+  });
+  return bad;
+}"""
+
+
+def test_long_titles_wrap_in_full_on_a_phone_everywhere(dash):
+    def mutate_plan(d):
+        d["songs"][0]["title"] = LONG_TITLE
+        d["songs"][0]["artists"] = [LONG_ARTIST]
+
+    def mutate_log(d):
+        d["moved"][0]["track"] = LONG_TITLE
+        d["moved"][0]["artist"] = LONG_ARTIST
+
+    ok_run = next(r for r in RUNS if r["mode"] == "apply" and r["verdict"] == "ok")
+
+    def setup(page):
+        patch_json(page, "latest-plan.json", mutate_plan)
+        patch_json(page, ok_run["log"], mutate_log)
+
+    page = dash("inbox", width=375, height=812, setup=setup)
+    page.locator("#inbox-q").fill("Aaaaaaaa")
+    btn = page.locator("#inbox-results .link-btn").first
+    assert btn.inner_text() == LONG_TITLE  # the whole title, not a cut-off one
+    assert page.locator("#inbox-results tbody tr").first.inner_text().count(LONG_ARTIST) == 1
+    box = btn.bounding_box()
+    assert box["x"] >= 0 and box["x"] + box["width"] <= 375 and box["height"] > 40  # several lines tall
+    assert page.evaluate("e => e.scrollWidth <= e.clientWidth + 1", btn.element_handle())
+    assert page.evaluate(NO_CLIPPING_JS) == []
+    # Explain drawer heading
+    btn.click()
+    head = page.locator("#drawer-title")
+    expect(head).to_be_visible()
+    assert LONG_TITLE in head.inner_text() and LONG_ARTIST in head.inner_text()
+    assert page.evaluate("e => e.scrollWidth <= e.clientWidth + 1", head.element_handle())
+    assert page.evaluate(NO_CLIPPING_JS) == []
+    page.keyboard.press("Escape")
+    # run page
+    goto_view(page, f"runs/{ok_run['run_id']}")
+    grp = page.locator("li.moved-song", has_text=LONG_TITLE)
+    assert grp.count() == 1 and LONG_ARTIST in grp.inner_text()
+    assert page.evaluate("document.documentElement.scrollWidth") <= 375
+    assert page.evaluate(NO_CLIPPING_JS) == []
+    # and no view anywhere uses ellipsis or line clamps
+    for view in VIEWS:
+        goto_view(page, view)
+        assert page.evaluate(NO_CLIPPING_JS) == [], view
+
+
+@pytest.mark.skipif(Axe is None, reason="axe-playwright-python not installed")
+def test_axe_zero_serious_or_critical_on_real_like_runs_and_overview(dash):
+    for view in ("overview", "inbox", "runs"):
+        page = dash(view, setup=use_real_like_data)
+        goto_view(page, view)
+        results = Axe().run(page)
+        serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
+        assert not serious, json.dumps([{"id": v["id"], "view": view} for v in serious])
+    goto_view(page, f"runs/{RUNS[0]['run_id']}")
+    results = Axe().run(page)
+    serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
+    assert not serious, json.dumps([{"id": v["id"]} for v in serious])
