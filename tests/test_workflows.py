@@ -162,3 +162,12 @@ def test_keepalive_always_re_enables_the_workflow_it_disabled(sync):
 def test_checkout_has_full_history_for_the_keepalive_check(sync):
     checkout = next(s for s in sync["jobs"]["sync"]["steps"] if str(s.get("uses", "")).startswith("actions/checkout"))
     assert checkout["with"]["fetch-depth"] == 0
+
+
+def test_sync_passes_the_claimed_slot_and_fire_time_to_the_run_log(sync):
+    steps = sync["jobs"]["sync"]["steps"]
+    step = next(s for s in steps if s.get("name") == "Sync")
+    env = step["env"]
+    assert env["LIKEDZERO_SCHEDULED_FOR"] == "${{ steps.gate.outputs.slot }}"
+    assert env["LIKEDZERO_WORKFLOW_STARTED_AT"] == "${{ github.run_started_at }}"
+    assert env["LIKEDZERO_TRIGGER"] == "${{ github.event_name }}"

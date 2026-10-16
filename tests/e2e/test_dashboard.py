@@ -296,6 +296,26 @@ def test_playlists_status_size_planned(dash):
 
 
 # ------------------------------------------------------------------ runs
+def test_runs_show_scheduled_vs_actual_start_and_finish_in_ist_and_utc(dash):
+    # 2026-09-19 fixture run: slot 22:30 UTC (04:00 IST), started 22:41:12 UTC, 11 minutes late.
+    late = next(r for r in RUNS if r.get("scheduled_for") == "2026-09-19T22:30:00+00:00")
+    page = dash("runs")
+    row = page.locator(f'tr[data-run="{late["run_id"]}"]')
+    sched, started = row.locator('[data-timing="scheduled"]').inner_text(), row.locator('[data-timing="started"]').inner_text()
+    assert "20 Sep 04:00 IST" in sched and "19 Sep 22:30 UTC" in sched
+    assert "20 Sep 04:11 IST" in started and "19 Sep 22:41 UTC" in started and "11 min late" in started
+    assert "Finished:" in row.locator('[data-timing="finished"]').inner_text()
+    # a manual run says so instead of showing a slot
+    manual = next(r for r in RUNS if r.get("trigger") == "workflow_dispatch")
+    assert "Not a scheduled run" in page.locator(f'tr[data-run="{manual["run_id"]}"] [data-timing="scheduled"]').inner_text()
+    # the detail page has exact seconds, GitHub's own fire time and the triggering event
+    row.locator("a", has_text="Details").click()
+    page.wait_for_selector('[data-testid="run-detail"]')
+    detail = page.locator('[data-testid="run-detail"]').inner_text()
+    assert "20 Sep 2026 04:00:00 IST" in detail and "GitHub fired the run" in detail and "22:40:55 UTC" in detail
+    assert "22:41:12 UTC" in detail and "Sync finished" in detail and "Schedule" in detail
+
+
 def test_runs_history_detail_and_diff(dash):
     page = dash("runs")
     rows = page.locator('[data-testid="runs-table"] tbody tr')

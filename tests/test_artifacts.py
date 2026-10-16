@@ -731,3 +731,31 @@ def test_any_placed_last_never_shadows_earlier_specific_rules():
     assert rule_of(p, "specific")["status"] == "ok"
     assert rule_of(p, "catchall")["status"] == "ok"
     assert rule_of(p, "catchall")["would_match"] == 2 and rule_of(p, "catchall")["wins"] == 1
+
+
+def test_timing_fields_record_slot_fire_start_and_finish_in_utc():
+    from datetime import timedelta
+    from src.artifacts import timing_fields
+
+    start = NOW
+    t = timing_fields(start, start + timedelta(seconds=75), scheduled_for="2026-10-16T22:30:00+00:00",
+                      workflow_started_at="2026-10-17T03:01:02Z", trigger="schedule")
+    assert t == {"started_at": iso(start), "finished_at": iso(start + timedelta(seconds=75)),
+                 "scheduled_for": "2026-10-16T22:30:00+00:00", "workflow_started_at": "2026-10-17T03:01:02+00:00",
+                 "trigger": "schedule"}
+    manual = timing_fields(start, None, scheduled_for="", workflow_started_at="not a time", trigger="")
+    assert manual["scheduled_for"] is None and manual["workflow_started_at"] is None and manual["trigger"] is None
+    assert manual["finished_at"] is None
+
+
+def test_run_entry_carries_timing_and_defaults_to_start_plus_duration():
+    from datetime import timedelta
+    from src.artifacts import timing_fields
+
+    e = entry()  # no timing supplied (older callers): start = time, finish = start + duration, nothing scheduled
+    assert e["started_at"] == e["time"] == iso(NOW) and e["finished_at"] == iso(NOW + timedelta(seconds=1.26))
+    assert e["scheduled_for"] is None and e["workflow_started_at"] is None and e["trigger"] is None
+    t = timing_fields(NOW, NOW + timedelta(seconds=3), scheduled_for="2026-10-16T22:30:00Z", trigger="schedule")
+    e = entry(timing=t)
+    assert e["scheduled_for"] == "2026-10-16T22:30:00+00:00" and e["trigger"] == "schedule"
+    assert e["finished_at"] == iso(NOW + timedelta(seconds=3))

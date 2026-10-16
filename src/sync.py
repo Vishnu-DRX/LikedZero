@@ -77,6 +77,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="song titles in written logs: auto = follow logging.include_track_names on a committed "
                         "workflow run (LIKEDZERO_COMMITTED_RUN=1), always visible on an ordinary local run")
     p.add_argument("--cron", default=os.environ.get("LIKEDZERO_CRON"), help="cron of the schedule, shown on the dashboard Overview")
+    p.add_argument("--scheduled-for", default=os.environ.get("LIKEDZERO_SCHEDULED_FOR"),
+                   help="UTC time of the schedule slot this run claims (set by the workflow's schedule gate)")
+    p.add_argument("--workflow-started-at", default=os.environ.get("LIKEDZERO_WORKFLOW_STARTED_AT"),
+                   help="UTC time GitHub started the workflow run (set by the workflow)")
+    p.add_argument("--trigger", default=os.environ.get("LIKEDZERO_TRIGGER"),
+                   help="what started the run: schedule, workflow_dispatch, or empty for a local run")
     p.add_argument("--what-if-enable-all", action="store_true", help="preview: treat disabled rules as enabled (dry-run only)")
     p.add_argument("--no-network", action="store_true", help="do not call MusicBrainz (cache + local signals only)")
     return p.parse_args(argv)
@@ -285,6 +291,9 @@ def run(args: argparse.Namespace) -> int:
     if args.apply:
         def write_journal(journal: list[dict[str, Any]]) -> None:  # runs BEFORE any removal from Liked Songs
             log = base_log(time.monotonic() - started, False)
+            log.update(artifacts.timing_fields(  # still running: no finish time yet
+                now, None, scheduled_for=args.scheduled_for, workflow_started_at=args.workflow_started_at, trigger=args.trigger,
+            ))
             log["journal"] = journal
             artifacts.atomic_write_json(out, log)
 
@@ -306,7 +315,12 @@ def run(args: argparse.Namespace) -> int:
 
     hide = hide_titles(args, config)
     duration = time.monotonic() - started
+    timing = artifacts.timing_fields(
+        now, datetime.now(timezone.utc), scheduled_for=args.scheduled_for,
+        workflow_started_at=args.workflow_started_at, trigger=args.trigger,
+    )
     log = base_log(duration, not args.apply)
+    log.update(timing)
     liked_after = len(liked_uris_before)
     if result is not None:
         liked_after = result.liked_after if result.liked_after is not None else len(liked_uris_before)
@@ -342,7 +356,7 @@ def run(args: argparse.Namespace) -> int:
                 m["playlist"] for m in plan.moves
                 if m["uri"] in (set(result.removed) if result else (set() if aborted else {m["uri"] for m in plan.moves}))
             )),
-            aborted=aborted,
+            aborted=aborted, timing=timing,
         ),
         now,
         schedule=artifacts.schedule_info_from_config(config.schedule, now) or artifacts.schedule_info(args.cron, now),

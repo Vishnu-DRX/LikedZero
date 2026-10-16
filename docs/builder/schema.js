@@ -13,7 +13,7 @@
     { key: 'logging.include_track_names', type: 'boolean', def: 'false', note: 'Off = committed public logs show counts/links only, not song titles.' },
     { key: 'schedule.enabled', type: 'boolean', def: 'false', note: 'Run LikedZero automatically at the time below. Off = it only runs when you start it.' },
     { key: 'schedule.timezone', type: 'IANA timezone name', def: 'UTC', note: 'The timezone `time` is in, e.g. Asia/Kolkata. The Configure page fills in your browser’s timezone.' },
-    { key: 'schedule.time', type: '"HH:MM" (24-hour, :00 or :30)', def: '"09:00"', note: 'Local time in `timezone`. Quote it. GitHub may start the run 5-20 minutes late.' },
+    { key: 'schedule.time', type: '"HH:MM" (24-hour, :00 or :30)', def: '"09:00"', note: 'Local time in `timezone`. Quote it. GitHub often starts the run late, sometimes by hours; the dashboard shows the real start time.' },
     { key: 'schedule.days', type: 'list of mon..sun', def: 'every day', note: 'Days of the week (in `timezone`) the schedule runs on.' },
     { key: 'schedule.apply', type: 'boolean', def: 'false', note: 'false: scheduled runs are dry runs (nothing moves). true: they really move songs; needs inbox_since.' },
     { key: 'artist_in_playlist.min_tracks', type: 'integer >= 1', def: '3', note: 'The artist needs at least this many existing tracks in one playlist, or the signal is too weak.' },

@@ -34,6 +34,34 @@ def iso(dt: datetime | None) -> str | None:
     return dt.astimezone(timezone.utc).isoformat(timespec="seconds") if dt else None
 
 
+def parse_utc(value: Any) -> datetime | None:
+    """An ISO timestamp (or datetime) as an aware UTC datetime; None when empty or unparseable. A bare time with no
+    offset is read as UTC, which is what the workflow supplies."""
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, str) and value.strip():
+        try:
+            dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+
+
+def timing_fields(
+    started: datetime, finished: datetime | None = None, *, scheduled_for: Any = None, workflow_started_at: Any = None,
+    trigger: str | None = None,
+) -> dict[str, Any]:
+    """When a run was due, when GitHub fired it, and when the sync really started and finished (all UTC ISO).
+    ``scheduled_for`` is the schedule slot the run claimed (None for manual and local runs); the dashboard shows
+    each next to the other in UTC and IST so a late GitHub tick is visible, not hidden behind the slot."""
+    return {
+        "started_at": iso(started), "finished_at": iso(finished), "scheduled_for": iso(parse_utc(scheduled_for)),
+        "workflow_started_at": iso(parse_utc(workflow_started_at)), "trigger": trigger or None,
+    }
+
+
 def config_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
@@ -248,7 +276,7 @@ def run_entry(
     *, run_id: str, now: datetime, mode: str, plan_counts: Mapping[str, int], moved: int, errors: int, warnings: int,
     liked_before: int, liked_after: int, duration_s: float, rule_counts: Mapping[str, int], log_file: str, what_if: bool = False,
     reconcile_ok: bool | None = None, moves_by_playlist: Mapping[str, int] | None = None,
-    aborted: str | None = None,
+    aborted: str | None = None, timing: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if aborted:
         verdict = aborted  # P1-3: an abort before any write must never be reported as "ok"
@@ -278,6 +306,7 @@ def run_entry(
         "liked_before": liked_before,
         "liked_after": liked_after,
         "duration_seconds": round(duration_s, 1),
+        **(timing if timing is not None else timing_fields(now, now + timedelta(seconds=duration_s))),
         "verdict": verdict,
         "rule_counts": dict(rule_counts),
         "moves_by_playlist": dict(moves_by_playlist or {}),

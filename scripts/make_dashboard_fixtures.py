@@ -29,6 +29,7 @@ from src.artifacts import (  # noqa: E402
     config_hash,
     run_entry,
     schedule_info,
+    timing_fields,
     update_runs_index,
 )
 from src.models import Artist, Config, Enrichment, Playlist, Rule, Track  # noqa: E402
@@ -202,19 +203,19 @@ def _journal(moves):
 
 RUN_SPECS = [
     # date, time-of-day, mode, what_if, plan_counts, moved, errors, warnings, before, after, secs, rule_counts
-    dict(date="2026-09-14", mode="dry_run", what_if=False, plan=dict(will_move=7, too_young=5, no_match=20, blocked=0, target_problem=0),
+    dict(date="2026-09-14", timing=dict(trigger="workflow_dispatch"), mode="dry_run", what_if=False, plan=dict(will_move=7, too_young=5, no_match=20, blocked=0, target_problem=0),
          moved=0, errors=0, warnings=0, before=52, after=52, secs=41.2, rc={"Lo-fi study": 3, "English pop": 4}),
-    dict(date="2026-09-15", mode="apply", what_if=False, plan=dict(will_move=6, too_young=4, no_match=18, blocked=0, target_problem=0),
+    dict(date="2026-09-15", timing=dict(trigger="schedule", scheduled="2026-09-14T22:30:00+00:00", fired="2026-09-15T05:59:41+00:00"), mode="apply", what_if=False, plan=dict(will_move=6, too_young=4, no_match=18, blocked=0, target_problem=0),
          moved=6, errors=0, warnings=0, before=52, after=46, secs=88.4, rc={"Lo-fi study": 2, "English pop": 3, "Hindi hits": 1}),
-    dict(date="2026-09-16", mode="dry_run", what_if=False, plan=dict(will_move=3, too_young=6, no_match=17, blocked=1, target_problem=0),
+    dict(date="2026-09-16", timing=dict(trigger="workflow_dispatch"), mode="dry_run", what_if=False, plan=dict(will_move=3, too_young=6, no_match=17, blocked=1, target_problem=0),
          moved=0, errors=0, warnings=1, before=46, after=46, secs=39.0, rc={"Lo-fi study": 1, "Spanish nights": 2}),
-    dict(date="2026-09-17", mode="apply", what_if=False, plan=dict(will_move=4, too_young=5, no_match=17, blocked=1, target_problem=1),
+    dict(date="2026-09-17", timing=dict(trigger="workflow_dispatch"), mode="apply", what_if=False, plan=dict(will_move=4, too_young=5, no_match=17, blocked=1, target_problem=1),
          moved=4, errors=0, warnings=3, before=46, after=43, secs=95.7, rc={"Spanish nights": 2, "Lo-fi study": 1, "Rock legends": 1}),
     dict(date="2026-09-18", mode="dry_run", what_if=False, plan=dict(will_move=0, too_young=0, no_match=0, blocked=0, target_problem=0),
          moved=0, errors=1, warnings=0, before=43, after=43, secs=12.3, rc={}),
-    dict(date="2026-09-19", mode="dry_run", what_if=False, plan=dict(will_move=5, too_young=7, no_match=25, blocked=2, target_problem=2),
+    dict(date="2026-09-19", timing=dict(trigger="schedule", started="2026-09-19T22:41:12+00:00", scheduled="2026-09-19T22:30:00+00:00", fired="2026-09-19T22:40:55+00:00"), mode="dry_run", what_if=False, plan=dict(will_move=5, too_young=7, no_match=25, blocked=2, target_problem=2),
          moved=0, errors=0, warnings=2, before=41, after=41, secs=44.8, rc={"Hindi hits": 2, "English pop": 3}),
-    dict(date="2026-09-20", mode="dry_run", what_if=True, plan=dict(will_move=17, too_young=6, no_match=15, blocked=2, target_problem=3),
+    dict(date="2026-09-20", timing=dict(trigger="workflow_dispatch"), mode="dry_run", what_if=True, plan=dict(will_move=17, too_young=6, no_match=15, blocked=2, target_problem=3),
          moved=0, errors=0, warnings=2, before=43, after=43, secs=46.1, rc={"Draft country": 2, "English pop": 5, "Hindi hits": 3}),
 ]
 
@@ -224,19 +225,23 @@ def build_runs(out: Path, plan: dict) -> dict:
     runs_path = out / "runs.json"
     if runs_path.exists():
         runs_path.unlink()
-    latest_spec = dict(date="2026-09-21", mode="dry_run", what_if=False, plan=plan["counts"], moved=0, errors=0,
+    latest_spec = dict(date="2026-09-21", timing=dict(trigger="schedule", scheduled="2026-09-20T22:30:00+00:00", fired="2026-09-21T05:44:09+00:00"),
+                       mode="dry_run", what_if=False, plan=plan["counts"], moved=0, errors=0,
                        warnings=min(plan["counts"]["target_problem"], 2), before=plan["liked_total"], after=plan["liked_total"], secs=42.5,
                        rc={r["name"]: r["wins"] for r in plan["rules"] if r["wins"]})
     index = None
     for spec in RUN_SPECS + [latest_spec]:
-        hour = 6
-        when = datetime.fromisoformat(spec["date"]).replace(hour=hour, tzinfo=timezone.utc)
+        t = spec.get("timing") or {}
+        when = (datetime.fromisoformat(t["started"]) if t.get("started")
+                else datetime.fromisoformat(spec["date"]).replace(hour=6, tzinfo=timezone.utc))
         run_id = when.strftime("%Y-%m-%dT%H:%M:%SZ")
         log_file = f"{spec['date']}.json"
         entry = run_entry(run_id=run_id, now=when, mode=spec["mode"], plan_counts=spec["plan"], moved=spec["moved"],
                           errors=spec["errors"], warnings=spec["warnings"], liked_before=spec["before"],
                           liked_after=spec["after"], duration_s=spec["secs"], rule_counts=spec["rc"], log_file=log_file,
-                          what_if=spec["what_if"])
+                          what_if=spec["what_if"],
+                          timing=timing_fields(when, when + timedelta(seconds=spec["secs"]), scheduled_for=t.get("scheduled"),
+                                               workflow_started_at=t.get("fired"), trigger=t.get("trigger")))
         log = _run_log(spec, entry, plan)
         # same rule as src/sync.py: the playlists the run's moved (or, for a dry run, planned) songs go to
         entry["moves_by_playlist"] = dict(Counter(m["playlist"] for m in log["moved"]))
@@ -289,6 +294,7 @@ def _run_log(spec: dict, entry: dict, plan: dict) -> dict:
         "http_audit": ({"GET api.spotify.com": 31, "POST api.spotify.com": 2, "PUT api.spotify.com": 0, "DELETE api.spotify.com": 3}
                        if apply else {"GET api.spotify.com": 28}),
         "runtime_seconds": entry["duration_seconds"],
+        **{k: entry[k] for k in ("started_at", "finished_at", "scheduled_for", "workflow_started_at", "trigger")},
     }
     if apply:
         expected = spec["before"] - spec["moved"]

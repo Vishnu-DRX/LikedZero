@@ -135,6 +135,25 @@ def test_dry_run_writes_log_with_all_keys(env):
     assert isinstance(log["http_audit"], dict)
 
 
+def test_run_log_and_index_record_slot_fire_start_and_finish(env):
+    tmp, cfg = env
+    slot, fired = "2026-10-16T22:30:00+00:00", "2026-10-17T03:12:30+00:00"
+    assert run(tmp, cfg, "--scheduled-for", slot, "--workflow-started-at", fired, "--trigger", "schedule") == 0
+    log, entry = read_log(tmp), json.loads((tmp / "logs" / "runs.json").read_text(encoding="utf-8"))["runs"][0]
+    for rec in (log, entry):
+        assert rec["scheduled_for"] == slot and rec["workflow_started_at"] == fired and rec["trigger"] == "schedule"
+        started, finished = datetime.fromisoformat(rec["started_at"]), datetime.fromisoformat(rec["finished_at"])
+        assert started.utcoffset() == timedelta(0) and started <= finished
+    assert entry["time"] == entry["started_at"]
+
+
+def test_manual_run_has_start_and_finish_but_no_slot(env):
+    tmp, cfg = env
+    assert run(tmp, cfg) == 0
+    log = read_log(tmp)
+    assert log["started_at"] and log["finished_at"] and log["scheduled_for"] is None and log["trigger"] is None
+
+
 def test_counts_and_moves(env):
     tmp, cfg = env
     run(tmp, cfg)

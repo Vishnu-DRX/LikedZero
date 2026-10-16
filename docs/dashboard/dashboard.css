@@ -16,6 +16,8 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 .page-title h1 { font-size: var(--text-2xl); }
 .page-title p { color: var(--color-text-secondary); margin: var(--space-1) 0 0; font-size: var(--text-sm); }
 
+[data-testid="runs-table"] td[data-label="Details"] { white-space: nowrap; }
+@media (min-width: 721px) { [data-testid="runs-table"] td.cell-main { min-width: 22rem; } } /* the schedule / start / finish lines */
 .num { text-align: right; white-space: nowrap; } /* extends assets/components.css's .num (tabular-nums) */
 
 /* decision 31: a persistent, unmissable label of the active data source (not just the dropdown's own value). */

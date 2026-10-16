@@ -399,8 +399,12 @@
       var waiting = waitingNow(ctx);
 
       // Card 1: did the last run go well?
+      var lastT = last ? runTiming(last, null) : null;
+      var lastTimingSub = lastT && lastT.scheduled
+        ? '<br><span data-timing="overview">Due ' + esc(D.fmtZone(lastT.scheduled, 'IST')) + '; started ' + esc(D.fmtZone(lastT.started, 'IST')) + ' (' + esc(D.lateText(lastT.lateStarted)) + ')</span>'
+        : '';
       var lastRunCard = last
-        ? card('Last run', verdictBadge(last.verdict), esc(modeLabel(last.mode)) + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(problemsText(last)), ' data-card="last-run"')
+        ? card('Last run', verdictBadge(last.verdict), esc(modeLabel(last.mode)) + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(problemsText(last)) + lastTimingSub, ' data-card="last-run"')
         : card('Last run', '<span class="muted">None</span>', 'No run has been recorded.', ' data-card="last-run"');
       // Card 2: when does it run next? Only shown when the run history actually carries a schedule.
       var nextRunCard = '';
@@ -801,8 +805,47 @@
     return h + '</div>';
   }
 
+  // Run timing: the schedule slot, when GitHub fired the run, and when the sync really started and finished. Runs
+  // recorded before this existed only have `time` (the start) and `duration_seconds`.
+  function runTiming(run, log) {
+    var l = (log && log.status === 'ok' && log.data) || {};
+    var started = run.started_at || l.started_at || run.time;
+    var finished = run.finished_at || l.finished_at ||
+      (started && run.duration_seconds != null ? new Date(Date.parse(started) + run.duration_seconds * 1000).toISOString() : null);
+    var scheduled = run.scheduled_for || l.scheduled_for || null;
+    var fired = run.workflow_started_at || l.workflow_started_at || null;
+    var trigger = run.trigger || l.trigger || null;
+    return {
+      scheduled: scheduled, fired: fired, started: started, finished: finished, trigger: trigger,
+      lateFired: scheduled && fired ? D.minutesBetween(scheduled, fired) : null,
+      lateStarted: scheduled ? D.minutesBetween(scheduled, started) : null
+    };
+  }
+  function triggerLabel(t) {
+    return t === 'schedule' ? 'Schedule' : (t === 'workflow_dispatch' ? 'Started by hand (Run workflow)' : (t ? t : 'Unknown (older run or local)'));
+  }
+  /** Scheduled / started / finished, each in India time and UTC, with how late the start was. */
+  function timingLines(t) {
+    var h = '<div class="small muted" data-timing="scheduled">' + (t.scheduled
+      ? 'Scheduled: ' + esc(D.fmtIstUtc(t.scheduled, false, true))
+      : (t.trigger === 'schedule' ? 'Scheduled: not recorded' : 'Not a scheduled run')) + '</div>';
+    h += '<div class="small muted" data-timing="started">Started: ' + esc(D.fmtIstUtc(t.started, false, true)) +
+      (t.lateStarted != null ? ' <strong>(' + esc(D.lateText(t.lateStarted)) + ')</strong>' : '') + '</div>';
+    if (t.finished) h += '<div class="small muted" data-timing="finished">Finished: ' + esc(D.fmtIstUtc(t.finished, false, true)) + '</div>';
+    return h;
+  }
+  function timingRows(run, log) {
+    var t = runTiming(run, log);
+    function row(label, iso, extra) { return '<dt>' + label + '</dt><dd data-timing-row="' + label + '">' + (iso ? esc(D.fmtIstUtc(iso, true)) + (extra || '') : '<span class="muted">not recorded</span>') + '</dd>'; }
+    return row('Scheduled for', t.scheduled) +
+      row('GitHub fired the run', t.fired, t.lateFired != null ? ' <strong>(' + esc(D.lateText(t.lateFired)) + ')</strong>' : '') +
+      row('Sync started', t.started, t.lateStarted != null ? ' <strong>(' + esc(D.lateText(t.lateStarted)) + ' vs the slot)</strong>' : '') +
+      row('Sync finished', t.finished) +
+      '<dt>Triggered by</dt><dd>' + esc(triggerLabel(t.trigger)) + '</dd>';
+  }
+
   function runDetail(run, log) {
-    var facts = '<dl class="kv"><dt>Mode</dt><dd>' + esc(modeLabel(run.mode)) + (run.what_if ? ' (what-if preview)' : '') + '</dd>' +
+    var facts = '<dl class="kv">' + timingRows(run, log) + '<dt>Mode</dt><dd>' + esc(modeLabel(run.mode)) + (run.what_if ? ' (what-if preview)' : '') + '</dd>' +
       '<dt>Liked Songs</dt><dd>' + esc(run.liked_before) + ' before, ' + esc(run.liked_after) + ' after</dd>' +
       '<dt>Problems</dt><dd>' + esc(problemsText(run)) + '</dd></dl>';
     var h = '<p><a href="#/runs">&larr; All runs</a></p><div class="card" data-testid="run-detail"><h3>Run of ' + esc(D.fmtTime(run.time)) + ' ' + verdictBadge(run.verdict) + '</h3>' +
@@ -910,7 +953,7 @@
         var cls = r.verdict === 'error' || r.verdict === 'mismatch' || r.verdict === 'aborted_too_many' ? 'row-bad' : (r.warnings ? 'row-warn' : '');
         h += '<tr class="' + cls + '" data-run="' + esc(r.run_id) + '" data-verdict="' + esc(r.verdict) + '"><td class="check-cell" data-label="Compare"><input type="checkbox" class="check" data-pick="' + esc(r.run_id) + '" aria-label="Select run ' + esc(D.fmtTime(r.time)) + ' for comparison"' + (st.sel.indexOf(r.run_id) >= 0 ? ' checked' : '') + ' /></td>' +
           '<td class="cell-main"><strong>' + esc(D.fmtTime(r.time)) + '</strong> <span class="small muted">· ' + esc(modeLabel(r.mode)) + '</span>' + (r.what_if ? ' ' + badge('warn', 'What-if') : '') +
-          '<div class="run-summary small" data-testid="run-summary-line">' + esc(runSummary(r)) + '</div></td>' +
+          '<div class="run-summary small" data-testid="run-summary-line">' + esc(runSummary(r)) + '</div>' + timingLines(runTiming(r, null)) + '</td>' +
           '<td data-label="Result">' + verdictBadge(r.verdict) + '</td>' +
           '<td class="num" data-label="Moved">' + esc(r.moved) + '</td>' +
           '<td class="num" data-label="Liked Songs">' + esc(r.liked_before) + ' &rarr; ' + esc(r.liked_after) + '</td>' +
