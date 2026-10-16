@@ -1,17 +1,17 @@
 {
  "version": 1,
- "generated_at": "2026-10-16T06:15:19+00:00",
- "run_id": "20261016T061519Z",
+ "generated_at": "2026-10-16T22:43:04+00:00",
+ "run_id": "20261016T224304Z",
  "mode": "apply",
  "what_if": false,
- "inbox_kind": "legacy_library",
- "config_hash": "2fcb98445d2d",
- "liked_total": 4,
+ "inbox_kind": "fresh_inbox",
+ "config_hash": "8387563aecd6",
+ "liked_total": 1,
  "default_days_threshold": 0,
  "english_default": false,
  "inbox_since": "2026-10-10",
  "counts": {
-  "will_move": 4,
+  "will_move": 1,
   "too_young": 0,
   "no_match": 0,
   "target_problem": 0,
@@ -35,10 +35,10 @@
     "language_in:hint",
     "language_in:country_default"
    ],
-   "would_match": 1,
-   "wins": 1,
+   "would_match": 0,
+   "wins": 0,
    "target_status": "resolved",
-   "status": "ok"
+   "status": "dead"
   },
   {
    "name": "Malayalam -> NewAgeMadrasMail",
@@ -249,8 +249,8 @@
    "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
-   "would_match": 4,
-   "wins": 3,
+   "would_match": 1,
+   "wins": 1,
    "target_status": "resolved",
    "status": "ok"
   }
@@ -259,8 +259,8 @@
   {
    "name": "Dil",
    "status": "resolved",
-   "size": 143,
-   "planned_in": 1,
+   "size": 144,
+   "planned_in": 0,
    "rules": [
     "Hindi -> Dil"
    ]
@@ -340,8 +340,8 @@
   {
    "name": "The Simulation Archives",
    "status": "resolved",
-   "size": 151,
-   "planned_in": 3,
+   "size": 153,
+   "planned_in": 1,
    "rules": [
     "English -> The Simulation Archives",
     "Catch-all -> The Simulation Archives"
@@ -350,664 +350,19 @@
  ],
  "songs": [
   {
-   "title": null,
-   "artists": [],
-   "uri": null,
-   "added_at": "2026-10-15T19:32:27+00:00",
-   "age_days": 0.4,
+   "title": "Shapes and Colors",
+   "artists": [
+    "The Sweet Serenades"
+   ],
+   "uri": "spotify:track:5SU33IeaS4x6TIye7x2b8I",
+   "added_at": "2026-10-16T06:42:45+00:00",
+   "age_days": 0.7,
    "decision": "will_move",
    "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
    "rule": "Catch-all -> The Simulation Archives",
    "target_playlist": "The Simulation Archives",
    "target_status": "resolved",
-   "eligible_on": "2026-10-15T19:32:27+00:00",
-   "target_position": "top",
-   "language": {
-    "value": null,
-    "source": null,
-    "confidence": null,
-    "used_for_rules": false,
-    "withheld": null
-   },
-   "genres": {
-    "values": [],
-    "source": null,
-    "confidence": null
-   },
-   "artist_routing": null,
-   "explain": {
-    "trace": [
-     {
-      "rule": "Hindi -> Dil",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "hindi"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Malayalam -> NewAgeMadrasMail",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "malayalam"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Anavae -> Anavae binge list",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Anavae"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Linkin Park -> Dead Dreams' Disco",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Linkin Park"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Queen -> Her Highness",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Queen"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Twenty One Pilots -> Riffs in the air",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Twenty One Pilots"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Klasey Jones -> The Klasey Universe",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Klasey Jones"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "The Midnight -> Midnight Mixer",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "The Midnight"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Route to artist's home playlist (draft)",
-      "enabled": false,
-      "threshold_days": 0,
-      "conditions": [],
-      "result": "skipped_disabled"
-     },
-     {
-      "rule": "Japanese -> nani mo wakaranai",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "japanese"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "English -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "english"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Catch-all -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "any",
-        "wanted": true,
-        "actual": true,
-        "passed": true
-       }
-      ],
-      "result": "matched"
-     }
-    ],
-    "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.4464381197106481
-   }
-  },
-  {
-   "title": null,
-   "artists": [],
-   "uri": null,
-   "added_at": "2026-10-15T19:32:40+00:00",
-   "age_days": 0.4,
-   "decision": "will_move",
-   "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
-   "rule": "Catch-all -> The Simulation Archives",
-   "target_playlist": "The Simulation Archives",
-   "target_status": "resolved",
-   "eligible_on": "2026-10-15T19:32:40+00:00",
-   "target_position": "top",
-   "language": {
-    "value": "chinese",
-    "source": "script",
-    "confidence": 0.9,
-    "used_for_rules": true,
-    "withheld": null
-   },
-   "genres": {
-    "values": [
-     "j-pop"
-    ],
-    "source": "musicbrainz",
-    "confidence": 0.6
-   },
-   "artist_routing": null,
-   "explain": {
-    "trace": [
-     {
-      "rule": "Hindi -> Dil",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "hindi"
-        ],
-        "actual": "chinese",
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Malayalam -> NewAgeMadrasMail",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "malayalam"
-        ],
-        "actual": "chinese",
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Anavae -> Anavae binge list",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Anavae"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Linkin Park -> Dead Dreams' Disco",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Linkin Park"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Queen -> Her Highness",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Queen"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Twenty One Pilots -> Riffs in the air",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Twenty One Pilots"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Klasey Jones -> The Klasey Universe",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Klasey Jones"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "The Midnight -> Midnight Mixer",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "The Midnight"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Route to artist's home playlist (draft)",
-      "enabled": false,
-      "threshold_days": 0,
-      "conditions": [],
-      "result": "skipped_disabled"
-     },
-     {
-      "rule": "Japanese -> nani mo wakaranai",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "japanese"
-        ],
-        "actual": "chinese",
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "English -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "english"
-        ],
-        "actual": "chinese",
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Catch-all -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "any",
-        "wanted": true,
-        "actual": true,
-        "passed": true
-       }
-      ],
-      "result": "matched"
-     }
-    ],
-    "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.44628765674768517
-   }
-  },
-  {
-   "title": null,
-   "artists": [],
-   "uri": null,
-   "added_at": "2026-10-15T19:32:54+00:00",
-   "age_days": 0.4,
-   "decision": "will_move",
-   "reason": "rule 'Hindi -> Dil' matched and the song is old enough",
-   "rule": "Hindi -> Dil",
-   "target_playlist": "Dil",
-   "target_status": "resolved",
-   "eligible_on": "2026-10-15T19:32:54+00:00",
-   "target_position": "bottom",
-   "language": {
-    "value": "hindi",
-    "source": "playlist",
-    "confidence": 0.95,
-    "used_for_rules": true,
-    "withheld": null
-   },
-   "genres": {
-    "values": [
-     "film composer",
-     "filmi"
-    ],
-    "source": "musicbrainz",
-    "confidence": 0.6
-   },
-   "artist_routing": null,
-   "explain": {
-    "trace": [
-     {
-      "rule": "Hindi -> Dil",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "hindi"
-        ],
-        "actual": "hindi",
-        "passed": true
-       }
-      ],
-      "result": "matched"
-     },
-     {
-      "rule": "Malayalam -> NewAgeMadrasMail",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "malayalam"
-        ],
-        "actual": "hindi",
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Anavae -> Anavae binge list",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Anavae"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Linkin Park -> Dead Dreams' Disco",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Linkin Park"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Queen -> Her Highness",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Queen"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Twenty One Pilots -> Riffs in the air",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Twenty One Pilots"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Klasey Jones -> The Klasey Universe",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Klasey Jones"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "The Midnight -> Midnight Mixer",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "The Midnight"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Route to artist's home playlist (draft)",
-      "enabled": false,
-      "threshold_days": 0,
-      "conditions": [],
-      "result": "skipped_disabled"
-     },
-     {
-      "rule": "Japanese -> nani mo wakaranai",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "japanese"
-        ],
-        "actual": "hindi",
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "English -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "english"
-        ],
-        "actual": "hindi",
-        "passed": false
-       }
-      ],
-      "result": "not_reached"
-     },
-     {
-      "rule": "Catch-all -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "any",
-        "wanted": true,
-        "actual": true,
-        "passed": true
-       }
-      ],
-      "result": "not_reached_but_would_match"
-     }
-    ],
-    "decided_by": "Hindi -> Dil",
-    "age_days": 0.4461256197106481
-   }
-  },
-  {
-   "title": null,
-   "artists": [],
-   "uri": null,
-   "added_at": "2026-10-15T21:48:09+00:00",
-   "age_days": 0.4,
-   "decision": "will_move",
-   "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
-   "rule": "Catch-all -> The Simulation Archives",
-   "target_playlist": "The Simulation Archives",
-   "target_status": "resolved",
-   "eligible_on": "2026-10-15T21:48:09+00:00",
+   "eligible_on": "2026-10-16T06:42:45+00:00",
    "target_position": "top",
    "language": {
     "value": "swedish",
@@ -1072,7 +427,9 @@
         "wanted": [
          "Anavae"
         ],
-        "actual": null,
+        "actual": [
+         "The Sweet Serenades"
+        ],
         "passed": false
        }
       ],
@@ -1088,7 +445,9 @@
         "wanted": [
          "Linkin Park"
         ],
-        "actual": null,
+        "actual": [
+         "The Sweet Serenades"
+        ],
         "passed": false
        }
       ],
@@ -1104,7 +463,9 @@
         "wanted": [
          "Queen"
         ],
-        "actual": null,
+        "actual": [
+         "The Sweet Serenades"
+        ],
         "passed": false
        }
       ],
@@ -1120,7 +481,9 @@
         "wanted": [
          "Twenty One Pilots"
         ],
-        "actual": null,
+        "actual": [
+         "The Sweet Serenades"
+        ],
         "passed": false
        }
       ],
@@ -1136,7 +499,9 @@
         "wanted": [
          "Klasey Jones"
         ],
-        "actual": null,
+        "actual": [
+         "The Sweet Serenades"
+        ],
         "passed": false
        }
       ],
@@ -1152,7 +517,9 @@
         "wanted": [
          "The Midnight"
         ],
-        "actual": null,
+        "actual": [
+         "The Sweet Serenades"
+        ],
         "passed": false
        }
       ],
@@ -1213,9 +580,8 @@
      }
     ],
     "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.35220200859953704
+    "age_days": 0.6668896603009259
    }
   }
- ],
- "titles_hidden": true
+ ]
 }
