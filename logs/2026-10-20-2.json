@@ -1,0 +1,185 @@
+{
+ "date": "2026-10-20",
+ "dry_run": false,
+ "evaluated": 4,
+ "moved": [
+  {
+   "track": "Worth It",
+   "artist": "Corbin",
+   "uri": "spotify:track:3wWEo3XUr7mlzjVdUndGjY",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.3,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-20T17:30:49+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "In Love With Myself",
+   "artist": "Kalman Chodakiewitz, Eli Shiffman, Petite Meller",
+   "uri": "spotify:track:2iyaHQlYrR8Eyr4wOmOT5D",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "English -> The Simulation Archives",
+   "matched": {
+    "language_in": "english"
+   },
+   "age_days": 0.3,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-20T17:30:13+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "High Forever",
+   "artist": "Petite Meller",
+   "uri": "spotify:track:3HO6JuiROufCO6HdEyLdb9",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "English -> The Simulation Archives",
+   "matched": {
+    "language_in": "english"
+   },
+   "age_days": 0.3,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-20T17:27:47+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Watson (feat. Oslo Green)",
+   "artist": "Petite Meller, Oslo Green",
+   "uri": "spotify:track:2x6cIXV8np81mpKhHXNbDS",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "English -> The Simulation Archives",
+   "matched": {
+    "language_in": "english"
+   },
+   "age_days": 0.3,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-20T17:26:54+00:00",
+   "target_position": "top"
+  }
+ ],
+ "skipped_no_match": 0,
+ "skipped_too_young": [],
+ "skipped_playlist_missing": [],
+ "errors": [],
+ "warnings": [],
+ "journal": [
+  {
+   "uri": "spotify:track:2iyaHQlYrR8Eyr4wOmOT5D",
+   "name": "In Love With Myself",
+   "artists": "Kalman Chodakiewitz, Eli Shiffman, Petite Meller",
+   "original_added_at": "2026-10-20T17:30:13+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:2x6cIXV8np81mpKhHXNbDS",
+   "name": "Watson (feat. Oslo Green)",
+   "artists": "Petite Meller, Oslo Green",
+   "original_added_at": "2026-10-20T17:26:54+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:3HO6JuiROufCO6HdEyLdb9",
+   "name": "High Forever",
+   "artists": "Petite Meller",
+   "original_added_at": "2026-10-20T17:27:47+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:3wWEo3XUr7mlzjVdUndGjY",
+   "name": "Worth It",
+   "artists": "Corbin",
+   "original_added_at": "2026-10-20T17:30:49+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  }
+ ],
+ "http_audit": {
+  "POST accounts.spotify.com": 1,
+  "GET api.spotify.com": 19,
+  "POST api.spotify.com": 1,
+  "DELETE api.spotify.com": 1
+ },
+ "runtime_seconds": 9.8,
+ "run_id": "20261020T234330Z",
+ "mode": "apply",
+ "what_if": false,
+ "liked_before": 4,
+ "liked_after": 0,
+ "verdict": "ok",
+ "rule_counts": {
+  "Hindi -> Dil": 0,
+  "Malayalam -> NewAgeMadrasMail": 0,
+  "Anavae -> Anavae binge list": 0,
+  "Linkin Park -> Dead Dreams' Disco": 0,
+  "Queen -> Her Highness": 0,
+  "Twenty One Pilots -> Riffs in the air": 0,
+  "Klasey Jones -> The Klasey Universe": 0,
+  "The Midnight -> Midnight Mixer": 0,
+  "Route to artist's home playlist (draft)": 0,
+  "Japanese -> nani mo wakaranai": 0,
+  "English -> The Simulation Archives": 3,
+  "Catch-all -> The Simulation Archives": 1
+ },
+ "config_hash": "8387563aecd6",
+ "plan_counts": {
+  "will_move": 4,
+  "too_young": 0,
+  "no_match": 0,
+  "target_problem": 0,
+  "blocked": 0
+ },
+ "started_at": "2026-10-20T23:43:30+00:00",
+ "finished_at": "2026-10-20T23:43:39+00:00",
+ "scheduled_for": "2026-10-20T22:30:00+00:00",
+ "workflow_started_at": null,
+ "trigger": "schedule",
+ "batches": [
+  {
+   "kind": "add_to_playlist",
+   "target": "79yR6353WPZ4marOYReGJ2",
+   "size": 4,
+   "committed": true,
+   "error": null
+  },
+  {
+   "kind": "remove_from_liked",
+   "target": "liked",
+   "size": 4,
+   "committed": true,
+   "error": null
+  }
+ ],
+ "reconcile": {
+  "liked_before": 4,
+  "removed": 4,
+  "expected_after": 0,
+  "actual_after": 0,
+  "new_likes_during_run": 0,
+  "lost": 0,
+  "resurrected": 0,
+  "gone_from_target": 0,
+  "ok": true
+ },
+ "moved_uris": [
+  "spotify:track:2iyaHQlYrR8Eyr4wOmOT5D",
+  "spotify:track:2x6cIXV8np81mpKhHXNbDS",
+  "spotify:track:3HO6JuiROufCO6HdEyLdb9",
+  "spotify:track:3wWEo3XUr7mlzjVdUndGjY"
+ ],
+ "still_liked": [],
+ "restore_command": "python -m src.sync --restore logs/2026-10-20-2.json --apply"
+}

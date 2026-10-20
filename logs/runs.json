@@ -1,12 +1,53 @@
 {
  "version": 1,
- "generated_at": "2026-10-20T01:11:04+00:00",
+ "generated_at": "2026-10-20T23:43:30+00:00",
  "schedule": {
   "cron": null,
   "description": "every day at 04:00 (Asia/Kolkata), moves songs",
-  "next_run": "2026-10-20T22:30:00+00:00"
+  "next_run": "2026-10-21T22:30:00+00:00"
  },
  "runs": [
+  {
+   "run_id": "20261020T234330Z",
+   "time": "2026-10-20T23:43:30+00:00",
+   "mode": "apply",
+   "what_if": false,
+   "planned_moves": 4,
+   "moved": 4,
+   "too_young": 0,
+   "no_match": 0,
+   "blocked": 0,
+   "target_problems": 0,
+   "errors": 0,
+   "warnings": 0,
+   "liked_before": 4,
+   "liked_after": 0,
+   "duration_seconds": 9.8,
+   "started_at": "2026-10-20T23:43:30+00:00",
+   "finished_at": "2026-10-20T23:43:39+00:00",
+   "scheduled_for": "2026-10-20T22:30:00+00:00",
+   "workflow_started_at": null,
+   "trigger": "schedule",
+   "verdict": "ok",
+   "rule_counts": {
+    "Hindi -> Dil": 0,
+    "Malayalam -> NewAgeMadrasMail": 0,
+    "Anavae -> Anavae binge list": 0,
+    "Linkin Park -> Dead Dreams' Disco": 0,
+    "Queen -> Her Highness": 0,
+    "Twenty One Pilots -> Riffs in the air": 0,
+    "Klasey Jones -> The Klasey Universe": 0,
+    "The Midnight -> Midnight Mixer": 0,
+    "Route to artist's home playlist (draft)": 0,
+    "Japanese -> nani mo wakaranai": 0,
+    "English -> The Simulation Archives": 3,
+    "Catch-all -> The Simulation Archives": 1
+   },
+   "moves_by_playlist": {
+    "The Simulation Archives": 4
+   },
+   "log": "2026-10-20-2.json"
+  },
   {
    "run_id": "20261020T011104Z",
    "time": "2026-10-20T01:11:04+00:00",
