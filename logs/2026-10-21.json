@@ -1,0 +1,192 @@
+{
+ "date": "2026-10-21",
+ "dry_run": false,
+ "evaluated": 4,
+ "moved": [
+  {
+   "track": "Bullets",
+   "artist": "Archive",
+   "uri": "spotify:track:5zxJ3BZyd6BK2gX4b2RnB4",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.1,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-21T19:24:09+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Solace - Slowed",
+   "artist": "Txmy",
+   "uri": "spotify:track:7030yBDfe6ASTveby7hJgx",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.2,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-21T16:41:47+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Brujita",
+   "artist": "Throwing Snow",
+   "uri": "spotify:track:42v0Nbp7Vj3ZkMIS7PQU5z",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.3,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-21T14:23:44+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Amsham - അംശം",
+   "artist": "Aksomaniac, M.H.R, Bhumi, Circle Tone",
+   "uri": "spotify:track:0Dt5EqEckM8jcfMYEdlx2Z",
+   "playlist": "NewAgeMadrasMail",
+   "playlist_id": "2G10NJhvQdiU4DA2Hgbw35",
+   "rule": "Malayalam -> NewAgeMadrasMail",
+   "matched": {
+    "language_in": "malayalam"
+   },
+   "age_days": 0.4,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-10-21T13:15:35+00:00",
+   "target_position": "bottom"
+  }
+ ],
+ "skipped_no_match": 0,
+ "skipped_too_young": [],
+ "skipped_playlist_missing": [],
+ "errors": [],
+ "warnings": [],
+ "journal": [
+  {
+   "uri": "spotify:track:0Dt5EqEckM8jcfMYEdlx2Z",
+   "name": "Amsham - അംശം",
+   "artists": "Aksomaniac, M.H.R, Bhumi, Circle Tone",
+   "original_added_at": "2026-10-21T13:15:35+00:00",
+   "target_playlist_id": "2G10NJhvQdiU4DA2Hgbw35",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:42v0Nbp7Vj3ZkMIS7PQU5z",
+   "name": "Brujita",
+   "artists": "Throwing Snow",
+   "original_added_at": "2026-10-21T14:23:44+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:5zxJ3BZyd6BK2gX4b2RnB4",
+   "name": "Bullets",
+   "artists": "Archive",
+   "original_added_at": "2026-10-21T19:24:09+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:7030yBDfe6ASTveby7hJgx",
+   "name": "Solace - Slowed",
+   "artists": "Txmy",
+   "original_added_at": "2026-10-21T16:41:47+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  }
+ ],
+ "http_audit": {
+  "POST accounts.spotify.com": 1,
+  "GET api.spotify.com": 22,
+  "POST api.spotify.com": 2,
+  "DELETE api.spotify.com": 1
+ },
+ "runtime_seconds": 13.0,
+ "run_id": "20261021T223734Z",
+ "mode": "apply",
+ "what_if": false,
+ "liked_before": 4,
+ "liked_after": 0,
+ "verdict": "ok",
+ "rule_counts": {
+  "Hindi -> Dil": 0,
+  "Malayalam -> NewAgeMadrasMail": 1,
+  "Anavae -> Anavae binge list": 0,
+  "Linkin Park -> Dead Dreams' Disco": 0,
+  "Queen -> Her Highness": 0,
+  "Twenty One Pilots -> Riffs in the air": 0,
+  "Klasey Jones -> The Klasey Universe": 0,
+  "The Midnight -> Midnight Mixer": 0,
+  "Route to artist's home playlist (draft)": 0,
+  "Japanese -> nani mo wakaranai": 0,
+  "English -> The Simulation Archives": 0,
+  "Catch-all -> The Simulation Archives": 3
+ },
+ "config_hash": "8387563aecd6",
+ "plan_counts": {
+  "will_move": 4,
+  "too_young": 0,
+  "no_match": 0,
+  "target_problem": 0,
+  "blocked": 0
+ },
+ "started_at": "2026-10-21T22:37:34+00:00",
+ "finished_at": "2026-10-21T22:37:47+00:00",
+ "scheduled_for": "2026-10-21T22:30:00+00:00",
+ "workflow_started_at": null,
+ "trigger": "schedule",
+ "batches": [
+  {
+   "kind": "add_to_playlist",
+   "target": "79yR6353WPZ4marOYReGJ2",
+   "size": 3,
+   "committed": true,
+   "error": null
+  },
+  {
+   "kind": "add_to_playlist",
+   "target": "2G10NJhvQdiU4DA2Hgbw35",
+   "size": 1,
+   "committed": true,
+   "error": null
+  },
+  {
+   "kind": "remove_from_liked",
+   "target": "liked",
+   "size": 4,
+   "committed": true,
+   "error": null
+  }
+ ],
+ "reconcile": {
+  "liked_before": 4,
+  "removed": 4,
+  "expected_after": 0,
+  "actual_after": 0,
+  "new_likes_during_run": 0,
+  "lost": 0,
+  "resurrected": 0,
+  "gone_from_target": 0,
+  "ok": true
+ },
+ "moved_uris": [
+  "spotify:track:0Dt5EqEckM8jcfMYEdlx2Z",
+  "spotify:track:42v0Nbp7Vj3ZkMIS7PQU5z",
+  "spotify:track:5zxJ3BZyd6BK2gX4b2RnB4",
+  "spotify:track:7030yBDfe6ASTveby7hJgx"
+ ],
+ "still_liked": [],
+ "restore_command": "python -m src.sync --restore logs/2026-10-21.json --apply"
+}
