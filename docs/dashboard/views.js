@@ -542,7 +542,7 @@
           if (st.decision && s.decision !== st.decision) return;
           if (st.rule && s.rule !== st.rule) return;
           if (term) {
-            var hay = [s.title, (s.artists || []).join(' '), s.rule, s.target_playlist, s.language && s.language.value].join(' ').toLowerCase();
+            var hay = [s.title, D.joinArtists(s.artists, ' '), s.rule, s.target_playlist, s.language && s.language.value].join(' ').toLowerCase();
             if (hay.indexOf(term) < 0) return;
           }
           rows.push({ s: s, i: i });
@@ -568,7 +568,7 @@
           var hidden = !!p.titles_hidden;
           shown.forEach(function (r) {
             var s = r.s, l = s.language || {}, noName = hidden || s.title == null;
-            h += '<tr data-decision="' + esc(s.decision) + '"><td class="cell-main"><button type="button" class="link-btn" data-explain="' + r.i + '" aria-haspopup="dialog">' + titleOrHidden(s.title, hidden, r.i + 1, p.songs.length) + '</button><div class="small muted">' + (noName ? esc(likedText(s.added_at)) : esc((s.artists || []).join(', '))) + '</div></td>' +
+            h += '<tr data-decision="' + esc(s.decision) + '"><td class="cell-main"><button type="button" class="link-btn" data-explain="' + r.i + '" aria-haspopup="dialog">' + titleOrHidden(s.title, hidden, r.i + 1, p.songs.length) + '</button><div class="small muted">' + (noName ? esc(likedText(s.added_at)) : esc(D.joinArtists(s.artists))) + '</div></td>' +
               '<td class="num cell-extra" data-label="Age (days)">' + esc(num(s.age_days)) + '</td>' +
               '<td data-label="Decision">' + decisionBadge(s.decision, p) + '</td>' +
               '<td class="cell-extra" data-label="Rule">' + (s.rule ? esc(s.rule) : '<span class="muted">—</span>') + '</td>' +
@@ -598,7 +598,7 @@
           var s = r.s;
           lines.push([
             hidden || s.title == null ? hiddenSongText(r.i + 1, p.songs.length) : s.title,
-            hidden ? '' : (s.artists || []).join('; '),
+            hidden ? '' : D.joinArtists(s.artists, '; '),
             s.age_days == null ? '' : s.age_days,
             decisionLabel(s.decision, p),
             s.rule || '', s.target_playlist || '',
@@ -729,7 +729,7 @@
     var h = '<div class="table-wrap cards"><table class="table stack" data-testid="journal"><thead><tr><th scope="col">Song</th><th scope="col">Originally liked</th><th scope="col">Target playlist id</th><th scope="col">URI</th></tr></thead><tbody>';
     j.forEach(function (e, i) {
       var noName = hidden || e.name == null;
-      h += '<tr><td class="cell-main"><strong>' + titleOrHidden(e.name, hidden, i + 1, j.length) + '</strong><div class="small muted">' + (noName ? '' : esc((e.artists || []).join(', '))) + '</div></td><td data-label="Originally liked">' + esc(D.fmtTime(e.original_added_at)) + '</td><td data-label="Target playlist id"><code>' + esc(e.target_playlist_id) + '</code></td><td data-label="URI">' + (e.uri ? '<code>' + esc(e.uri) + '</code>' : '<span class="muted">not kept in the public log</span>') + '</td></tr>';
+      h += '<tr><td class="cell-main"><strong>' + titleOrHidden(e.name, hidden, i + 1, j.length) + '</strong><div class="small muted">' + (noName ? '' : esc(D.joinArtists(e.artists))) + '</div></td><td data-label="Originally liked">' + esc(D.fmtTime(e.original_added_at)) + '</td><td data-label="Target playlist id"><code>' + esc(e.target_playlist_id) + '</code></td><td data-label="URI">' + (e.uri ? '<code>' + esc(e.uri) + '</code>' : '<span class="muted">not kept in the public log</span>') + '</td></tr>';
     });
     return h + '</tbody></table></div>';
   }

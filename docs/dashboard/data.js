@@ -208,6 +208,11 @@
     } catch (e) { return null; }
     return out;
   }
+  // Artists arrive as a list (plan snapshot) or an already-joined string (run journal, null when redacted).
+  function joinArtists(a, sep) {
+    if (Array.isArray(a)) return a.join(sep == null ? ', ' : sep);
+    return typeof a === 'string' ? a : '';
+  }
   function fmtTime(iso) {
     var d = new Date(iso);
     if (isNaN(d)) return String(iso || '');
@@ -283,7 +288,7 @@
     normalizeRepoBase: normalizeRepoBase, validRepoBase: validRepoBase, baseFor: baseFor,
     now: now, loadAll: loadAll, fetchLog: fetchLog, clearLogCache: clearLogCache,
     readLocalFiles: readLocalFiles, clearLocalFiles: clearLocalFiles, localFileNames: localFileNames,
-    stampOf: stampOf, fmtTime: fmtTime, fmtDate: fmtDate, fmtZone: fmtZone, fmtIstUtc: fmtIstUtc,
+    stampOf: stampOf, joinArtists: joinArtists, fmtTime: fmtTime, fmtDate: fmtDate, fmtZone: fmtZone, fmtIstUtc: fmtIstUtc,
     minutesBetween: minutesBetween, lateText: lateText, rel: rel, isStale: isStale
   };
 })();
