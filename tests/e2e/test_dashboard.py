@@ -1373,3 +1373,20 @@ def test_axe_zero_serious_or_critical_on_real_like_runs_and_overview(dash):
     results = Axe().run(page)
     serious = [v for v in results.response["violations"] if v.get("impact") in ("serious", "critical")]
     assert not serious, json.dumps([{"id": v["id"]} for v in serious])
+
+
+def test_run_journal_tolerates_artists_as_string_or_list(dash):
+    """Real run logs journal `artists` as one joined string (the fixtures use lists); the Runs detail must draw both."""
+    ok_run = next(r for r in RUNS if r["mode"] == "apply" and r["verdict"] == "ok")
+    log_name = f"{ok_run['run_id'][:10]}.json"
+
+    def as_string(log):
+        for e in log["journal"]:
+            e["artists"] = "Fake Band Alpha, Guest"
+
+    page = dash("runs", setup=lambda p: patch_json(p, log_name, as_string))
+    goto_view(page, f"runs/{ok_run['run_id']}")
+    expect(page.locator('.errorbox')).to_have_count(0)
+    page.locator('[data-testid="run-technical"] summary').first.click()
+    page.locator('[data-testid="run-technical"] details', has_text="Journal").locator("summary").click()
+    assert "Fake Band Alpha, Guest" in page.locator('[data-testid="journal"]').inner_text()

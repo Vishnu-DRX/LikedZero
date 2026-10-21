@@ -221,7 +221,7 @@
     var titlesHidden = !!p.titles_hidden;
     var noName = titlesHidden || song.title == null;
     var heading = noName ? 'Song ' + (index + 1) + ' of ' + p.songs.length + ' (title hidden)' : song.title;
-    var subline = noName ? (song.added_at ? 'Liked ' + D.fmtTime(song.added_at) : '') : (song.artists || []).join(', ');
+    var subline = noName ? (song.added_at ? 'Liked ' + D.fmtTime(song.added_at) : '') : D.joinArtists(song.artists);
     drawerRoot.innerHTML = '<aside class="drawer" id="drawer" role="dialog" aria-labelledby="drawer-title">' +
       '<div class="dialog-head"><h2 id="drawer-title">' + esc(heading) + '<span class="sub">' + esc(subline) + '</span></h2>' +
       '<button type="button" class="btn btn-icon" data-close aria-label="Close explanation">✕</button></div>' +
