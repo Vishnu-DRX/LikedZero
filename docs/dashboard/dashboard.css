@@ -86,7 +86,9 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
 /* A song title that opens the Explain drawer, styled as inline text inside a table cell rather than a full
    button -- there is no "text-styled action" component in assets/components.css to reuse, so this stays a
    small dashboard-only addition (it is a real <button>, per decision 40, not an <a>). */
-.link-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent-text); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link-btn { background: none; border: 0; border-radius: var(--radius-sm); margin: 0 calc(-1 * var(--space-2)); padding: var(--space-1) var(--space-2); font: inherit; font-weight: var(--weight-medium); color: var(--color-text); text-align: left; cursor: pointer; text-decoration: none; }
+.link-btn::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: var(--space-2); border: solid var(--color-text-secondary); border-width: 2px 2px 0 0; transform: rotate(45deg); }
+.link-btn:hover { background: var(--color-hover); }
 .link-btn:hover { color: var(--color-accent-hover); }
 /* A sortable column header. Visually similar to assets/components.css's .th-sort, but this dashboard's sort
    is type-aware (numeric age, date, decision order, language) and state is tracked per view for the CSV
@@ -94,6 +96,7 @@ body { overflow-wrap: anywhere; } /* narrow-screen safety: a long song/artist na
    text-only sortBy(); kept visually consistent (bold, inline arrow) with .th-sort on purpose. */
 .sort-btn { background: none; border: 0; padding: var(--space-1) 0; font: inherit; font-weight: var(--weight-bold); color: inherit; cursor: pointer; display: inline-flex; gap: var(--space-1); align-items: center; }
 .sort-btn:hover { color: var(--color-accent-text); }
+.sort-btn .chev { margin-left: var(--space-1); }
 
 /* ------------------------------------------------------------ error box (no shared equivalent) */
 .errorbox { background: var(--color-surface); border: 1px dashed var(--color-muted); border-radius: var(--radius-lg); padding: var(--space-5); margin: 0 0 var(--space-4); border-style: solid; border-color: var(--color-danger); }
@@ -117,10 +120,18 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
   .dash-bar .btn { padding-inline: var(--space-3); }
   .source-current { padding-inline: var(--space-2); }
   .page-title h1 { font-size: var(--text-xl); }
-  .tabs { position: static; border-bottom: 0; margin-top: 0; min-height: 0; }
-  .tabs ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); overflow: visible; }
-  .tabs a { justify-content: center; padding: 0 var(--space-2); font-size: var(--text-sm); border: 1px solid var(--color-border); border-radius: var(--radius-pill); }
-  .tabs a[aria-current="page"] { background: var(--color-elevated); border-color: var(--color-accent); }
+  .tabs { margin-top: 0; }
+  .tabs ul { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; overflow: visible; }
+  .tabs a { justify-content: center; padding: 0 2px; font-size: 0.8125rem; }
+  /* Top row: the source on its own line, then two equal buttons */
+  .dash-bar { flex-wrap: wrap; }
+  .dash-bar .source-current { flex: 1 1 100%; margin: 0; }
+  .dash-bar .btn { flex: 1 1 0; }
+  /* Help icons get room and stay on the label's line */
+  .metric-label { display: flex; align-items: center; gap: var(--space-2); }
+  .metric-label .help { margin-left: auto; }
+  /* Long cards (and an odd last card) take the full row; short numeric ones pair up */
+  .grid > [data-card="last-run"], .grid > [data-card="next-run"], .grid > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .view-head { margin-top: var(--space-4); }
   .src-prefix { display: none; }
   .view-head h2 { font-size: var(--text-lg); }
@@ -130,7 +141,7 @@ tr.row-warn td:first-child { box-shadow: inset 4px 0 0 var(--color-warning); }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
   .grid > .card { padding: var(--space-3); }
   .metric-value { font-size: var(--text-xl); }
-  .metric-sub { font-size: var(--text-xs); }
+  .metric-sub { font-size: var(--text-sm); }
   .callout { padding: var(--space-3); }
   /* Cards that carry less-important numbers fold them away on a phone; the full row is still in the Explain
      drawer / run details, and everything is shown on larger screens. */
@@ -237,3 +248,25 @@ details.tech { border: 1px solid var(--color-border); border-radius: var(--radiu
 details.tech[open] { padding-bottom: var(--space-3); }
 [data-banner="inbox-snapshot"], [data-banner="run-mismatch"] { margin-bottom: var(--space-3); }
 .nowrap { white-space: nowrap; }
+
+/* ------------------------------------------------------------ Rules / Playlists: plain-text metrics + an expand button */
+.rule-list { display: grid; gap: var(--space-3); }
+.rule-card { padding: var(--space-4); }
+.rule-card.row-bad { border-left: 4px solid var(--color-danger); }
+.rule-card.row-warn { border-left: 4px solid var(--color-warning); }
+.rule-title { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; overflow-wrap: anywhere; }
+.rule-pos { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.rule-meta { margin: var(--space-1) 0 var(--space-3); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.rule-meta strong { color: var(--color-text); }
+.rule-card details { margin: 0; }
+.rule-body { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.rule-body h4 { margin: var(--space-3) 0 var(--space-2); }
+.rule-recent { list-style: decimal inside; margin: 0; padding: 0; }
+.rule-recent li { display: grid; gap: var(--space-1); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
+.rule-recent li:last-child { border-bottom: 0; }
+.rule-recent .btn { justify-self: start; }
+
+/* ------------------------------------------------------------ run timing: labelled rows, muted labels */
+dl.timing { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px var(--space-3); margin: var(--space-2) 0 0; font-size: var(--text-sm); font-weight: var(--weight-regular, 400); }
+dl.timing dt { color: var(--color-text-secondary); }
+dl.timing dd { margin: 0; font-variant-numeric: tabular-nums; }

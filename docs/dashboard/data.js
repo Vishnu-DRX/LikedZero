@@ -213,19 +213,30 @@
     if (Array.isArray(a)) return a.join(sep == null ? ', ' : sep);
     return typeof a === 'string' ? a : '';
   }
+  // "24 Oct, 4:05 AM IST" (the year is added only when it is not the current one).
+  var MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function zoneLabel(p) {
+    var tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { /* keep the short name */ }
+    return tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta' ? 'IST' : p.timeZoneName;
+  }
+  function dayText(p, d) {
+    return parseInt(p.day, 10) + ' ' + MONTH_NAMES[parseInt(p.month, 10) - 1] + (parseInt(p.year, 10) !== new Date(now()).getFullYear() ? ' ' + p.year : '');
+  }
   function fmtTime(iso) {
     var d = new Date(iso);
     if (isNaN(d)) return String(iso || '');
     var p = localParts(d);
     if (!p) return d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-    return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ' ' + p.timeZoneName;
+    var h = parseInt(p.hour, 10);
+    return dayText(p, d) + ', ' + (h % 12 || 12) + ':' + p.minute + ' ' + (h < 12 ? 'AM' : 'PM') + ' ' + zoneLabel(p);
   }
   function fmtDate(iso) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return String(iso);
     var d = new Date(iso);
     if (isNaN(d)) return String(iso || '');
     var p = localParts(d);
-    return p ? p.year + '-' + p.month + '-' + p.day : d.toISOString().slice(0, 10);
+    return p ? dayText(p, d) : d.toISOString().slice(0, 10);
   }
   // Run timing is always shown in BOTH India time and UTC (decision: the 04:00 IST schedule makes a late GitHub tick
   // visible), independent of the viewer's own timezone: "17 Oct 04:07:12 IST".

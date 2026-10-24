@@ -57,8 +57,6 @@
   // read as a promise about the future; say what it means instead.
   function decisionLabel(d, p) { return d === 'will_move' && p && p.mode === 'apply' ? 'Due to move' : (DECISIONS[d] || [null, d])[1]; }
   function decisionBadge(d, p) { var m = DECISIONS[d] || ['neutral', d]; return badge(m[0], decisionLabel(d, p)); }
-  var RULE_STATUS = { ok: ['ok', 'Active'], dead: ['bad', 'Dead'], shadowed: ['warn', 'Shadowed'], disabled: ['neutral', 'Disabled'] };
-  function ruleStatusBadge(s) { var m = RULE_STATUS[s] || ['neutral', s]; return badge(m[0], m[1]); }
   var VERDICTS = { ok: ['ok', 'OK'], dry_run: ['info', 'Dry run'], mismatch: ['bad', 'Mismatch'], error: ['bad', 'Error'], aborted_too_many: ['bad', 'Stopped: too many moves'] };
   function modeLabel(mode) { return mode === 'apply' ? 'Real run' : 'Dry run'; }
   function verdictBadge(v) { var m = VERDICTS[v] || ['neutral', v]; return badge(m[0], m[1]); }
@@ -116,8 +114,8 @@
   var VIEW_EXPLAIN = {
     overview: 'A health check for the whole sorter: did the last run go cleanly, how many songs are waiting, how many have been moved this week, and when it runs next.',
     inbox: 'The songs in Liked Songs, and what LikedZero decided (or will decide) to do with each one, and why. After a real run this is the list as it was when that run started.',
-    rules: 'Your rules, in the order they run. The first rule a song matches wins; later rules never see it. A rule can be "shadowed" (an earlier rule always takes its songs first) or "dead" (nothing matches it).',
-    playlists: 'Every playlist a rule sends songs to, whether LikedZero can actually write to it, and how many songs are queued for it.',
+    rules: 'Your rules, in the order they run. A song goes to the first rule it matches. For each rule you can see how many songs it has moved and, once opened, the last five songs and the runs that moved them.',
+    playlists: 'Every playlist a rule sends songs to, whether LikedZero can actually write to it, how many real runs have added songs to it, and (once opened) the last five of those runs.',
     runs: 'The history of every time the sorter has run, dry or real. Open a run to see which songs moved to which playlist, and by which rule.'
   };
   function helpBtn(text) {
@@ -144,9 +142,6 @@
     // label from the config) must not be believed.
     if (p && p.inbox_kind === 'legacy_library' && !p.inbox_since) {
       out += banner('info', '●', '<p><strong>No inbox start date is set, so your whole Liked Songs library is in scope.</strong> LikedZero is meant to run on a fresh, nearly empty Liked Songs list. Set an inbox start date in <a href="../builder/">Configure</a> so older songs are never touched; until then, treat this as a preview of how your rules behave, not a to-do list.</p>', 'role="status" data-banner="legacy"');
-    }
-    if (p && planIsBeforeMoves(p) && (key === 'rules' || key === 'playlists')) {
-      out += '<p class="small muted" data-testid="snapshot-note">The match counts below come from the inbox as it was when the last run started (' + esc(D.fmtTime(p.generated_at)) + ').</p>';
     }
     if (p && p.what_if) {
       out += banner('warn', '▲', '<p><strong>What-if preview.</strong> Disabled rules were treated as enabled. This is not what a normal run would do.</p>', 'role="status" data-banner="what-if"');
@@ -385,13 +380,13 @@
       // decision 45/P1-2: inbox_since is the one guard that would stop a schedule from reaching the whole
       // legacy library, so it is surfaced here in plain words.
       if (p && p.inbox_since) {
-        sinceHtml = '<p class="small muted" data-testid="inbox-since">Only songs liked on or after <strong>' + esc(D.fmtDate(p.inbox_since)) + '</strong> are ever sorted. Older ones are never touched.</p>';
+        sinceHtml = '<p class="small muted" data-testid="inbox-since">Sorting songs liked since <strong>' + esc(p.inbox_since) + '</strong>' + helpBtn('Songs liked before this date are never evaluated or touched.') + '</p>';
       } else if (p) {
-        sinceHtml = '<p class="small" data-testid="inbox-since">' + badge('neutral', 'No inbox start date') + ' Every song in Liked Songs is in scope. Set a start date in <a href="../builder/">Configure</a> before turning on automatic runs.</p>';
+        sinceHtml = '<p class="small" data-testid="inbox-since">' + badge('neutral', 'No inbox start date') + ' ' + helpBtn('Every song in Liked Songs is in scope. Set a start date in Configure before turning on automatic runs.') + ' <a class="btn btn-secondary btn-sm" href="../builder/">Configure</a></p>';
       }
       if (ctx.source === 'repo') {
         runHtml = '<p class="run-now-row"><button type="button" class="btn btn-primary" data-open="run-now-dialog" data-testid="run-now-btn">Run now</button> ' +
-          '<span class="small muted">Starts the Sync workflow on GitHub with your own token.</span></p>';
+          helpBtn('Starts the Sync workflow on GitHub using your own token.') + '</p>';
       }
 
       var sched = schedOf(ctx);
@@ -401,11 +396,11 @@
       // Card 1: did the last run go well?
       var lastT = last ? runTiming(last, null) : null;
       var lastTimingSub = lastT && lastT.scheduled
-        ? '<br><span data-timing="overview">Due ' + esc(D.fmtZone(lastT.scheduled, 'IST')) + '; started ' + esc(D.fmtZone(lastT.started, 'IST')) + ' (' + esc(D.lateText(lastT.lateStarted)) + ')</span>'
+        ? '<br><span data-timing="overview">Due ' + esc(istShort(lastT.scheduled, lastT.started)) + ' &middot; started ' + esc(istShort(lastT.started, lastT.started)) + ' ' + lateBadge(lastT.lateStarted) + '</span>'
         : '';
       var lastRunCard = last
         ? card('Last run', verdictBadge(last.verdict), esc(modeLabel(last.mode)) + (last.what_if ? ' (what-if)' : '') + ' &middot; <time datetime="' + esc(last.time) + '">' + esc(D.fmtTime(last.time)) + '</time> (' + esc(D.rel(last.time)) + ') &middot; ' + esc(problemsText(last)) + lastTimingSub, ' data-card="last-run"')
-        : card('Last run', '<span class="muted">None</span>', 'No run has been recorded.', ' data-card="last-run"');
+        : card('Last run', '<span class="muted">None</span>', 'No runs yet', ' data-card="last-run"');
       // Card 2: when does it run next? Only shown when the run history actually carries a schedule.
       var nextRunCard = '';
       if (typeof sched === 'string' && sched) {
@@ -421,46 +416,46 @@
       if (waiting && p && !planIsBeforeMoves(p)) {
         waitSub = esc(p.counts.will_move) + ' ready to move, ' + esc(p.counts.too_young) + ' too new';
       } else if (waiting) {
-        waitSub = 'Counted at the end of the last run (' + esc(D.rel(waiting.asOf)) + ')';
+        waitSub = 'After the last run (' + esc(D.rel(waiting.asOf)) + ')';
       }
       var waitingCard = card('Waiting in Liked Songs', waiting ? esc(waiting.count) : '—', waitSub, ' data-card="liked"',
-        'The songs sitting in Liked Songs right now that LikedZero has not moved yet. Zero means everything has been sorted.');
+        'The songs in Liked Songs that LikedZero has not moved yet. Zero means everything has been sorted.');
       // Card 4: what has it done this week?
-      var movesCard = card('Moved this week', last ? esc(movesWeek) : '—', 'Songs moved out of Liked Songs by real runs in the last 7 days', ' data-card="moves"',
-        'Only real runs count. A dry run just shows what would move and never changes anything.');
+      var movesCard = card('Moved this week', last ? esc(movesWeek) : '—', 'Last 7 days, real runs', ' data-card="moves"',
+        'Songs moved out of Liked Songs by real runs in the last 7 days. A dry run only shows what would move, so it is not counted.');
       // Card 5: is every song accounted for?
       var safety, safetySub;
       if (lastApply) {
         safety = lastApply.verdict === 'ok' ? badge('ok', 'All songs accounted for') : (lastApply.verdict === 'mismatch' ? badge('bad', 'A song may need restoring') : verdictBadge(lastApply.verdict));
-        safetySub = 'Checked after the real run on ' + esc(D.fmtDate(lastApply.time)) + (mismatches > 1 ? ' &middot; ' + esc(plural(mismatches, 'run')) + ' failed this check' : '') +
-          ' &middot; <a href="#/runs/' + encodeURIComponent(lastApply.run_id) + '">See that run</a>';
+        safetySub = 'Checked ' + esc(D.fmtDate(lastApply.time)) + (mismatches > 1 ? ' &middot; ' + esc(plural(mismatches, 'run')) + ' failed the check' : '') +
+          '<br><a class="btn btn-secondary btn-sm" href="#/runs/' + encodeURIComponent(lastApply.run_id) + '">See that run</a>';
       } else {
         safety = badge('info', 'No real run yet');
-        safetySub = 'Everything so far was a dry run, so nothing has been removed from Liked Songs.';
+        safetySub = 'Dry runs only so far';
       }
       var safetyTip = 'After every real run LikedZero counts your Liked Songs: the number before, minus the songs it moved, should equal the number left. “All songs accounted for” means the numbers matched. Otherwise a song may have gone missing and the run page shows how to restore it.';
       var safetyCard = card('Last real run', safety, safetySub, ' data-card="safety"', safetyTip);
 
       // "What happens next": one plain sentence.
       var nextHtml = '', tail = '';
-      if (nextTime) tail = ' The next automatic run is ' + nextTime + '.';
-      else if (sched === null) tail = ' No automatic runs are set up.';
+      if (nextTime) tail = ' Next run: ' + nextTime + '.';
+      else if (sched === null) tail = ' No automatic runs set up.';
       if (p) {
         var c = p.counts, next;
         if (planIsBeforeMoves(p) && last) {
           var lastBy = last.moves_by_playlist || {}, nPl = Object.keys(lastBy).length;
           if (last.verdict === 'aborted_too_many') {
-            next = 'The last run stopped without moving anything because it planned more moves than the safety limit allows. Nothing was changed.' + tail;
+            next = 'Last run stopped: it planned more moves than the safety limit allows. Nothing changed.' + tail;
           } else if (last.verdict === 'error' || last.verdict === 'mismatch') {
-            next = 'The last run ran into a problem — open it under Runs before the next one.' + tail;
+            next = 'Last run hit a problem. Open it under Runs.' + tail;
           } else {
             var left = [];
             if (c.too_young) left.push(c.too_young + ' too new');
             if (c.no_match) left.push(c.no_match + ' matched no rule');
             if (c.blocked) left.push(c.blocked + ' blocked');
             if (c.target_problem) left.push(plural(c.target_problem, 'song') + ' with a playlist problem');
-            next = (waiting.count === 0 ? 'Nothing is waiting.' : plural(waiting.count, 'song') + ' still waiting in Liked Songs' + (left.length ? ' (when that run started: ' + left.join(', ') + ')' : '') + '.') +
-              ' The last run moved ' + (last.moved ? plural(last.moved, 'song') + (nPl ? ' into ' + plural(nPl, 'playlist') : '') : 'nothing') + '.' + tail;
+            next = (waiting.count === 0 ? 'Nothing waiting.' : plural(waiting.count, 'song') + ' waiting' + (left.length ? ' (' + left.join(', ') + ')' : '') + '.') +
+              ' Last run moved ' + (last.moved ? plural(last.moved, 'song') + (nPl ? ' into ' + plural(nPl, 'playlist') : '') : 'nothing') + '.' + tail;
           }
         } else {
           var targets = {};
@@ -470,8 +465,8 @@
           if (c.no_match) rest.push(c.no_match + ' match no rule');
           if (c.blocked) rest.push(c.blocked + ' blocked');
           if (c.target_problem) rest.push(plural(c.target_problem, 'song') + ' with a playlist problem');
-          next = (c.will_move ? 'The next run would move ' + plural(c.will_move, 'song') + ' into ' + plural(n, 'playlist') + '.' : 'The next run would move nothing.') +
-            (rest.length ? ' ' + rest.join(', ') + '.' : '') + ' This list comes from a dry run: nothing has been written to Spotify.' + (p.what_if ? ' (What-if: disabled rules counted as enabled.)' : '') + tail;
+          next = (c.will_move ? 'Next run would move ' + plural(c.will_move, 'song') + ' into ' + plural(n, 'playlist') + '.' : 'Next run would move nothing.') +
+            (rest.length ? ' ' + rest.join(', ') + '.' : '') + ' Dry run: nothing written to Spotify.' + (p.what_if ? ' (What-if: disabled rules counted as enabled.)' : '') + tail;
         }
         var nextEsc = esc(next);
         if (nextTime) nextEsc = nextEsc.replace(esc(nextTime), nowrap(nextTime));  // keep the date and time on one line
@@ -504,9 +499,9 @@
       var notice = '';
       if (planIsBeforeMoves(p)) {
         var w = waitingNow(ctx);
-        notice = banner('info', '●', '<p><strong>This is the inbox as it was when the last run started</strong> (<time datetime="' + esc(p.generated_at) + '">' + esc(D.fmtTime(p.generated_at)) + '</time>).' +
-          ' Songs marked “Due to move” were handled by that run; <a href="#/runs">Runs</a> shows what actually moved.' +
-          (w ? ' Right now <strong>' + esc(w.count) + '</strong> ' + (w.count === 1 ? 'song is' : 'songs are') + ' waiting in Liked Songs.' : '') + '</p>', 'role="status" data-banner="inbox-snapshot"');
+        notice = banner('info', '●', '<p><strong>Inbox as the last run saw it</strong> (<time datetime="' + esc(p.generated_at) + '">' + esc(D.fmtTime(p.generated_at)) + '</time>)' +
+          helpBtn('Songs marked “Due to move” were handled by that run. The Runs tab shows what actually moved.') +
+          (w ? '<br>Waiting now: <strong>' + esc(w.count) + '</strong>' : '') + '</p>', 'role="status" data-banner="inbox-snapshot"');
       }
       if (p.titles_hidden) notice += '<p class="small muted" data-testid="titles-hidden-note">' + esc(TITLE_HIDDEN_NOTE) + '</p>';
       return notice + '<div class="toolbar" role="search">' +
@@ -562,7 +557,7 @@
           h += '<div class="table-wrap cards"><table class="table stack" data-testid="inbox-table"><thead><tr>';
           COLS.forEach(function (c) {
             var active = st.sort === c[0];
-            h += '<th scope="col" class="' + (c[2] || '') + '" aria-sort="' + (active ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '"><button type="button" class="sort-btn" data-sort="' + c[0] + '">' + esc(c[1]) + '<span aria-hidden="true">' + (active ? (st.dir === 'asc' ? '▲' : '▼') : '') + '</span></button></th>';
+            h += '<th scope="col" class="' + (c[2] || '') + '" aria-sort="' + (active ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '"><button type="button" class="sort-btn" data-sort="' + c[0] + '">' + esc(c[1]) + '<span aria-hidden="true">' + (active ? '<span class="chev' + (st.dir === 'asc' ? ' chev-up' : '') + '"></span>' : '') + '</span></button></th>';
           });
           h += '</tr></thead><tbody>';
           var hidden = !!p.titles_hidden;
@@ -635,81 +630,95 @@
   };
 
   // ---- Rules
+  var RECENT_SONGS = 5;
+  // What each rule actually did: read from the per-run logs of real runs that moved something (a run that moved
+  // nothing cannot contribute, so its log is never fetched). Dry runs are ignored: they move nothing.
+  function ruleHistory(ctx, runs) {
+    var real = runs.filter(function (r) { return r.mode === 'apply'; });
+    var withMoves = real.filter(function (r) { return r.moved > 0 && r.log; });
+    return Promise.all(withMoves.map(function (r) { return D.fetchLog(ctx.base, r.log); })).then(function (logs) {
+      var h = { real: real.length, since: real.length ? real[real.length - 1].time : null, unreadable: 0, count: {}, last: {} };
+      withMoves.forEach(function (run, i) {
+        var l = logs[i];
+        if (!l || l.status !== 'ok') { h.unreadable++; return; }
+        (l.data.moved || []).forEach(function (m) {
+          h.count[m.rule] = (h.count[m.rule] || 0) + 1;
+          var list = h.last[m.rule] = h.last[m.rule] || [];
+          if (list.length < RECENT_SONGS) list.push({ run: run, m: m, hidden: !!l.data.titles_hidden });
+        });
+      });
+      return h;
+    });
+  }
+  function ruleCard(r, i, h) {
+    var n = h.count[r.name] || 0, recent = h.last[r.name] || [];
+    var conds = Object.keys(r.conditions || {}).map(function (k) { return '<div>' + matchDictLine(k, r.conditions[k]) + '</div>'; }).join('') +
+      (r.unless && Object.keys(r.unless).length ? '<div class="small" data-testid="unless-summary">unless ' + Object.keys(r.unless).map(function (k) { return matchDictLine(k, r.unless[k]); }).join(' &amp; ') + '</div>' : '');
+    var weak = r.weak_signals_possible && r.weak_signals_possible.length
+      ? '<p>' + badge('warn', 'Weak signals: ' + r.weak_signals_possible.map(function (s) { return s.replace('language_in:', ''); }).join(', ')) + '</p>' : '';
+    var list = recent.length
+      ? '<ol class="rule-recent" data-testid="rule-recent">' + recent.map(function (x) {
+          return '<li><div>' + titleOrHidden(x.m.track, x.hidden) + (x.m.artist ? ' <span class="muted">&middot; ' + esc(x.m.artist) + '</span>' : '') + '</div>' +
+            '<div class="small muted">to ' + esc(x.m.playlist) + ' &middot; ' + nowrap(D.fmtTime(x.run.time)) + '</div><a class="btn btn-secondary btn-sm" href="#/runs/' + encodeURIComponent(x.run.run_id) + '">Run log</a></li>';
+        }).join('') + '</ol>'
+      : '<p class="small muted" data-testid="rule-recent-empty">' + (h.real ? 'This rule has not moved any songs yet.' : 'No real run yet, so nothing has been moved.') + '</p>';
+    return '<article class="card rule-card" data-rule="' + esc(r.name) + '" data-enabled="' + (r.enabled ? 'true' : 'false') + '">' +
+      '<div class="rule-title"><span class="rule-pos">' + (i + 1) + '</span><strong>' + esc(r.name) + '</strong>' + (r.enabled ? '' : badge('neutral', 'Off')) + '</div>' +
+      '<p class="rule-meta"><span data-testid="rule-count"><strong>' + n + '</strong> ' + (n === 1 ? 'song' : 'songs') + ' moved</span> &middot; to ' + esc(r.target_playlist) + '</p>' +
+      '<details><summary class="btn btn-secondary btn-sm">Details and last ' + RECENT_SONGS + ' songs</summary>' +
+      '<div class="rule-body"><dl class="kv"><dt>Matches</dt><dd>' + (conds || '<span class="muted">every song</span>') + '</dd>' +
+      '<dt>Goes to</dt><dd>' + esc(r.target_playlist) + ' <span class="muted">(' + esc(posText(r.target_position)) + ')</span> ' + targetBadge(r.target_status) + '</dd>' +
+      '<dt>Waits</dt><dd>' + esc(r.threshold_days) + ' days</dd></dl>' + weak +
+      '<h4>Last ' + RECENT_SONGS + ' songs</h4>' + list + '</div></details></article>';
+  }
   V.rules = {
     label: 'Rules', question: 'What does each rule do?', files: ['plan', 'runs'],
     render: function (ctx) {
       var bad = problems(ctx, ['plan']);
       if (bad) return bad;
-      var p = plan(ctx), runs = runsOf(ctx), now = D.now();
-      var html = ctx.files.runs.status !== 'ok' ? problems(ctx, ['runs']) : '';
-      var last = runs[0];
-      var monthAgo = now - 30 * 86400000;
-      // who shadows whom
-      var shadow = {};
-      p.songs.forEach(function (s) {
-        (s.explain.trace || []).forEach(function (e) {
-          if (e.result === 'not_reached_but_would_match') {
-            var m = shadow[e.rule] = shadow[e.rule] || {};
-            var by = s.explain.decided_by || '?';
-            m[by] = (m[by] || 0) + 1;
-          }
-        });
+      var p = plan(ctx), runs = runsOf(ctx);
+      var intro = ctx.files.runs.status !== 'ok' ? problems(ctx, ['runs']) : '';
+      return ruleHistory(ctx, runs).then(function (h) {
+        var html = intro + '<p class="small muted">Songs moved by real runs' + (h.real ? ' (' + plural(h.real, 'run') + ' since ' + esc(D.fmtDate(h.since)) + ')' : '') +
+          helpBtn('Rules run top to bottom and a song goes to the first rule it matches. Counts come from real runs only; a dry run moves nothing. Open a rule to see its last ' + RECENT_SONGS + ' songs.') + '</p>';
+        if (h.unreadable) html += banner('warn', ICON.warn, plural(h.unreadable, 'run log') + ' could not be read, so those runs are missing from the counts.');
+        html += '<div class="rule-list" data-testid="rules-list">' + p.rules.map(function (r, i) { return ruleCard(r, i, h); }).join('') + '</div>';
+        return html;
       });
-      html += '<p class="small muted">Rules run top to bottom and the first match wins. <strong>Dead</strong> means no song in the inbox matches; <strong>shadowed</strong> means songs match but an earlier rule always takes them.</p>';
-      html += '<div class="table-wrap cards"><table class="table stack" data-testid="rules-table"><thead><tr><th scope="col">#</th><th scope="col">Rule</th><th scope="col">Status</th><th scope="col">Conditions</th><th scope="col">Target</th>' +
-        '<th scope="col" class="num">Would match</th><th scope="col" class="num">Wins now</th><th scope="col" class="num">Last run</th><th scope="col" class="num">30 days</th><th scope="col">Last matched</th></tr></thead><tbody>';
-      p.rules.forEach(function (r, i) {
-        var lastWins = last ? ((last.rule_counts || {})[r.name] || 0) : null;
-        var thirty = runs.length ? runs.filter(function (x) { return Date.parse(x.time) >= monthAgo; }).reduce(function (a, x) { return a + ((x.rule_counts || {})[r.name] || 0); }, 0) : null;
-        var lastMatched = runs.filter(function (x) { return (x.rule_counts || {})[r.name] > 0; })[0];
-        var cls = r.status === 'dead' ? 'row-bad' : (r.status === 'shadowed' ? 'row-warn' : '');
-        var note = '';
-        if (r.status === 'shadowed') {
-          var by = shadow[r.name] || {};
-          note = '<div class="small muted">Songs match, but earlier ' + esc(Object.keys(by).length > 1 ? 'rules win' : 'rule wins') + ': ' + esc(Object.keys(by).map(function (k) { return k + ' (' + by[k] + ')'; }).join(', ')) + '</div>';
-        } else if (r.status === 'dead') note = '<div class="small muted">No song in the inbox matches this rule.</div>';
-        else if (r.status === 'disabled') note = '<div class="small muted">Switched off in your config; it never runs.</div>';
-        var weak = r.weak_signals_possible && r.weak_signals_possible.length
-          ? '<div>' + badge('warn', 'Weak signals: ' + r.weak_signals_possible.map(function (s) { return s.replace('language_in:', ''); }).join(', ')) + '</div>' : '';
-        html += '<tr class="' + cls + '" data-rule="' + esc(r.name) + '" data-status="' + esc(r.status) + '"><td class="num" data-label="Priority">' + (i + 1) + '</td>' +
-          '<td class="cell-main"><strong>' + esc(r.name) + '</strong>' + note + weak + '</td>' +
-          '<td data-label="Status">' + ruleStatusBadge(r.status) + '</td>' +
-          '<td data-label="Conditions">' + Object.keys(r.conditions || {}).map(function (k) { return '<div>' + matchDictLine(k, r.conditions[k]) + '</div>'; }).join('') +
-          (r.unless && Object.keys(r.unless).length ? '<div class="small" data-testid="unless-summary">unless ' + Object.keys(r.unless).map(function (k) { return matchDictLine(k, r.unless[k]); }).join(' &amp; ') + '</div>' : '') +
-          '<div class="small muted">waits ' + esc(r.threshold_days) + ' days</div></td>' +
-          '<td data-label="Target">' + esc(r.target_playlist) + '<div class="small muted">' + esc(posText(r.target_position)) + '</div>' + targetBadge(r.target_status) + '</td>' +
-          '<td class="num cell-extra" data-label="Would match">' + esc(r.would_match) + '</td>' +
-          '<td class="num" data-label="Wins now"><a href="#/inbox?rule=' + encodeURIComponent(r.name) + '">' + esc(r.wins) + '</a></td>' +
-          '<td class="num cell-extra" data-label="Last run">' + num(lastWins) + '</td>' +
-          '<td class="num cell-extra" data-label="30 days">' + num(thirty) + '</td>' +
-          '<td data-label="Last matched">' + (lastMatched ? esc(D.fmtDate(lastMatched.time)) : '<span class="muted">' + (runs.length ? 'never' : '—') + '</span>') + '</td></tr>';
-      });
-      html += '</tbody></table></div>';
-      return html;
     }
   };
 
   // ---- Playlists
+  function playlistCard(x, runs) {
+    // Real runs only (a dry run adds nothing), straight from the runs index: no per-run log needed.
+    var added = runs.filter(function (r) { return r.mode === 'apply' && ((r.moves_by_playlist || {})[x.name] || 0) > 0; });
+    var recent = added.slice(0, RECENT_SONGS);
+    var list = recent.length
+      ? '<ol class="rule-recent" data-testid="playlist-recent">' + recent.map(function (r) {
+          var n = r.moves_by_playlist[x.name];
+          return '<li><div>' + nowrap(D.fmtTime(r.time)) + ' <span class="muted">&middot; ' + plural(n, 'song') + ' added</span></div>' +
+            '<a class="btn btn-secondary btn-sm" href="#/runs/' + encodeURIComponent(r.run_id) + '">Run log</a></li>';
+        }).join('') + '</ol>'
+      : '<p class="small muted" data-testid="playlist-recent-empty">No real run has added a song to this playlist yet.</p>';
+    var cls = x.status === 'resolved' ? '' : (x.status === 'ambiguous' ? ' row-warn' : ' row-bad');
+    return '<article class="card rule-card' + cls + '" data-playlist="' + esc(x.name) + '" data-status="' + esc(x.status) + '">' +
+      '<div class="rule-title"><strong>' + esc(x.name) + '</strong>' + targetBadge(x.status) + '</div>' +
+      '<p class="rule-meta"><span data-testid="playlist-runs"><strong>' + added.length + '</strong> ' + (added.length === 1 ? 'run' : 'runs') + ' added songs</span>' +
+      (x.size != null ? ' &middot; ' + esc(x.size) + ' songs in it' : '') + '</p>' +
+      '<details><summary class="btn btn-secondary btn-sm">Last ' + RECENT_SONGS + ' runs</summary>' +
+      '<div class="rule-body"><dl class="kv"><dt>Rules that send here</dt><dd>' + ((x.rules || []).map(esc).join(', ') || '<span class="muted">none</span>') + '</dd></dl>' +
+      '<h4>Last ' + RECENT_SONGS + ' runs that added songs</h4>' + list + '</div></details></article>';
+  }
   V.playlists = {
-    label: 'Playlists', question: 'Can every target playlist actually be written to?', files: ['plan'],
+    label: 'Playlists', question: 'Can every target playlist actually be written to?', files: ['plan', 'runs'],
     render: function (ctx) {
       var bad = problems(ctx, ['plan']);
       if (bad) return bad;
-      var p = plan(ctx);
+      var p = plan(ctx), runs = runsOf(ctx);
       var okCount = p.playlists.filter(function (x) { return x.status === 'resolved'; }).length;
-      var html = '<p class="small muted">' + esc(okCount + ' of ' + p.playlists.length) + ' target playlists are ready. Every move takes a song out of Liked Songs and into one of these; "Planned in" is how many ' + (planIsBeforeMoves(p) ? 'the last run was due to add' : 'the next run would add') + '.</p>';
-      html += '<div class="table-wrap cards"><table class="table stack" data-testid="playlists-table"><thead><tr><th scope="col">Playlist</th><th scope="col">Status</th><th scope="col" class="num">Size</th><th scope="col" class="num">Planned in</th>' +
-        '<th scope="col" class="num">Moves out<button type="button" class="help" data-tip="Always 0 for now: playlists are never a source for the sorter. Songs only ever move INTO a playlist, out of Liked Songs — a playlist itself is never sorted from." aria-label="What does moves out mean?">?</button></th>' +
-        '<th scope="col">Rules that send here</th></tr></thead><tbody>';
-      p.playlists.forEach(function (x) {
-        var cls = x.status === 'resolved' ? '' : (x.status === 'ambiguous' ? 'row-warn' : 'row-bad');
-        html += '<tr class="' + cls + '" data-status="' + esc(x.status) + '"><td class="cell-main"><strong>' + esc(x.name) + '</strong></td><td data-label="Status">' + targetBadge(x.status) + '</td>' +
-          '<td class="num" data-label="Size">' + num(x.size) + '</td><td class="num" data-label="Planned in">' + esc(x.planned_in) + '</td>' +
-          '<td class="num cell-extra" data-label="Moves out"><span data-tip="Playlists are never a source for the sorter in this design, so this is structurally always 0.">0</span></td>' +
-          '<td data-label="Rules">' + (x.rules || []).map(esc).join(', ') + '</td></tr>';
-      });
-      html += '</tbody></table></div>';
-      html += '<ul class="small muted"><li><strong>Found</strong>: an owned or collaborative playlist with exactly this name.</li><li><strong>Missing</strong>: no playlist has this name (LikedZero never creates playlists unless a rule allows it).</li><li><strong>Not writable</strong>: you follow it but do not own it.</li><li><strong>Ambiguous</strong>: more than one playlist has this name.</li></ul>';
+      var html = ctx.files.runs.status !== 'ok' ? problems(ctx, ['runs']) : '';
+      html += '<p class="small muted">' + esc(okCount + ' of ' + p.playlists.length) + ' playlists ready' + helpBtn('Found: an owned or collaborative playlist with exactly this name. Missing: no playlist has this name (LikedZero never creates playlists unless a rule allows it). Not writable: you follow it but do not own it. Ambiguous: more than one playlist has this name. Each playlist shows how many real runs added songs to it; open one to see the last ' + RECENT_SONGS + '.') + '</p>';
+      html += '<div class="rule-list" data-testid="playlists-list">' + p.playlists.map(function (x) { return playlistCard(x, runs); }).join('') + '</div>';
       return html;
     }
   };
@@ -824,22 +833,42 @@
   function triggerLabel(t) {
     return t === 'schedule' ? 'Schedule' : (t === 'workflow_dispatch' ? 'Started by hand (Run workflow)' : (t ? t : 'Unknown (older run or local)'));
   }
-  /** Scheduled / started / finished, each in India time and UTC, with how late the start was. */
+  // "04:11 IST" (plus the date only when it differs from `sameDayAs`); UTC goes in the tooltip, not the row.
+  function istParts(iso) { var z = D.fmtZone(iso, 'IST', false, true).split(' '); return { date: z[0] + ' ' + z[1], clock: z[2] + ' ' + z[3] }; }
+  function istShort(iso, sameDayAs) {
+    var a = istParts(iso), d = sameDayAs ? istParts(sameDayAs).date : null;
+    return a.clock.replace(' IST', '') + ' IST' + (d && d !== a.date ? ' (' + a.date + ')' : '');
+  }
+  function durText(sec) {
+    if (sec == null || isNaN(sec)) return '';
+    sec = Math.round(sec);
+    return sec < 60 ? sec + ' s' : Math.floor(sec / 60) + ' min ' + (sec % 60 ? (sec % 60) + ' s' : '');
+  }
+  // How far the start was from its slot: green when on time, neutral when a little late, amber when it was really late.
+  function lateBadge(min) {
+    if (min == null) return '';
+    return min < 2 ? badge('ok', 'On time') : badge(min >= 15 ? 'warn' : 'neutral', D.lateText(min));
+  }
+  /** Compact labelled rows for a run: when it was due, when it started (with a lateness badge) and how long it took. IST only; UTC in tooltips. */
   function timingLines(t) {
-    var h = '<div class="small muted" data-timing="scheduled">' + (t.scheduled
-      ? 'Scheduled: ' + esc(D.fmtIstUtc(t.scheduled, false, true))
-      : (t.trigger === 'schedule' ? 'Scheduled: not recorded' : 'Not a scheduled run')) + '</div>';
-    h += '<div class="small muted" data-timing="started">Started: ' + esc(D.fmtIstUtc(t.started, false, true)) +
-      (t.lateStarted != null ? ' <strong>(' + esc(D.lateText(t.lateStarted)) + ')</strong>' : '') + '</div>';
-    if (t.finished) h += '<div class="small muted" data-timing="finished">Finished: ' + esc(D.fmtIstUtc(t.finished, false, true)) + '</div>';
-    return h;
+    function tip(iso) { return iso ? ' title="' + esc(D.fmtZone(iso, 'UTC', true)) + '"' : ''; }
+    var h = '<dl class="timing"><dt>Due</dt><dd data-timing="scheduled"' + tip(t.scheduled) + '>' + (t.scheduled
+      ? esc(istShort(t.scheduled, t.started))
+      : '<span class="muted">' + (t.trigger === 'schedule' ? 'Not recorded' : 'Not a scheduled run') + '</span>') + '</dd>';
+    h += '<dt>Started</dt><dd data-timing="started"' + tip(t.started) + '>' + esc(istShort(t.started, t.started)) + ' ' + lateBadge(t.lateStarted) + '</dd>';
+    if (t.finished) h += '<dt>Took</dt><dd data-timing="finished"' + tip(t.finished) + '>' + esc(durText((Date.parse(t.finished) - Date.parse(t.started)) / 1000)) + '</dd>';
+    return h + '</dl>';
   }
   function timingRows(run, log) {
     var t = runTiming(run, log);
-    function row(label, iso, extra) { return '<dt>' + label + '</dt><dd data-timing-row="' + label + '">' + (iso ? esc(D.fmtIstUtc(iso, true)) + (extra || '') : '<span class="muted">not recorded</span>') + '</dd>'; }
+    function row(label, iso, extra) {
+      return '<dt>' + label + '</dt><dd data-timing-row="' + label + '">' + (iso
+        ? '<span class="nowrap">' + esc(D.fmtZone(iso, 'IST', true)) + '</span> <span class="muted nowrap">' + esc(D.fmtZone(iso, 'UTC', true)) + '</span>' + (extra || '')
+        : '<span class="muted">not recorded</span>') + '</dd>';
+    }
     return row('Scheduled for', t.scheduled) +
-      row('GitHub fired the run', t.fired, t.lateFired != null ? ' <strong>(' + esc(D.lateText(t.lateFired)) + ')</strong>' : '') +
-      row('Sync started', t.started, t.lateStarted != null ? ' <strong>(' + esc(D.lateText(t.lateStarted)) + ' vs the slot)</strong>' : '') +
+      row('GitHub fired the run', t.fired, t.lateFired != null ? ' ' + lateBadge(t.lateFired) : '') +
+      row('Sync started', t.started, t.lateStarted != null ? ' ' + lateBadge(t.lateStarted) : '') +
       row('Sync finished', t.finished) +
       '<dt>Triggered by</dt><dd>' + esc(triggerLabel(t.trigger)) + '</dd>';
   }
@@ -848,7 +877,7 @@
     var facts = '<dl class="kv">' + timingRows(run, log) + '<dt>Mode</dt><dd>' + esc(modeLabel(run.mode)) + (run.what_if ? ' (what-if preview)' : '') + '</dd>' +
       '<dt>Liked Songs</dt><dd>' + esc(run.liked_before) + ' before, ' + esc(run.liked_after) + ' after</dd>' +
       '<dt>Problems</dt><dd>' + esc(problemsText(run)) + '</dd></dl>';
-    var h = '<p><a href="#/runs">&larr; All runs</a></p><div class="card" data-testid="run-detail"><h3>Run of ' + esc(D.fmtTime(run.time)) + ' ' + verdictBadge(run.verdict) + '</h3>' +
+    var h = '<p><a class="btn btn-secondary btn-sm" href="#/runs">All runs</a></p><div class="card" data-testid="run-detail"><h3>Run of ' + esc(D.fmtTime(run.time)) + ' ' + verdictBadge(run.verdict) + '</h3>' +
       '<p class="callout" data-testid="run-summary">' + esc(runSummary(run)) + '</p>' + facts;
     if (!log) return h + '</div>';
     if (log.status !== 'ok') return h + '</div>' + (log.status === 'missing'
@@ -893,7 +922,7 @@
   }
 
   function runDiff(a, b, la, lb) {
-    var h = '<p><a href="#/runs">&larr; All runs</a></p><div class="card" data-testid="run-diff"><h3>Compare runs</h3><p class="small muted">Older run on the left, newer run on the right.</p>';
+    var h = '<p><a class="btn btn-secondary btn-sm" href="#/runs">All runs</a></p><div class="card" data-testid="run-diff"><h3>Compare runs</h3><p class="small muted">Older run on the left, newer run on the right.</p>';
     h += '<div class="table-wrap"><table class="table"><thead><tr><th scope="col">Measure</th><th scope="col">' + esc(D.fmtDate(a.time)) + ' (' + esc(a.mode) + ')</th><th scope="col">' + esc(D.fmtDate(b.time)) + ' (' + esc(b.mode) + ')</th><th scope="col" class="num">Change</th></tr></thead><tbody>';
     METRICS.forEach(function (m) {
       var x = a[m[0]], y = b[m[0]], d = '';
@@ -936,12 +965,12 @@
         if (arg.indexOf('~') > 0) {
           var ids = arg.split('~');
           var ra = findRun(runs, ids[0]), rb = findRun(runs, ids[1]);
-          if (!ra || !rb) return '<div class="empty"><h3>Run not found</h3><p>One of the runs is no longer in the history.</p><p><a href="#/runs">Back to all runs</a></p></div>';
+          if (!ra || !rb) return '<div class="empty"><h3>Run not found</h3><p>One of the runs is no longer in the history.</p><p><a class="btn btn-secondary btn-sm" href="#/runs">Back to all runs</a></p></div>';
           if (Date.parse(ra.time) > Date.parse(rb.time)) { var t = ra; ra = rb; rb = t; }
           return Promise.all([D.fetchLog(ctx.base, ra.log), D.fetchLog(ctx.base, rb.log)]).then(function (l) { return runDiff(ra, rb, l[0], l[1]); });
         }
         var run = findRun(runs, arg);
-        if (!run) return '<div class="empty"><h3>Run not found</h3><p>That run is no longer in the history.</p><p><a href="#/runs">Back to all runs</a></p></div>';
+        if (!run) return '<div class="empty"><h3>Run not found</h3><p>That run is no longer in the history.</p><p><a class="btn btn-secondary btn-sm" href="#/runs">Back to all runs</a></p></div>';
         return D.fetchLog(ctx.base, run.log).then(function (l) { return runDetail(run, l); });
       }
       if (!runs.length) return '<div class="empty"><h3>No runs recorded</h3><p>Run <code>python -m src.sync</code> to record the first one.</p></div>';
@@ -957,7 +986,7 @@
           '<td data-label="Result">' + verdictBadge(r.verdict) + '</td>' +
           '<td class="num" data-label="Moved">' + esc(r.moved) + '</td>' +
           '<td class="num" data-label="Liked Songs">' + esc(r.liked_before) + ' &rarr; ' + esc(r.liked_after) + '</td>' +
-          '<td data-label="Details"><a href="#/runs/' + encodeURIComponent(r.run_id) + '" aria-label="Details for run ' + esc(D.fmtTime(r.time)) + '">Details</a></td></tr>';
+          '<td data-label="Details"><a class="btn btn-secondary btn-sm" href="#/runs/' + encodeURIComponent(r.run_id) + '" aria-label="Details for run ' + esc(D.fmtTime(r.time)) + '">Details</a></td></tr>';
       });
       return h + '</tbody></table></div>';
     },

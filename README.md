@@ -114,8 +114,8 @@ if it is more than 2 days old. Every view always renders its full content — th
 
 - **Overview** asks "is it healthy?" with five cards, each answering one question: *Last run* (did it go well, and were there any problems), *Next run* (when it runs next; shown only when your run history carries a schedule), *Waiting in Liked Songs* (how many songs are waiting right now), *Moved this week* (songs moved by real runs in the last 7 days) and *Last real run* (every song accounted for, or a song that may need restoring). One sentence above them says what happens next. After a real run the inbox file is the list as it was when that run started, so the Overview takes the "waiting now" number from the run's own result instead. A **Run now** button dispatches the Sync workflow directly from here (via a token you create and control).
 - **Inbox** asks "what is waiting, and why?": every liked song with its decision. Search, filter and sort it, then click a title to open the **Explain** drawer: a plain sentence on what happened, the rule-by-rule trace, and where the language and genre came from. Titles and artists always wrap in full, never cut off, on a phone too. After a real run a note at the top says the list is the inbox as it was when that run started.
-- **Rules** asks "what does each rule do?": how many songs each rule matches and wins, when it last matched, and flags for problem rules.
-- **Playlists** asks "can every target be written to?": found, missing, not writable or ambiguous, its size and how many songs the next run adds.
+- **Rules** asks "what does each rule do?": one card per rule with how many songs real runs have moved through it. Open a card for its conditions and the last 5 songs it moved, each with a button to that run's log.
+- **Playlists** asks "can every target be written to?": found, missing, not writable or ambiguous, its size and how many real runs have added songs to it. Open a card for the last 5 of those runs.
 - **Runs** is the history. Each row has a one-line summary ("Moved 4 songs: 3 to Playlist A, 1 to Playlist B"). A run's page leads with what moved where and by which rule, then what was left behind and any problems; the technical part (safety check, restore command, journal of removals) sits in a collapsed section underneath. Where the logs hide titles it shows "Song 1 of 4 (title hidden)" and when each was liked. You can also compare two runs side by side.
 
 The dashboard has no separate Safety, Backtest or Signals tabs. The reconcile/restore/journal detail lives in each
@@ -132,8 +132,7 @@ Language tiers: **Playlist** (learned from your own language playlists) and **Sc
 the title) are trusted. **Hint** and **Country default** are guesses; they may drive a rule only when measured
 at 90% precision or better ("qualified").
 
-Terms: **Dead** rule: no song matches it. **Shadowed** rule: songs match, but an earlier rule always takes them
-first. **Blocked** song: a rule would have matched, but only through a language signal that is not qualified.
+Terms: **Blocked** song: a rule would have matched, but only through a language signal that is not qualified.
 **Withheld** signal: the language was found but hidden from the rules for that reason. **What-if**: a preview
 in which disabled rules count as enabled; it is not what a normal run does. **Old library banner**: shown only when no
 inbox start date (`inbox_since`) is set, meaning every song already in Liked Songs is in scope.
