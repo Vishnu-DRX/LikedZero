@@ -1802,7 +1802,7 @@
 
     window.__lzBuilder = { ready: true };
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-      navigator.serviceWorker.register('../sw.js').catch(function () { /* offline support is optional */ });
+      navigator.serviceWorker.register('../sw.js', { updateViaCache: 'none' }).catch(function () { /* offline support is optional */ });
     }
   }
 
