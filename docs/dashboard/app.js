@@ -195,7 +195,6 @@
     ['Inbox', 'The songs currently sitting in Liked Songs, waiting to be evaluated or moved.'],
     ['Eligible', 'A song has waited long enough (its rule’s threshold) and can move on the next run.'],
     ['Shadowed rule', 'A rule that songs would match, but an earlier rule in the list always takes them first, so this one never wins.'],
-    ['Dead rule', 'A rule that no song in the current inbox matches at all.'],
     ['Where a language comes from', 'How a song’s language was worked out: your own playlists, the title’s script, a weaker hint, or a country default — in that order of trust.'],
     ['Confidence', 'How sure LikedZero is about a song’s language or genre, shown as a percentage.'],
     ['Reconcile', 'The safety check after a real run: the songs in Liked Songs before, minus the ones moved, should equal what is left. A mismatch means a song may need restoring.'],

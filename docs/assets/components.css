@@ -83,8 +83,9 @@ input[type="range"] { accent-color: var(--color-accent); }
 .input[aria-invalid="true"], .select[aria-invalid="true"], .textarea[aria-invalid="true"], .tags[aria-invalid="true"] { border-color: var(--color-danger); }
 .input:disabled, .select:disabled, .textarea:disabled { opacity: 0.5; cursor: not-allowed; }
 .select { appearance: none; -webkit-appearance: none; padding-right: 2.5rem; cursor: pointer;
-  background-image: linear-gradient(45deg, transparent 50%, var(--color-text-secondary) 50%), linear-gradient(135deg, var(--color-text-secondary) 50%, transparent 50%);
-  background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+  /* chevron (a stroked V, not a filled triangle); #8a8a8a clears 3:1 on both the dark and the light surfaces */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%238a8a8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-position: right 14px center; background-size: 12px 8px; background-repeat: no-repeat; }
 .select option { background: var(--color-elevated); color: var(--color-text); }
 input[type="number"].input { font-variant-numeric: tabular-nums; }
 input[type="number"].input::-webkit-inner-spin-button, input[type="number"].input::-webkit-outer-spin-button { opacity: 0.6; height: 28px; }
@@ -257,3 +258,12 @@ th[aria-sort="descending"] .th-sort::after { content: "\2193"; color: var(--colo
 .meter > span { display: block; height: 100%; width: var(--v, 0%); background: var(--color-accent); border-radius: inherit; }
 .meter-warning > span { background: var(--color-warning); }
 .meter-danger > span { background: var(--color-danger); }
+
+/* ------------------------------------------------------------ chevrons: every disclosure, plain or button-styled */
+details > summary { list-style: none; display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: ""; flex: none; width: 8px; height: 8px; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg); transition: transform var(--motion-base) var(--motion-ease); }
+details[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+summary.btn { display: inline-flex; }
+.chev { display: inline-block; width: 7px; height: 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg); }
+.chev-up { transform: translateY(2px) rotate(-135deg); }

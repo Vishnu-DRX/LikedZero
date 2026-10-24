@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.parse import unquote
 from pathlib import Path
 
 import pytest
@@ -74,16 +75,16 @@ def test_overview_answers_is_it_healthy(dash):
     assert "Is it healthy?" in text(page, ".question")
     last = RUNS[0]
     card = text(page, '[data-card="last-run"]')
-    assert "Dry run" in card and "2026-09-21 06:00 UTC" in card and "2 warnings" in card
-    assert "2026-09-22 03:00 UTC" in text(page, '[data-card="next-run"]')  # from the demo fixture's schedule (decision 34)
+    assert "Dry run" in card and "21 Sep, 6:00 AM UTC" in card and "2 warnings" in card
+    assert "22 Sep, 3:00 AM UTC" in text(page, '[data-card="next-run"]')  # from the demo fixture's schedule (decision 34)
     waiting = text(page, '[data-card="liked"]')
     assert str(PLAN["liked_total"]) in waiting and f"{c['will_move']} ready to move" in waiting
     week_moves = sum(r["moved"] for r in RUNS if r["mode"] == "apply")
     assert re.search(rf"\b{week_moves}\b", text(page, '[data-card="moves"]'))
     assert "A song may need restoring" in text(page, '[data-card="safety"]')  # the latest real run failed its count check
     nxt = text(page, '[data-testid="next"]')
-    assert f"move {c['will_move']} songs" in nxt and "nothing has been written" in nxt
-    assert "next automatic run is 2026-09-22 03:00 UTC" in nxt
+    assert f"move {c['will_move']} songs" in nxt and "nothing written" in nxt
+    assert "Next run: 22 Sep, 3:00 AM UTC" in nxt
     # no jargon or noise cards any more
     for gone in ("pending", "errors"):
         expect(page.locator(f'[data-card="{gone}"]')).to_have_count(0)
@@ -104,7 +105,7 @@ def test_overview_answers_is_it_healthy(dash):
 def test_overview_shows_times_in_browser_timezone(dash):
     """Stored times are UTC; the dashboard renders them in the viewer's timezone (06:00 UTC -> 11:30 in Kolkata)."""
     page = dash("overview", timezone_id="Asia/Kolkata")
-    assert "2026-09-21 11:30" in text(page, '[data-card="last-run"]')
+    assert "21 Sep, 11:30 AM IST" in text(page, '[data-card="last-run"]')
     assert "UTC" not in text(page, '[data-card="last-run"]')
     # the instant is unchanged: the <time datetime> attribute stays UTC
     assert page.locator('[data-card="last-run"] time').get_attribute("datetime").startswith("2026-09-21T06:00")
@@ -256,43 +257,78 @@ def test_explain_drawer_keyboard_focus_and_escape(dash):
 
 
 # ------------------------------------------------------------------ rules
-def test_rules_flags_and_history(dash):
+def _moved_by_rule():
+    """Songs moved per rule by real runs, newest first, straight from the fixture run logs."""
+    out = {}
+    for run in RUNS:  # runs.json is newest first
+        if run["mode"] != "apply" or not run["moved"]:
+            continue
+        for m in fx(run["log"])["moved"]:
+            out.setdefault(m["rule"], []).append((run, m))
+    return out
+
+
+def test_rules_show_moved_count_and_last_five_songs(dash):
     page = dash("rules")
-    rows = page.locator('[data-testid="rules-table"] tbody tr')
-    expect(rows).to_have_count(len(PLAN["rules"]))
-    status = {n: page.locator(f'tr[data-rule="{n}"]').get_attribute("data-status") for n in ("Polka party", "Alpha live cuts", "Draft country", "Rock legends")}
-    assert status == {"Polka party": "dead", "Alpha live cuts": "shadowed", "Draft country": "disabled", "Rock legends": "ok"}
-    shadow = page.locator('tr[data-rule="Alpha live cuts"]').inner_text()
-    assert "Shadowed" in shadow and "Rock legends (1)" in shadow
-    assert "No song in the inbox matches" in page.locator('tr[data-rule="Polka party"]').inner_text()
-    assert "Weak signals: hint, country_default" in page.locator('tr[data-rule="Spanish nights"]').inner_text()
-    hindi = page.locator('tr[data-rule="Hindi hits"]')
-    plan_rule = next(r for r in PLAN["rules"] if r["name"] == "Hindi hits")
-    assert f"{plan_rule['would_match']}" in hindi.locator("td[data-label='Would match']").inner_text()
-    last_matched = next(r for r in RUNS if r["rule_counts"].get("Hindi hits"))["time"][:10]
-    assert last_matched in hindi.locator("td[data-label='Last matched']").inner_text()
-    last_run = RUNS[0]["rule_counts"].get("Hindi hits", 0)
-    assert hindi.locator("td[data-label='Last run']").inner_text() == str(last_run)
-    assert "never" in page.locator('tr[data-rule="Polka party"] td[data-label="Last matched"]').inner_text()
-    assert "Missing" in page.locator('tr[data-rule="Old jazz"]').inner_text()
-    hindi.locator("td[data-label='Wins now'] a").click()
-    page.wait_for_selector('#view-root[data-view="inbox"]')
-    expect(page.locator("#inbox-results tbody tr")).to_have_count(plan_rule["wins"])
+    cards = page.locator('[data-testid="rules-list"] article.rule-card')
+    expect(cards).to_have_count(len(PLAN["rules"]))
+    body = page.locator("#view-root").inner_text()
+    # the status/metric vocabulary the user asked to drop is gone
+    for gone in ("Dead", "Wins now", "Would match", "Shadowed", "Last matched"):
+        assert gone not in body, gone
+    moved = _moved_by_rule()
+    assert moved, "fixtures must contain at least one real run that moved songs"
+    for name, items in moved.items():
+        card = page.locator(f'article.rule-card[data-rule="{name}"]')
+        assert card.locator('[data-testid="rule-count"]').inner_text().split()[0] == str(len(items))
+        expect(card.locator("ol.rule-recent li").first).to_be_hidden()  # collapsed
+        card.locator("summary").click()
+        recent = card.locator("ol.rule-recent li")
+        expect(recent).to_have_count(min(5, len(items)))
+        newest_run, newest_song = items[0]
+        assert newest_song["track"] in recent.first.inner_text()
+        assert unquote(recent.first.locator("a").get_attribute("href")) == f"#/runs/{newest_run['run_id']}"
+    quiet = next(r["name"] for r in PLAN["rules"] if r["name"] not in moved)
+    card = page.locator(f'article.rule-card[data-rule="{quiet}"]')
+    assert card.locator('[data-testid="rule-count"]').inner_text().split()[0] == "0"
+    card.locator("summary").click()
+    expect(card.locator('[data-testid="rule-recent-empty"]')).to_be_visible()
+    for name in ("Spanish nights", "Old jazz"):
+        page.locator(f'article.rule-card[data-rule="{name}"] details').evaluate("d => { d.open = true; }")
+    assert "Weak signals: hint, country_default" in page.locator('article.rule-card[data-rule="Spanish nights"]').inner_text()
+    assert "Missing" in page.locator('article.rule-card[data-rule="Old jazz"]').inner_text()
+    run_link = page.locator("ol.rule-recent a").first
+    run_link.click()
+    page.wait_for_selector('#view-root[data-view="runs"] [data-testid="run-detail"]')
 
 
 # ------------------------------------------------------------------ playlists
-def test_playlists_status_size_planned(dash):
+def test_playlists_show_runs_that_added_songs_and_last_five(dash):
     page = dash("playlists")
-    rows = page.locator('[data-testid="playlists-table"] tbody tr')
-    expect(rows).to_have_count(len(PLAN["playlists"]))
-    statuses = set(rows.evaluate_all("els => els.map(e => e.dataset.status)"))
+    cards = page.locator('[data-testid="playlists-list"] article.rule-card')
+    expect(cards).to_have_count(len(PLAN["playlists"]))
+    statuses = set(cards.evaluate_all("els => els.map(e => e.dataset.status)"))
     assert statuses == {"resolved", "missing", "not_writable", "ambiguous"}
-    eng = next(p for p in PLAN["playlists"] if p["name"] == "Fake English")
-    row = page.locator("tr", has_text="Fake English")
-    assert str(eng["size"]) in row.inner_text() and str(eng["planned_in"]) in row.inner_text()
-    assert "Not writable" in page.locator("tr", has_text="Fake Tamil Telugu").inner_text()
-    assert "Ambiguous" in page.locator("tr", has_text="Fake Duplicate").inner_text()
-    assert "Missing" in page.locator("tr", has_text="Fake Jazz Vault").inner_text()
+    body = page.locator("#view-root").inner_text()
+    for gone in ("Planned in", "Moves out", "planned"):
+        assert gone not in body, gone
+    for name, text in (("Fake Tamil Telugu", "Not writable"), ("Fake Duplicate", "Ambiguous"), ("Fake Jazz Vault", "Missing")):
+        assert text in page.locator(f'article.rule-card[data-playlist="{name}"]').inner_text()
+    checked = 0
+    for pl in PLAN["playlists"]:
+        runs = [r for r in RUNS if r["mode"] == "apply" and (r.get("moves_by_playlist") or {}).get(pl["name"])]
+        card = page.locator(f'article.rule-card[data-playlist="{pl["name"]}"]')
+        assert card.locator('[data-testid="playlist-runs"]').inner_text().split()[0] == str(len(runs))
+        card.locator("summary").click()
+        if not runs:
+            expect(card.locator('[data-testid="playlist-recent-empty"]')).to_be_visible()
+            continue
+        checked += 1
+        recent = card.locator("ol.rule-recent li")
+        expect(recent).to_have_count(min(5, len(runs)))
+        assert unquote(recent.first.locator("a").get_attribute("href")) == f"#/runs/{runs[0]['run_id']}"
+        assert f"{runs[0]['moves_by_playlist'][pl['name']]} song" in recent.first.inner_text()
+    assert checked, "fixtures must contain a playlist that real runs added songs to"
 
 
 # ------------------------------------------------------------------ runs
@@ -302,9 +338,9 @@ def test_runs_show_scheduled_vs_actual_start_and_finish_in_ist_and_utc(dash):
     page = dash("runs")
     row = page.locator(f'tr[data-run="{late["run_id"]}"]')
     sched, started = row.locator('[data-timing="scheduled"]').inner_text(), row.locator('[data-timing="started"]').inner_text()
-    assert "20 Sep 04:00 IST" in sched and "19 Sep 22:30 UTC" in sched
-    assert "20 Sep 04:11 IST" in started and "19 Sep 22:41 UTC" in started and "11 min late" in started
-    assert "Finished:" in row.locator('[data-timing="finished"]').inner_text()
+    assert sched == "04:00 IST" and "19 Sep 2026 22:30:00 UTC" in row.locator('[data-timing="scheduled"]').get_attribute("title")
+    assert started.startswith("04:11 IST") and "11 min late" in started and "19 Sep 2026 22:41" in row.locator('[data-timing="started"]').get_attribute("title")
+    assert "min" in row.locator('[data-timing="finished"]').inner_text() or " s" in row.locator('[data-timing="finished"]').inner_text()
     # a manual run says so instead of showing a slot
     manual = next(r for r in RUNS if r.get("trigger") == "workflow_dispatch")
     assert "Not a scheduled run" in page.locator(f'tr[data-run="{manual["run_id"]}"] [data-timing="scheduled"]').inner_text()
@@ -982,8 +1018,9 @@ def test_rules_view_shows_dynamic_badge_for_auto_rule(dash):
         return data
 
     page = dash("rules", setup=lambda p: patch_json(p, "latest-plan.json", patch))
-    row = page.locator('tr[data-rule="Route to artist home"]')
+    row = page.locator('article.rule-card[data-rule="Route to artist home"]')
     expect(row).to_be_visible()
+    row.locator("summary").click()
     assert "auto" in row.inner_text()
     assert "Resolved per song" in row.inner_text()
 
@@ -1062,8 +1099,9 @@ def test_rules_view_shows_unless_summary(dash):
         return data
 
     page = dash("rules", setup=lambda p: patch_json(p, "latest-plan.json", patch))
-    row = page.locator('tr[data-rule="Hindi to Dil (exceptions)"]')
+    row = page.locator('article.rule-card[data-rule="Hindi to Dil (exceptions)"]')
     expect(row).to_be_visible()
+    row.locator("summary").click()
     assert "unless" in row.inner_text() and "Arijit Singh" in row.inner_text()
 
 
@@ -1112,8 +1150,9 @@ def test_rules_view_shows_any_of_summary(dash):
         return data
 
     page = dash("rules", setup=lambda p: patch_json(p, "latest-plan.json", patch))
-    row = page.locator('tr[data-rule="Chill (OR)"]')
+    row = page.locator('article.rule-card[data-rule="Chill (OR)"]')
     expect(row).to_be_visible()
+    row.locator("summary").click()
     row_text = row.inner_text()
     assert "any_of" in row_text and "OR" in row_text
 
@@ -1191,11 +1230,11 @@ def test_after_a_live_run_the_overview_does_not_call_the_moved_songs_pending(das
     page = dash("overview", setup=use_real_like_data)
     # the plan file says 4 songs "will move", but that was BEFORE the run: nothing is waiting now
     assert text(page, '[data-card="liked"] .metric-value') == "0"
-    assert "Counted at the end of the last run" in text(page, '[data-card="liked"]')
+    assert "After the last run" in text(page, '[data-card="liked"]')
     nxt = text(page, '[data-testid="next"]')
-    assert nxt.startswith("What happens next: Nothing is waiting. The last run moved 4 songs into 2 playlists.")
-    assert "next automatic run is 2026-09-22 03:00 UTC" in nxt
-    assert "would move" not in nxt and "nothing has been written" not in nxt
+    assert nxt.startswith("What happens next: Nothing waiting. Last run moved 4 songs into 2 playlists.")
+    assert "Next run: 22 Sep, 3:00 AM UTC" in nxt
+    assert "would move" not in nxt and "nothing written" not in nxt
     assert "Inbox when the last run started" in text(page, "#view-root")
     expect(page.locator('[data-card="pending"]')).to_have_count(0)
     # the stale "legacy" label is ignored because an inbox start date is set
@@ -1208,7 +1247,7 @@ def test_after_a_live_run_the_inbox_says_it_is_the_inbox_when_the_run_started(da
     notice = page.locator('[data-banner="inbox-snapshot"]')
     expect(notice).to_be_visible()
     t = notice.inner_text()
-    assert "as it was when the last run started" in t and "2026-09-21 06:00 UTC" in t and "Right now 0 songs are waiting" in t
+    assert "Inbox as the last run saw it" in t and "21 Sep, 6:00 AM UTC" in t and "Waiting now: 0" in t
     expect(page.locator('[data-banner="legacy"]')).to_have_count(0)
     rows = page.locator("#inbox-results tbody tr")
     expect(rows).to_have_count(4)
@@ -1241,7 +1280,7 @@ def test_run_page_leads_with_what_moved_where_by_which_rule_and_hides_titles_gra
     eng = page.locator('.moved-group[data-playlist="Fake English"]')
     assert "3 songs" in eng.inner_text() and "Rule: English pop" in eng.inner_text() and "top of the playlist" in eng.inner_text()
     lines = eng.locator("li.moved-song").all_inner_texts()
-    assert len(lines) == 3 and all("title hidden" in x and "liked 2026-" in x for x in lines)
+    assert len(lines) == 3 and all("title hidden" in x and "liked " in x for x in lines)
     assert "Song 1 of 4 (title hidden)" in lines[0]
     hindi = page.locator('.moved-group[data-playlist="Fake Hindi Hits"]')
     assert "1 song" in hindi.inner_text() and "Rule: Hindi hits" in hindi.inner_text()
@@ -1293,12 +1332,12 @@ def test_overview_is_honest_about_the_schedule(dash):
     # explicit null (written by sync when config.yaml has no enabled schedule): say so plainly, still no card
     page = dash("overview", setup=lambda p: patch_json(p, "runs.json", lambda d: d.update(schedule=None)))
     expect(page.locator('[data-card="next-run"]')).to_have_count(0)
-    assert "No automatic runs are set up" in text(page, '[data-testid="next"]')
+    assert "No automatic runs set up" in text(page, '[data-testid="next"]')
     # a real schedule: description + time in the browser's time zone
     page = dash("overview", timezone_id="Asia/Kolkata", setup=lambda p: patch_json(
         p, "runs.json", lambda d: d.update(schedule={"cron": None, "description": "every day at 08:00 (Asia/Kolkata), moves songs", "next_run": "2026-09-22T02:30:00+00:00"})))
     card = text(page, '[data-card="next-run"]')
-    assert "2026-09-22 08:00" in card and "Every day at 08:00 (Asia/Kolkata), moves songs" in card
+    assert "22 Sep, 8:00 AM IST" in card and "Every day at 08:00 (Asia/Kolkata), moves songs" in card
 
 
 LONG_TITLE = "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa and a very long title that keeps going well past one line of a phone (Extended Remastered Deluxe Edition) [feat. Somebody With A Long Name]"
