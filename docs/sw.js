@@ -1,7 +1,8 @@
-// LikedZero service worker: cache-first for the app shell so the builder works offline.
-// Bump CACHE_VERSION whenever any cached file changes. All URLs are relative to this file
+// LikedZero service worker: network-first for the app shell, falling back to the cache when offline.
+// Network-first means a deploy reaches returning visitors on their next load instead of being
+// stuck behind an old cached copy. Bump CACHE_VERSION whenever the SHELL list changes. All URLs are relative to this file
 // (works under the /LikedZero/ GitHub Pages base path).
-const CACHE_VERSION = 'v19';
+const CACHE_VERSION = 'v20';
 const CACHE_NAME = 'likedzero-shell-' + CACHE_VERSION;
 const SHELL = [
   './',
@@ -75,11 +76,13 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
-      const hit = await cache.match(req, { ignoreSearch: true });
-      if (hit) return hit;
       try {
-        return await fetch(req);
+        const res = await fetch(req, { cache: 'no-cache' });
+        if (res.ok) cache.put(req, res.clone());
+        return res;
       } catch (err) {
+        const hit = await cache.match(req, { ignoreSearch: true });
+        if (hit) return hit;
         if (req.mode === 'navigate') {
           const shell = await cache.match(new URL('index.html', self.location).href);
           if (shell) return shell;
