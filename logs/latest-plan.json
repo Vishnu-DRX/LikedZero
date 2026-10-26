@@ -1,20 +1,20 @@
 {
  "version": 1,
- "generated_at": "2026-10-26T00:36:31+00:00",
- "run_id": "20261026T003631Z",
+ "generated_at": "2026-10-26T23:16:15+00:00",
+ "run_id": "20261026T231615Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
  "config_hash": "8387563aecd6",
- "liked_total": 1,
+ "liked_total": 2,
  "default_days_threshold": 0,
  "english_default": false,
  "inbox_since": "2026-10-10",
  "counts": {
-  "will_move": 0,
+  "will_move": 2,
   "too_young": 0,
   "no_match": 0,
-  "target_problem": 1,
+  "target_problem": 0,
   "blocked": 0
  },
  "rules": [
@@ -37,7 +37,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -59,7 +59,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -78,7 +78,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -97,7 +97,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -116,7 +116,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -135,7 +135,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -154,7 +154,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -173,7 +173,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -212,7 +212,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -234,7 +234,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "missing",
+   "target_status": "resolved",
    "status": "dead"
   },
   {
@@ -249,17 +249,17 @@
    "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
-   "would_match": 1,
-   "wins": 1,
-   "target_status": "missing",
+   "would_match": 2,
+   "wins": 2,
+   "target_status": "resolved",
    "status": "ok"
   }
  ],
  "playlists": [
   {
    "name": "Dil",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 144,
    "planned_in": 0,
    "rules": [
     "Hindi -> Dil"
@@ -267,8 +267,8 @@
   },
   {
    "name": "NewAgeMadrasMail",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 99,
    "planned_in": 0,
    "rules": [
     "Malayalam -> NewAgeMadrasMail"
@@ -276,8 +276,8 @@
   },
   {
    "name": "Anavae binge list",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 28,
    "planned_in": 0,
    "rules": [
     "Anavae -> Anavae binge list"
@@ -285,8 +285,8 @@
   },
   {
    "name": "Dead Dreams' Disco",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 20,
    "planned_in": 0,
    "rules": [
     "Linkin Park -> Dead Dreams' Disco"
@@ -294,8 +294,8 @@
   },
   {
    "name": "Her Highness",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 14,
    "planned_in": 0,
    "rules": [
     "Queen -> Her Highness"
@@ -303,8 +303,8 @@
   },
   {
    "name": "Riffs in the air",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 12,
    "planned_in": 0,
    "rules": [
     "Twenty One Pilots -> Riffs in the air"
@@ -312,8 +312,8 @@
   },
   {
    "name": "The Klasey Universe",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 17,
    "planned_in": 0,
    "rules": [
     "Klasey Jones -> The Klasey Universe"
@@ -321,8 +321,8 @@
   },
   {
    "name": "Midnight Mixer",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 11,
    "planned_in": 0,
    "rules": [
     "The Midnight -> Midnight Mixer"
@@ -330,8 +330,8 @@
   },
   {
    "name": "nani mo wakaranai",
-   "status": "missing",
-   "size": null,
+   "status": "resolved",
+   "size": 63,
    "planned_in": 0,
    "rules": [
     "Japanese -> nani mo wakaranai"
@@ -339,9 +339,9 @@
   },
   {
    "name": "The Simulation Archives",
-   "status": "missing",
-   "size": null,
-   "planned_in": 0,
+   "status": "resolved",
+   "size": 161,
+   "planned_in": 2,
    "rules": [
     "English -> The Simulation Archives",
     "Catch-all -> The Simulation Archives"
@@ -356,12 +356,12 @@
    ],
    "uri": "spotify:track:73f6iSnK07ZDtmitGKTzNE",
    "added_at": "2026-10-25T19:36:12+00:00",
-   "age_days": 0.2,
-   "decision": "target_problem",
-   "reason": "target playlist missing",
+   "age_days": 1.2,
+   "decision": "will_move",
+   "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
    "rule": "Catch-all -> The Simulation Archives",
    "target_playlist": "The Simulation Archives",
-   "target_status": "missing",
+   "target_status": "resolved",
    "eligible_on": "2026-10-25T19:36:12+00:00",
    "target_position": "top",
    "language": {
@@ -574,7 +574,241 @@
      }
     ],
     "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.20855902181712963
+    "age_days": 1.1528157369328704
+   }
+  },
+  {
+   "title": "You Can't Run From Me",
+   "artists": [
+    "Rico Nasty"
+   ],
+   "uri": "spotify:track:7cTx8eKgtFuagDkjYpVKrI",
+   "added_at": "2026-10-26T18:11:00+00:00",
+   "age_days": 0.2,
+   "decision": "will_move",
+   "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
+   "rule": "Catch-all -> The Simulation Archives",
+   "target_playlist": "The Simulation Archives",
+   "target_status": "resolved",
+   "eligible_on": "2026-10-26T18:11:00+00:00",
+   "target_position": "top",
+   "language": {
+    "value": null,
+    "source": null,
+    "confidence": null,
+    "used_for_rules": false,
+    "withheld": null
+   },
+   "genres": {
+    "values": [
+     "trap",
+     "alternative hip hop",
+     "bass",
+     "bass house",
+     "club"
+    ],
+    "source": "musicbrainz",
+    "confidence": 0.6
+   },
+   "artist_routing": null,
+   "explain": {
+    "trace": [
+     {
+      "rule": "Hindi -> Dil",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "hindi"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Malayalam -> NewAgeMadrasMail",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "malayalam"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Anavae -> Anavae binge list",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Anavae"
+        ],
+        "actual": [
+         "Rico Nasty"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Linkin Park -> Dead Dreams' Disco",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Linkin Park"
+        ],
+        "actual": [
+         "Rico Nasty"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Queen -> Her Highness",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Queen"
+        ],
+        "actual": [
+         "Rico Nasty"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Twenty One Pilots -> Riffs in the air",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Twenty One Pilots"
+        ],
+        "actual": [
+         "Rico Nasty"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Klasey Jones -> The Klasey Universe",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Klasey Jones"
+        ],
+        "actual": [
+         "Rico Nasty"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "The Midnight -> Midnight Mixer",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "The Midnight"
+        ],
+        "actual": [
+         "Rico Nasty"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Route to artist's home playlist (draft)",
+      "enabled": false,
+      "threshold_days": 0,
+      "conditions": [],
+      "result": "skipped_disabled"
+     },
+     {
+      "rule": "Japanese -> nani mo wakaranai",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "japanese"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "English -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "english"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Catch-all -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "any",
+        "wanted": true,
+        "actual": true,
+        "passed": true
+       }
+      ],
+      "result": "matched"
+     }
+    ],
+    "decided_by": "Catch-all -> The Simulation Archives",
+    "age_days": 0.21198240359953704
    }
   }
  ]
