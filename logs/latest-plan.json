@@ -1,12 +1,12 @@
 {
  "version": 1,
- "generated_at": "2026-10-24T23:02:30+00:00",
- "run_id": "20261024T230230Z",
+ "generated_at": "2026-10-26T00:36:31+00:00",
+ "run_id": "20261026T003631Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
  "config_hash": "8387563aecd6",
- "liked_total": 0,
+ "liked_total": 1,
  "default_days_threshold": 0,
  "english_default": false,
  "inbox_since": "2026-10-10",
@@ -14,7 +14,7 @@
   "will_move": 0,
   "too_young": 0,
   "no_match": 0,
-  "target_problem": 0,
+  "target_problem": 1,
   "blocked": 0
  },
  "rules": [
@@ -37,7 +37,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -59,7 +59,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -78,7 +78,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -97,7 +97,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -116,7 +116,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -135,7 +135,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -154,7 +154,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -173,7 +173,7 @@
    "weak_signals_possible": [],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -212,7 +212,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -234,7 +234,7 @@
    ],
    "would_match": 0,
    "wins": 0,
-   "target_status": "resolved",
+   "target_status": "missing",
    "status": "dead"
   },
   {
@@ -249,17 +249,17 @@
    "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
-   "would_match": 0,
-   "wins": 0,
-   "target_status": "resolved",
-   "status": "dead"
+   "would_match": 1,
+   "wins": 1,
+   "target_status": "missing",
+   "status": "ok"
   }
  ],
  "playlists": [
   {
    "name": "Dil",
-   "status": "resolved",
-   "size": 144,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Hindi -> Dil"
@@ -267,8 +267,8 @@
   },
   {
    "name": "NewAgeMadrasMail",
-   "status": "resolved",
-   "size": 99,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Malayalam -> NewAgeMadrasMail"
@@ -276,8 +276,8 @@
   },
   {
    "name": "Anavae binge list",
-   "status": "resolved",
-   "size": 28,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Anavae -> Anavae binge list"
@@ -285,8 +285,8 @@
   },
   {
    "name": "Dead Dreams' Disco",
-   "status": "resolved",
-   "size": 20,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Linkin Park -> Dead Dreams' Disco"
@@ -294,8 +294,8 @@
   },
   {
    "name": "Her Highness",
-   "status": "resolved",
-   "size": 14,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Queen -> Her Highness"
@@ -303,8 +303,8 @@
   },
   {
    "name": "Riffs in the air",
-   "status": "resolved",
-   "size": 12,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Twenty One Pilots -> Riffs in the air"
@@ -312,8 +312,8 @@
   },
   {
    "name": "The Klasey Universe",
-   "status": "resolved",
-   "size": 17,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Klasey Jones -> The Klasey Universe"
@@ -321,8 +321,8 @@
   },
   {
    "name": "Midnight Mixer",
-   "status": "resolved",
-   "size": 11,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "The Midnight -> Midnight Mixer"
@@ -330,8 +330,8 @@
   },
   {
    "name": "nani mo wakaranai",
-   "status": "resolved",
-   "size": 63,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "Japanese -> nani mo wakaranai"
@@ -339,8 +339,8 @@
   },
   {
    "name": "The Simulation Archives",
-   "status": "resolved",
-   "size": 161,
+   "status": "missing",
+   "size": null,
    "planned_in": 0,
    "rules": [
     "English -> The Simulation Archives",
@@ -348,5 +348,234 @@
    ]
   }
  ],
- "songs": []
+ "songs": [
+  {
+   "title": "No Future, No Past",
+   "artists": [
+    "Tsuneo Imahori"
+   ],
+   "uri": "spotify:track:73f6iSnK07ZDtmitGKTzNE",
+   "added_at": "2026-10-25T19:36:12+00:00",
+   "age_days": 0.2,
+   "decision": "target_problem",
+   "reason": "target playlist missing",
+   "rule": "Catch-all -> The Simulation Archives",
+   "target_playlist": "The Simulation Archives",
+   "target_status": "missing",
+   "eligible_on": "2026-10-25T19:36:12+00:00",
+   "target_position": "top",
+   "language": {
+    "value": null,
+    "source": null,
+    "confidence": null,
+    "used_for_rules": false,
+    "withheld": null
+   },
+   "genres": {
+    "values": [],
+    "source": null,
+    "confidence": null
+   },
+   "artist_routing": null,
+   "explain": {
+    "trace": [
+     {
+      "rule": "Hindi -> Dil",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "hindi"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Malayalam -> NewAgeMadrasMail",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "malayalam"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Anavae -> Anavae binge list",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Anavae"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Linkin Park -> Dead Dreams' Disco",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Linkin Park"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Queen -> Her Highness",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Queen"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Twenty One Pilots -> Riffs in the air",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Twenty One Pilots"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Klasey Jones -> The Klasey Universe",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Klasey Jones"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "The Midnight -> Midnight Mixer",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "The Midnight"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Route to artist's home playlist (draft)",
+      "enabled": false,
+      "threshold_days": 0,
+      "conditions": [],
+      "result": "skipped_disabled"
+     },
+     {
+      "rule": "Japanese -> nani mo wakaranai",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "japanese"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "English -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "english"
+        ],
+        "actual": null,
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Catch-all -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "any",
+        "wanted": true,
+        "actual": true,
+        "passed": true
+       }
+      ],
+      "result": "matched"
+     }
+    ],
+    "decided_by": "Catch-all -> The Simulation Archives",
+    "age_days": 0.20855902181712963
+   }
+  }
+ ]
 }
