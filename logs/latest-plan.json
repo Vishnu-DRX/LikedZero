@@ -1,17 +1,17 @@
 {
  "version": 1,
- "generated_at": "2026-10-26T23:16:15+00:00",
- "run_id": "20261026T231615Z",
+ "generated_at": "2026-10-27T23:43:01+00:00",
+ "run_id": "20261027T234301Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
  "config_hash": "8387563aecd6",
- "liked_total": 2,
+ "liked_total": 1,
  "default_days_threshold": 0,
  "english_default": false,
  "inbox_since": "2026-10-10",
  "counts": {
-  "will_move": 2,
+  "will_move": 1,
   "too_young": 0,
   "no_match": 0,
   "target_problem": 0,
@@ -249,8 +249,8 @@
    "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
-   "would_match": 2,
-   "wins": 2,
+   "would_match": 1,
+   "wins": 1,
    "target_status": "resolved",
    "status": "ok"
   }
@@ -341,7 +341,7 @@
    "name": "The Simulation Archives",
    "status": "resolved",
    "size": 161,
-   "planned_in": 2,
+   "planned_in": 1,
    "rules": [
     "English -> The Simulation Archives",
     "Catch-all -> The Simulation Archives"
@@ -350,19 +350,19 @@
  ],
  "songs": [
   {
-   "title": "No Future, No Past",
+   "title": "Break Down Slowly",
    "artists": [
-    "Tsuneo Imahori"
+    "Mason Engler"
    ],
-   "uri": "spotify:track:73f6iSnK07ZDtmitGKTzNE",
-   "added_at": "2026-10-25T19:36:12+00:00",
-   "age_days": 1.2,
+   "uri": "spotify:track:4PWupgEQqE0nsspOaGUpvx",
+   "added_at": "2026-10-27T20:55:07+00:00",
+   "age_days": 0.1,
    "decision": "will_move",
    "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
    "rule": "Catch-all -> The Simulation Archives",
    "target_playlist": "The Simulation Archives",
    "target_status": "resolved",
-   "eligible_on": "2026-10-25T19:36:12+00:00",
+   "eligible_on": "2026-10-27T20:55:07+00:00",
    "target_position": "top",
    "language": {
     "value": null,
@@ -422,7 +422,7 @@
          "Anavae"
         ],
         "actual": [
-         "Tsuneo Imahori"
+         "Mason Engler"
         ],
         "passed": false
        }
@@ -440,7 +440,7 @@
          "Linkin Park"
         ],
         "actual": [
-         "Tsuneo Imahori"
+         "Mason Engler"
         ],
         "passed": false
        }
@@ -458,7 +458,7 @@
          "Queen"
         ],
         "actual": [
-         "Tsuneo Imahori"
+         "Mason Engler"
         ],
         "passed": false
        }
@@ -476,7 +476,7 @@
          "Twenty One Pilots"
         ],
         "actual": [
-         "Tsuneo Imahori"
+         "Mason Engler"
         ],
         "passed": false
        }
@@ -494,7 +494,7 @@
          "Klasey Jones"
         ],
         "actual": [
-         "Tsuneo Imahori"
+         "Mason Engler"
         ],
         "passed": false
        }
@@ -512,7 +512,7 @@
          "The Midnight"
         ],
         "actual": [
-         "Tsuneo Imahori"
+         "Mason Engler"
         ],
         "passed": false
        }
@@ -574,241 +574,7 @@
      }
     ],
     "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 1.1528157369328704
-   }
-  },
-  {
-   "title": "You Can't Run From Me",
-   "artists": [
-    "Rico Nasty"
-   ],
-   "uri": "spotify:track:7cTx8eKgtFuagDkjYpVKrI",
-   "added_at": "2026-10-26T18:11:00+00:00",
-   "age_days": 0.2,
-   "decision": "will_move",
-   "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
-   "rule": "Catch-all -> The Simulation Archives",
-   "target_playlist": "The Simulation Archives",
-   "target_status": "resolved",
-   "eligible_on": "2026-10-26T18:11:00+00:00",
-   "target_position": "top",
-   "language": {
-    "value": null,
-    "source": null,
-    "confidence": null,
-    "used_for_rules": false,
-    "withheld": null
-   },
-   "genres": {
-    "values": [
-     "trap",
-     "alternative hip hop",
-     "bass",
-     "bass house",
-     "club"
-    ],
-    "source": "musicbrainz",
-    "confidence": 0.6
-   },
-   "artist_routing": null,
-   "explain": {
-    "trace": [
-     {
-      "rule": "Hindi -> Dil",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "hindi"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Malayalam -> NewAgeMadrasMail",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "malayalam"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Anavae -> Anavae binge list",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Anavae"
-        ],
-        "actual": [
-         "Rico Nasty"
-        ],
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Linkin Park -> Dead Dreams' Disco",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Linkin Park"
-        ],
-        "actual": [
-         "Rico Nasty"
-        ],
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Queen -> Her Highness",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Queen"
-        ],
-        "actual": [
-         "Rico Nasty"
-        ],
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Twenty One Pilots -> Riffs in the air",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Twenty One Pilots"
-        ],
-        "actual": [
-         "Rico Nasty"
-        ],
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Klasey Jones -> The Klasey Universe",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "Klasey Jones"
-        ],
-        "actual": [
-         "Rico Nasty"
-        ],
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "The Midnight -> Midnight Mixer",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "artist_in",
-        "wanted": [
-         "The Midnight"
-        ],
-        "actual": [
-         "Rico Nasty"
-        ],
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Route to artist's home playlist (draft)",
-      "enabled": false,
-      "threshold_days": 0,
-      "conditions": [],
-      "result": "skipped_disabled"
-     },
-     {
-      "rule": "Japanese -> nani mo wakaranai",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "japanese"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "English -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "language_in",
-        "wanted": [
-         "english"
-        ],
-        "actual": null,
-        "passed": false
-       }
-      ],
-      "result": "failed"
-     },
-     {
-      "rule": "Catch-all -> The Simulation Archives",
-      "enabled": true,
-      "threshold_days": 0,
-      "conditions": [
-       {
-        "key": "any",
-        "wanted": true,
-        "actual": true,
-        "passed": true
-       }
-      ],
-      "result": "matched"
-     }
-    ],
-    "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.21198240359953704
+    "age_days": 0.11660282466435185
    }
   }
  ]
