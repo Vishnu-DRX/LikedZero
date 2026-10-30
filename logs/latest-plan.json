@@ -1,17 +1,17 @@
 {
  "version": 1,
- "generated_at": "2026-10-28T22:47:00+00:00",
- "run_id": "20261028T224700Z",
+ "generated_at": "2026-10-30T01:17:40+00:00",
+ "run_id": "20261030T011740Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
  "config_hash": "8387563aecd6",
- "liked_total": 0,
+ "liked_total": 1,
  "default_days_threshold": 0,
  "english_default": false,
  "inbox_since": "2026-10-10",
  "counts": {
-  "will_move": 0,
+  "will_move": 1,
   "too_young": 0,
   "no_match": 0,
   "target_problem": 0,
@@ -232,10 +232,10 @@
     "language_in:hint",
     "language_in:country_default"
    ],
-   "would_match": 0,
-   "wins": 0,
+   "would_match": 1,
+   "wins": 1,
    "target_status": "resolved",
-   "status": "dead"
+   "status": "ok"
   },
   {
    "name": "Catch-all -> The Simulation Archives",
@@ -249,10 +249,10 @@
    "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
-   "would_match": 0,
+   "would_match": 1,
    "wins": 0,
    "target_status": "resolved",
-   "status": "dead"
+   "status": "shadowed"
   }
  ],
  "playlists": [
@@ -341,12 +341,241 @@
    "name": "The Simulation Archives",
    "status": "resolved",
    "size": 162,
-   "planned_in": 0,
+   "planned_in": 1,
    "rules": [
     "English -> The Simulation Archives",
     "Catch-all -> The Simulation Archives"
    ]
   }
  ],
- "songs": []
+ "songs": [
+  {
+   "title": "Out of Bounds",
+   "artists": [
+    "Tsuneo Imahori"
+   ],
+   "uri": "spotify:track:4ypL8lKeVlFe3ZJMLcYHzK",
+   "added_at": "2026-10-29T04:33:19+00:00",
+   "age_days": 0.9,
+   "decision": "will_move",
+   "reason": "rule 'English -> The Simulation Archives' matched and the song is old enough",
+   "rule": "English -> The Simulation Archives",
+   "target_playlist": "The Simulation Archives",
+   "target_status": "resolved",
+   "eligible_on": "2026-10-29T04:33:19+00:00",
+   "target_position": "top",
+   "language": {
+    "value": "english",
+    "source": "playlist",
+    "confidence": 0.95,
+    "used_for_rules": true,
+    "withheld": null
+   },
+   "genres": {
+    "values": [],
+    "source": null,
+    "confidence": null
+   },
+   "artist_routing": null,
+   "explain": {
+    "trace": [
+     {
+      "rule": "Hindi -> Dil",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "hindi"
+        ],
+        "actual": "english",
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Malayalam -> NewAgeMadrasMail",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "malayalam"
+        ],
+        "actual": "english",
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Anavae -> Anavae binge list",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Anavae"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Linkin Park -> Dead Dreams' Disco",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Linkin Park"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Queen -> Her Highness",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Queen"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Twenty One Pilots -> Riffs in the air",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Twenty One Pilots"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Klasey Jones -> The Klasey Universe",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Klasey Jones"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "The Midnight -> Midnight Mixer",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "The Midnight"
+        ],
+        "actual": [
+         "Tsuneo Imahori"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Route to artist's home playlist (draft)",
+      "enabled": false,
+      "threshold_days": 0,
+      "conditions": [],
+      "result": "skipped_disabled"
+     },
+     {
+      "rule": "Japanese -> nani mo wakaranai",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "japanese"
+        ],
+        "actual": "english",
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "English -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "english"
+        ],
+        "actual": "english",
+        "passed": true
+       }
+      ],
+      "result": "matched"
+     },
+     {
+      "rule": "Catch-all -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "any",
+        "wanted": true,
+        "actual": true,
+        "passed": true
+       }
+      ],
+      "result": "not_reached_but_would_match"
+     }
+    ],
+    "decided_by": "English -> The Simulation Archives",
+    "age_days": 0.8641401690509258
+   }
+  }
+ ]
 }
