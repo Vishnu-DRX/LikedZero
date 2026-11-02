@@ -1,17 +1,17 @@
 {
  "version": 1,
- "generated_at": "2026-10-31T23:36:33+00:00",
- "run_id": "20261031T233633Z",
+ "generated_at": "2026-11-02T01:43:49+00:00",
+ "run_id": "20261102T014349Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
  "config_hash": "8387563aecd6",
- "liked_total": 0,
+ "liked_total": 1,
  "default_days_threshold": 0,
  "english_default": false,
  "inbox_since": "2026-10-10",
  "counts": {
-  "will_move": 0,
+  "will_move": 1,
   "too_young": 0,
   "no_match": 0,
   "target_problem": 0,
@@ -57,10 +57,10 @@
     "language_in:hint",
     "language_in:country_default"
    ],
-   "would_match": 0,
-   "wins": 0,
+   "would_match": 1,
+   "wins": 1,
    "target_status": "resolved",
-   "status": "dead"
+   "status": "ok"
   },
   {
    "name": "Anavae -> Anavae binge list",
@@ -249,10 +249,10 @@
    "unless": {},
    "uses_language": false,
    "weak_signals_possible": [],
-   "would_match": 0,
+   "would_match": 1,
    "wins": 0,
    "target_status": "resolved",
-   "status": "dead"
+   "status": "shadowed"
   }
  ],
  "playlists": [
@@ -269,7 +269,7 @@
    "name": "NewAgeMadrasMail",
    "status": "resolved",
    "size": 99,
-   "planned_in": 0,
+   "planned_in": 1,
    "rules": [
     "Malayalam -> NewAgeMadrasMail"
    ]
@@ -348,5 +348,262 @@
    ]
   }
  ],
- "songs": []
+ "songs": [
+  {
+   "title": "Shoka Mookam (From \"Lokah - Chapter 1: Chandra\")",
+   "artists": [
+    "JK",
+    "Benny Dayal",
+    "Pranavam Sasi",
+    "J'mymah",
+    "Vinayak Sasikumar"
+   ],
+   "uri": "spotify:track:2kpfmXe5dI5ePEc5SUO7xJ",
+   "added_at": "2026-11-01T07:40:07+00:00",
+   "age_days": 0.8,
+   "decision": "will_move",
+   "reason": "rule 'Malayalam -> NewAgeMadrasMail' matched and the song is old enough",
+   "rule": "Malayalam -> NewAgeMadrasMail",
+   "target_playlist": "NewAgeMadrasMail",
+   "target_status": "resolved",
+   "eligible_on": "2026-11-01T07:40:07+00:00",
+   "target_position": "bottom",
+   "language": {
+    "value": "malayalam",
+    "source": "playlist",
+    "confidence": 0.95,
+    "used_for_rules": true,
+    "withheld": null
+   },
+   "genres": {
+    "values": [],
+    "source": null,
+    "confidence": null
+   },
+   "artist_routing": null,
+   "explain": {
+    "trace": [
+     {
+      "rule": "Hindi -> Dil",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "hindi"
+        ],
+        "actual": "malayalam",
+        "passed": false
+       }
+      ],
+      "result": "failed"
+     },
+     {
+      "rule": "Malayalam -> NewAgeMadrasMail",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "malayalam"
+        ],
+        "actual": "malayalam",
+        "passed": true
+       }
+      ],
+      "result": "matched"
+     },
+     {
+      "rule": "Anavae -> Anavae binge list",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Anavae"
+        ],
+        "actual": [
+         "JK",
+         "Benny Dayal",
+         "Pranavam Sasi",
+         "J'mymah",
+         "Vinayak Sasikumar"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "Linkin Park -> Dead Dreams' Disco",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Linkin Park"
+        ],
+        "actual": [
+         "JK",
+         "Benny Dayal",
+         "Pranavam Sasi",
+         "J'mymah",
+         "Vinayak Sasikumar"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "Queen -> Her Highness",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Queen"
+        ],
+        "actual": [
+         "JK",
+         "Benny Dayal",
+         "Pranavam Sasi",
+         "J'mymah",
+         "Vinayak Sasikumar"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "Twenty One Pilots -> Riffs in the air",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Twenty One Pilots"
+        ],
+        "actual": [
+         "JK",
+         "Benny Dayal",
+         "Pranavam Sasi",
+         "J'mymah",
+         "Vinayak Sasikumar"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "Klasey Jones -> The Klasey Universe",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "Klasey Jones"
+        ],
+        "actual": [
+         "JK",
+         "Benny Dayal",
+         "Pranavam Sasi",
+         "J'mymah",
+         "Vinayak Sasikumar"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "The Midnight -> Midnight Mixer",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "artist_in",
+        "wanted": [
+         "The Midnight"
+        ],
+        "actual": [
+         "JK",
+         "Benny Dayal",
+         "Pranavam Sasi",
+         "J'mymah",
+         "Vinayak Sasikumar"
+        ],
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "Route to artist's home playlist (draft)",
+      "enabled": false,
+      "threshold_days": 0,
+      "conditions": [],
+      "result": "skipped_disabled"
+     },
+     {
+      "rule": "Japanese -> nani mo wakaranai",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "japanese"
+        ],
+        "actual": "malayalam",
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "English -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "language_in",
+        "wanted": [
+         "english"
+        ],
+        "actual": "malayalam",
+        "passed": false
+       }
+      ],
+      "result": "not_reached"
+     },
+     {
+      "rule": "Catch-all -> The Simulation Archives",
+      "enabled": true,
+      "threshold_days": 0,
+      "conditions": [
+       {
+        "key": "any",
+        "wanted": true,
+        "actual": true,
+        "passed": true
+       }
+      ],
+      "result": "not_reached_but_would_match"
+     }
+    ],
+    "decided_by": "Malayalam -> NewAgeMadrasMail",
+    "age_days": 0.7525801926157407
+   }
+  }
+ ]
 }
