@@ -1,0 +1,185 @@
+{
+ "date": "2026-11-06",
+ "dry_run": false,
+ "evaluated": 4,
+ "moved": [
+  {
+   "track": "The Gilded Hand",
+   "artist": "Radical Face",
+   "uri": "spotify:track:77iFvBMFTOiTmWnmqxhIWd",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.7,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-11-05T09:56:01+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Like I Do",
+   "artist": "Fraxriel",
+   "uri": "spotify:track:0fn6DcFUnZNjWRVk7PTeMT",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.7,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-11-05T09:44:33+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Dead Reckoning",
+   "artist": "Clint Mansell",
+   "uri": "spotify:track:1JHAZGaAbSCUPsmLq4RFOe",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.7,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-11-05T09:06:41+00:00",
+   "target_position": "top"
+  },
+  {
+   "track": "Cells",
+   "artist": "The Servant",
+   "uri": "spotify:track:0riiudmdgNM5nqer2vXftk",
+   "playlist": "The Simulation Archives",
+   "playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "rule": "Catch-all -> The Simulation Archives",
+   "matched": {
+    "any": true
+   },
+   "age_days": 0.9,
+   "threshold_days": 0,
+   "already_in_target": false,
+   "original_added_at": "2026-11-05T05:38:06+00:00",
+   "target_position": "top"
+  }
+ ],
+ "skipped_no_match": 0,
+ "skipped_too_young": [],
+ "skipped_playlist_missing": [],
+ "errors": [],
+ "warnings": [],
+ "journal": [
+  {
+   "uri": "spotify:track:0fn6DcFUnZNjWRVk7PTeMT",
+   "name": "Like I Do",
+   "artists": "Fraxriel",
+   "original_added_at": "2026-11-05T09:44:33+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:0riiudmdgNM5nqer2vXftk",
+   "name": "Cells",
+   "artists": "The Servant",
+   "original_added_at": "2026-11-05T05:38:06+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:1JHAZGaAbSCUPsmLq4RFOe",
+   "name": "Dead Reckoning",
+   "artists": "Clint Mansell",
+   "original_added_at": "2026-11-05T09:06:41+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  },
+  {
+   "uri": "spotify:track:77iFvBMFTOiTmWnmqxhIWd",
+   "name": "The Gilded Hand",
+   "artists": "Radical Face",
+   "original_added_at": "2026-11-05T09:56:01+00:00",
+   "target_playlist_id": "79yR6353WPZ4marOYReGJ2",
+   "already_in_target": false
+  }
+ ],
+ "http_audit": {
+  "POST accounts.spotify.com": 1,
+  "GET api.spotify.com": 19,
+  "POST api.spotify.com": 1,
+  "DELETE api.spotify.com": 1
+ },
+ "runtime_seconds": 15.8,
+ "run_id": "20261106T020835Z",
+ "mode": "apply",
+ "what_if": false,
+ "liked_before": 4,
+ "liked_after": 0,
+ "verdict": "ok",
+ "rule_counts": {
+  "Hindi -> Dil": 0,
+  "Malayalam -> NewAgeMadrasMail": 0,
+  "Anavae -> Anavae binge list": 0,
+  "Linkin Park -> Dead Dreams' Disco": 0,
+  "Queen -> Her Highness": 0,
+  "Twenty One Pilots -> Riffs in the air": 0,
+  "Klasey Jones -> The Klasey Universe": 0,
+  "The Midnight -> Midnight Mixer": 0,
+  "Route to artist's home playlist (draft)": 0,
+  "Japanese -> nani mo wakaranai": 0,
+  "English -> The Simulation Archives": 0,
+  "Catch-all -> The Simulation Archives": 4
+ },
+ "config_hash": "8387563aecd6",
+ "plan_counts": {
+  "will_move": 4,
+  "too_young": 0,
+  "no_match": 0,
+  "target_problem": 0,
+  "blocked": 0
+ },
+ "started_at": "2026-11-06T02:08:35+00:00",
+ "finished_at": "2026-11-06T02:08:50+00:00",
+ "scheduled_for": "2026-11-05T22:30:00+00:00",
+ "workflow_started_at": null,
+ "trigger": "schedule",
+ "batches": [
+  {
+   "kind": "add_to_playlist",
+   "target": "79yR6353WPZ4marOYReGJ2",
+   "size": 4,
+   "committed": true,
+   "error": null
+  },
+  {
+   "kind": "remove_from_liked",
+   "target": "liked",
+   "size": 4,
+   "committed": true,
+   "error": null
+  }
+ ],
+ "reconcile": {
+  "liked_before": 4,
+  "removed": 4,
+  "expected_after": 0,
+  "actual_after": 0,
+  "new_likes_during_run": 0,
+  "lost": 0,
+  "resurrected": 0,
+  "gone_from_target": 0,
+  "ok": true
+ },
+ "moved_uris": [
+  "spotify:track:0fn6DcFUnZNjWRVk7PTeMT",
+  "spotify:track:0riiudmdgNM5nqer2vXftk",
+  "spotify:track:1JHAZGaAbSCUPsmLq4RFOe",
+  "spotify:track:77iFvBMFTOiTmWnmqxhIWd"
+ ],
+ "still_liked": [],
+ "restore_command": "python -m src.sync --restore logs/2026-11-06.json --apply"
+}
