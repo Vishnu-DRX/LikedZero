@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generated_at": "2026-11-07T23:51:04+00:00",
- "run_id": "20261107T235104Z",
+ "generated_at": "2026-11-09T01:53:21+00:00",
+ "run_id": "20261109T015321Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
@@ -232,10 +232,10 @@
     "language_in:hint",
     "language_in:country_default"
    ],
-   "would_match": 0,
-   "wins": 0,
+   "would_match": 1,
+   "wins": 1,
    "target_status": "resolved",
-   "status": "dead"
+   "status": "ok"
   },
   {
    "name": "Catch-all -> The Simulation Archives",
@@ -250,9 +250,9 @@
    "uses_language": false,
    "weak_signals_possible": [],
    "would_match": 1,
-   "wins": 1,
+   "wins": 0,
    "target_status": "resolved",
-   "status": "ok"
+   "status": "shadowed"
   }
  ],
  "playlists": [
@@ -340,7 +340,7 @@
   {
    "name": "The Simulation Archives",
    "status": "resolved",
-   "size": 168,
+   "size": 169,
    "planned_in": 1,
    "rules": [
     "English -> The Simulation Archives",
@@ -350,31 +350,37 @@
  ],
  "songs": [
   {
-   "title": "In The Night",
+   "title": "Wolf Like Me",
    "artists": [
-    "electrølush"
+    "TV On The Radio"
    ],
-   "uri": "spotify:track:7D1kvRQdgiNFzLuPbCELGJ",
-   "added_at": "2026-11-07T09:46:16+00:00",
-   "age_days": 0.6,
+   "uri": "spotify:track:6Zgd7SomLTZkL1WPh4CUnV",
+   "added_at": "2026-11-08T06:48:01+00:00",
+   "age_days": 0.8,
    "decision": "will_move",
-   "reason": "rule 'Catch-all -> The Simulation Archives' matched and the song is old enough",
-   "rule": "Catch-all -> The Simulation Archives",
+   "reason": "rule 'English -> The Simulation Archives' matched and the song is old enough",
+   "rule": "English -> The Simulation Archives",
    "target_playlist": "The Simulation Archives",
    "target_status": "resolved",
-   "eligible_on": "2026-11-07T09:46:16+00:00",
+   "eligible_on": "2026-11-08T06:48:01+00:00",
    "target_position": "top",
    "language": {
-    "value": null,
-    "source": null,
-    "confidence": null,
-    "used_for_rules": false,
+    "value": "english",
+    "source": "playlist",
+    "confidence": 0.95,
+    "used_for_rules": true,
     "withheld": null
    },
    "genres": {
-    "values": [],
-    "source": null,
-    "confidence": null
+    "values": [
+     "indie rock",
+     "art rock",
+     "experimental rock",
+     "4ad",
+     "electronic"
+    ],
+    "source": "musicbrainz",
+    "confidence": 0.6
    },
    "artist_routing": null,
    "explain": {
@@ -389,7 +395,7 @@
         "wanted": [
          "hindi"
         ],
-        "actual": null,
+        "actual": "english",
         "passed": false
        }
       ],
@@ -405,7 +411,7 @@
         "wanted": [
          "malayalam"
         ],
-        "actual": null,
+        "actual": "english",
         "passed": false
        }
       ],
@@ -422,7 +428,7 @@
          "Anavae"
         ],
         "actual": [
-         "electrølush"
+         "TV On The Radio"
         ],
         "passed": false
        }
@@ -440,7 +446,7 @@
          "Linkin Park"
         ],
         "actual": [
-         "electrølush"
+         "TV On The Radio"
         ],
         "passed": false
        }
@@ -458,7 +464,7 @@
          "Queen"
         ],
         "actual": [
-         "electrølush"
+         "TV On The Radio"
         ],
         "passed": false
        }
@@ -476,7 +482,7 @@
          "Twenty One Pilots"
         ],
         "actual": [
-         "electrølush"
+         "TV On The Radio"
         ],
         "passed": false
        }
@@ -494,7 +500,7 @@
          "Klasey Jones"
         ],
         "actual": [
-         "electrølush"
+         "TV On The Radio"
         ],
         "passed": false
        }
@@ -512,7 +518,7 @@
          "The Midnight"
         ],
         "actual": [
-         "electrølush"
+         "TV On The Radio"
         ],
         "passed": false
        }
@@ -536,7 +542,7 @@
         "wanted": [
          "japanese"
         ],
-        "actual": null,
+        "actual": "english",
         "passed": false
        }
       ],
@@ -552,11 +558,11 @@
         "wanted": [
          "english"
         ],
-        "actual": null,
-        "passed": false
+        "actual": "english",
+        "passed": true
        }
       ],
-      "result": "failed"
+      "result": "matched"
      },
      {
       "rule": "Catch-all -> The Simulation Archives",
@@ -570,11 +576,11 @@
         "passed": true
        }
       ],
-      "result": "matched"
+      "result": "not_reached_but_would_match"
      }
     ],
-    "decided_by": "Catch-all -> The Simulation Archives",
-    "age_days": 0.5866776848958334
+    "decided_by": "English -> The Simulation Archives",
+    "age_days": 0.7953748698726851
    }
   }
  ]
