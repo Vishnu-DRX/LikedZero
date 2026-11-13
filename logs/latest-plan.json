@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generated_at": "2026-11-11T22:37:40+00:00",
- "run_id": "20261111T223740Z",
+ "generated_at": "2026-11-13T01:23:43+00:00",
+ "run_id": "20261113T012343Z",
  "mode": "apply",
  "what_if": false,
  "inbox_kind": "fresh_inbox",
@@ -331,7 +331,7 @@
   {
    "name": "nani mo wakaranai",
    "status": "resolved",
-   "size": 63,
+   "size": 64,
    "planned_in": 0,
    "rules": [
     "Japanese -> nani mo wakaranai"
